@@ -15,9 +15,11 @@ import { CodeGen } from './codegen';
 import { Compiler } from './compiler';
 import { Corrector, CorrectionResult } from './correction';
 import { Learner } from './learner';
+import { AutoHeaderEngine, HeaderProposal } from './engine/auto-header';
 
 export { Op, Inst, AIIntent, VMResult, CompileResult };
-export type { CorrectionResult };
+export type { CorrectionResult, HeaderProposal };
+export { AutoHeaderEngine };
 
 export interface ExecResult {
   // VM execution
