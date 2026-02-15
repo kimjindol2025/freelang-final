@@ -288,19 +288,28 @@ cat docs/IMPLEMENTATION-ROADMAP.md
 
 ---
 
-## 🔗 모든 설계 문서 (7개, 3,606줄)
+## 🔗 모든 설계 문서 (11개, ~5,500줄)
 
-### 📋 필독 문서 (정렬 순서)
+### 📋 핵심 설계 문서
 
 | # | 문서 | LOC | 내용 | 대상 |
 |---|------|-----|------|------|
-| **1** | **[README.md](./README.md)** | 430 | 전체 개요 | 모두 |
-| **2** | **[AI-UX-FLOW.md](./docs/AI-UX-FLOW.md)** | 473 | 6단계 UX 플로우 + UI 모형 ⭐ | 설계자 |
-| **3** | **[AI-ADDICTION-MECHANICS.md](./docs/AI-ADDICTION-MECHANICS.md)** | 683 | 9가지 중독 요소 + 게임화 설계 🔥 | 설계자 |
+| **1** | **[README.md](./README.md)** | 460 | 전체 개요 | 모두 |
+| **2** | **[AI-UX-FLOW.md](./docs/AI-UX-FLOW.md)** | 473 | 6단계 UX 플로우 + UI 모형 | 설계자 |
+| **3** | **[AI-ADDICTION-MECHANICS.md](./docs/AI-ADDICTION-MECHANICS.md)** | 683 | 9가지 중독 요소 + 게임화 설계 | 설계자 |
 | **4** | **[AUTO-HEADER-ENGINE.md](./docs/AUTO-HEADER-ENGINE.md)** | 450 | 자동 헤더 생성 (7단계 파이프라인) | 아키텍트 |
 | **5** | **[AI-FEEDBACK-LOOP.md](./docs/AI-FEEDBACK-LOOP.md)** | 400 | AI 피드백 루프 철학 | 철학자 |
 | **6** | **[ARCHITECTURE-V2-UPDATED.md](./docs/ARCHITECTURE-V2-UPDATED.md)** | 550 | 전체 아키텍처 (9개 레이어) | 설계자 |
 | **7** | **[IMPLEMENTATION-ROADMAP.md](./docs/IMPLEMENTATION-ROADMAP.md)** | 750 | 7주 구현 계획 (6,000 LOC) | 구현자 |
+| **8** | **[AI-COMPETITIVE-STRATEGY.md](./docs/AI-COMPETITIVE-STRATEGY.md)** | 447 | Python/Rust 경쟁 전략 | 전략가 |
+
+### 📋 컴파일러 설계 문서 (신규)
+
+| # | 문서 | LOC | 내용 | 대상 |
+|---|------|-----|------|------|
+| **9** | **[COMPILER-ARCHITECTURE.md](./docs/COMPILER-ARCHITECTURE.md)** | ~500 | 8단계 파이프라인 + 3가지 백엔드 | 컴파일러 |
+| **10** | **[IR-SPECIFICATION.md](./docs/IR-SPECIFICATION.md)** | ~400 | IR 스펙 (29 opcode, 14 타입) | 컴파일러 |
+| **11** | **[COMPILER-PIPELINE.md](./docs/COMPILER-PIPELINE.md)** | ~350 | 파이프라인 플로우 + Directive 전략 | 컴파일러 |
 
 ### 📚 참고 문서 (필요시 읽기)
 
