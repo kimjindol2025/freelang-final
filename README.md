@@ -229,13 +229,15 @@ v2-freelang-ai/
 │   └── integration.test.ts
 │
 ├── docs/
-│   ├── AUTO-HEADER-ENGINE.md          # 자동 헤더 생성 설계
-│   ├── AI-FEEDBACK-LOOP.md            # 피드백 루프 철학
-│   ├── ARCHITECTURE-V2-UPDATED.md     # 전체 아키텍처
-│   ├── IMPLEMENTATION-ROADMAP.md      # 7주 구현 계획
-│   ├── SPECIFICATION.md               # 스펙
-│   ├── HEADER-CONTRACT.md             # 헤더 계약
-│   └── README.md                      # 이 파일
+│   ├── README.md                      # 📖 시작 가이드
+│   ├── AI-UX-FLOW.md                  # 📱 UX 플로우 설계 (6단계 + UI)
+│   ├── AI-ADDICTION-MECHANICS.md      # 🔥 중독 설계 (9가지 요소)
+│   ├── AUTO-HEADER-ENGINE.md          # 🧠 자동 헤더 생성 (7단계)
+│   ├── AI-FEEDBACK-LOOP.md            # 🔄 피드백 루프 철학
+│   ├── ARCHITECTURE-V2-UPDATED.md     # 🏗️ 전체 아키텍처 (9레이어)
+│   ├── IMPLEMENTATION-ROADMAP.md      # 📋 7주 구현 계획
+│   ├── SPECIFICATION.md               # 📖 스펙
+│   └── HEADER-CONTRACT.md             # 📋 헤더 계약
 │
 ├── package.json
 ├── tsconfig.json
@@ -286,16 +288,26 @@ cat docs/IMPLEMENTATION-ROADMAP.md
 
 ---
 
-## 🔗 핵심 문서
+## 🔗 모든 설계 문서 (7개, 3,606줄)
 
-| 문서 | 내용 | 대상 |
-|------|------|------|
-| **[AUTO-HEADER-ENGINE.md](./docs/AUTO-HEADER-ENGINE.md)** | 7단계 파이프라인 | 아키텍트 |
-| **[AI-FEEDBACK-LOOP.md](./docs/AI-FEEDBACK-LOOP.md)** | 피드백 철학 | 철학자 |
-| **[ARCHITECTURE-V2-UPDATED.md](./docs/ARCHITECTURE-V2-UPDATED.md)** | 9개 레이어 | 설계자 |
-| **[IMPLEMENTATION-ROADMAP.md](./docs/IMPLEMENTATION-ROADMAP.md)** | 7주 계획 | 구현자 |
-| **[SPECIFICATION.md](./docs/SPECIFICATION.md)** | 상세 스펙 | 참고 |
-| **[HEADER-CONTRACT.md](./docs/HEADER-CONTRACT.md)** | 헤더 계약 | 참고 |
+### 📋 필독 문서 (정렬 순서)
+
+| # | 문서 | LOC | 내용 | 대상 |
+|---|------|-----|------|------|
+| **1** | **[README.md](./README.md)** | 430 | 전체 개요 | 모두 |
+| **2** | **[AI-UX-FLOW.md](./docs/AI-UX-FLOW.md)** | 473 | 6단계 UX 플로우 + UI 모형 ⭐ | 설계자 |
+| **3** | **[AI-ADDICTION-MECHANICS.md](./docs/AI-ADDICTION-MECHANICS.md)** | 683 | 9가지 중독 요소 + 게임화 설계 🔥 | 설계자 |
+| **4** | **[AUTO-HEADER-ENGINE.md](./docs/AUTO-HEADER-ENGINE.md)** | 450 | 자동 헤더 생성 (7단계 파이프라인) | 아키텍트 |
+| **5** | **[AI-FEEDBACK-LOOP.md](./docs/AI-FEEDBACK-LOOP.md)** | 400 | AI 피드백 루프 철학 | 철학자 |
+| **6** | **[ARCHITECTURE-V2-UPDATED.md](./docs/ARCHITECTURE-V2-UPDATED.md)** | 550 | 전체 아키텍처 (9개 레이어) | 설계자 |
+| **7** | **[IMPLEMENTATION-ROADMAP.md](./docs/IMPLEMENTATION-ROADMAP.md)** | 750 | 7주 구현 계획 (6,000 LOC) | 구현자 |
+
+### 📚 참고 문서 (필요시 읽기)
+
+| 문서 | 내용 |
+|------|------|
+| **[SPECIFICATION.md](./docs/SPECIFICATION.md)** | 상세 스펙 (v2.0~v2.5) |
+| **[HEADER-CONTRACT.md](./docs/HEADER-CONTRACT.md)** | 헤더 계약 시스템 |
 
 ---
 
@@ -397,8 +409,18 @@ AI 피드백 (승인/수정/재제안/취소)
 |------|------|--------|
 | **설계** | ✅ 완료 | 100% |
 | **철학** | ✅ 확정 | 100% |
-| **문서** | ✅ 4개 | 1,896줄 |
+| **문서** | ✅ 7개 | 3,606줄 |
 | **구현** | ⏳ 대기 | 0% |
+
+### 📚 완성된 설계 문서
+
+- ✅ README.md - 전체 개요
+- ✅ AI-UX-FLOW.md - 6단계 플로우 + UI 모형
+- ✅ AI-ADDICTION-MECHANICS.md - 9가지 중독 요소
+- ✅ AUTO-HEADER-ENGINE.md - 7단계 파이프라인
+- ✅ AI-FEEDBACK-LOOP.md - 피드백 철학
+- ✅ ARCHITECTURE-V2-UPDATED.md - 9개 레이어 시스템
+- ✅ IMPLEMENTATION-ROADMAP.md - 7주 구현 계획
 
 ---
 
