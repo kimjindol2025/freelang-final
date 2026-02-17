@@ -315,6 +315,105 @@
       <div id="feedback-stats" class="loading">데이터 로딩 중...</div>
     </div>
 
+    <!-- Phase 12: 신뢰도 분석 섹션 시작 -->
+
+    <!-- 신뢰도 개요 -->
+    <div class="section">
+      <h2>📊 신뢰도 개요 (Phase 11 분석)</h2>
+      <div class="stats-grid" id="confidence-overview" style="margin-bottom: 0;">
+        <div class="stat-card high">
+          <div class="stat-label">조정 전 평균</div>
+          <div class="stat-value" id="conf-before">-</div>
+          <div class="stat-unit">신뢰도</div>
+        </div>
+
+        <div class="stat-card high">
+          <div class="stat-label">조정 후 평균</div>
+          <div class="stat-value" id="conf-after">-</div>
+          <div class="stat-unit">신뢰도</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">개선된 패턴</div>
+          <div class="stat-value" id="improved-count">-</div>
+          <div class="stat-unit">개</div>
+        </div>
+
+        <div class="stat-card medium">
+          <div class="stat-label">악화된 패턴</div>
+          <div class="stat-value" id="degraded-count">-</div>
+          <div class="stat-unit">개</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 카테고리별 성능 -->
+    <div class="section">
+      <h2>🏆 카테고리별 신뢰도 성능</h2>
+      <table id="category-table">
+        <thead>
+          <tr>
+            <th>카테고리</th>
+            <th>패턴 수</th>
+            <th>조정 전</th>
+            <th>조정 후</th>
+            <th>변화</th>
+            <th>상태</th>
+          </tr>
+        </thead>
+        <tbody id="category-body" class="loading">
+          <tr><td colspan="6">데이터 로딩 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 상위 개선 패턴 & 악화 패턴 -->
+    <div class="section">
+      <h2>🎯 상위 변동 패턴</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        <div>
+          <h3 style="color: #48bb78; margin-bottom: 15px;">✨ 상위 10개 개선</h3>
+          <ol id="top-improvements" style="line-height: 1.8; color: #333;">
+            <li style="color: #999;">데이터 로딩 중...</li>
+          </ol>
+        </div>
+        <div>
+          <h3 style="color: #f56565; margin-bottom: 15px;">⚡ 상위 10개 악화</h3>
+          <ol id="top-degradations" style="line-height: 1.8; color: #333;">
+            <li style="color: #999;">데이터 로딩 중...</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- 신뢰도 추이 -->
+    <div class="section">
+      <h2>📈 신뢰도 추이 (최근 7일)</h2>
+      <table id="confidence-trends-table">
+        <thead>
+          <tr>
+            <th>날짜</th>
+            <th>조정 전 평균</th>
+            <th>조정 후 평균</th>
+            <th>개선 패턴 수</th>
+          </tr>
+        </thead>
+        <tbody id="confidence-trends-body" class="loading">
+          <tr><td colspan="4">데이터 로딩 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 신뢰도 분포 히스토그램 -->
+    <div class="section">
+      <h2>📊 신뢰도 분포</h2>
+      <div id="confidence-histogram" style="display: flex; gap: 2px; align-items: flex-end; height: 200px; background: #f9f9f9; padding: 20px; border-radius: 6px;">
+        <div style="color: #999; width: 100%; text-align: center;">데이터 로딩 중...</div>
+      </div>
+    </div>
+
+    <!-- Phase 12 섹션 끝 -->
+
     <!-- 데이터 내보내기 -->
     <div class="section">
       <h2>📥 데이터 내보내기</h2>
@@ -354,6 +453,40 @@
         const feedbackRes = await fetch(`${API_BASE}/feedback-summary`);
         const feedback = await feedbackRes.json();
         updateFeedback(feedback);
+
+        // Phase 12: 신뢰도 분석 데이터
+        try {
+          // 신뢰도 리포트
+          const reportRes = await fetch(`${API_BASE}/confidence-report`);
+          if (reportRes.ok) {
+            const report = await reportRes.json();
+            updateConfidenceOverview(report);
+          }
+
+          // 카테고리 분석
+          const categoryRes = await fetch(`${API_BASE}/categories`);
+          if (categoryRes.ok) {
+            const categories = await categoryRes.json();
+            updateCategoryBreakdown(categories);
+          }
+
+          // 상위 변동 패턴
+          const moversRes = await fetch(`${API_BASE}/top-movers?limit=10`);
+          if (moversRes.ok) {
+            const movers = await moversRes.json();
+            updateTopMovers(movers);
+          }
+
+          // 신뢰도 추이
+          const trendsRes = await fetch(`${API_BASE}/confidence-trends?days=7`);
+          if (trendsRes.ok) {
+            const trends = await trendsRes.json();
+            updateConfidenceTrends(trends);
+          }
+        } catch (confError) {
+          console.warn('Phase 12 신뢰도 데이터 로드 실패:', confError);
+          // Phase 12 데이터 없음 (피드백이 없을 수 있음)
+        }
 
         document.getElementById('last-update').textContent = new Date().toLocaleString('ko-KR');
       } catch (error) {
@@ -522,6 +655,175 @@
       setTimeout(() => {
         msgDiv.style.display = 'none';
       }, 3000);
+    }
+
+    /**
+     * Phase 12: 신뢰도 개요 업데이트
+     */
+    function updateConfidenceOverview(report) {
+      if (!report || !report.comparison) {
+        return;
+      }
+
+      const before = (report.comparison.averageConfidenceBefore * 100).toFixed(1);
+      const after = (report.comparison.averageConfidenceAfter * 100).toFixed(1);
+      const improvements = report.comparison.improvementsCount || 0;
+      const degradations = report.comparison.degradationsCount || 0;
+
+      document.getElementById('conf-before').textContent = before + '%';
+      document.getElementById('conf-after').textContent = after + '%';
+      document.getElementById('improved-count').textContent = improvements;
+      document.getElementById('degraded-count').textContent = degradations;
+    }
+
+    /**
+     * Phase 12: 카테고리별 성능 업데이트
+     */
+    function updateCategoryBreakdown(categories) {
+      const tbody = document.getElementById('category-body');
+
+      if (!categories || categories.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">카테고리 데이터 없음</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = categories
+        .map(cat => {
+          const change = cat.avgAfter - cat.avgBefore;
+          const changePercent = ((change / cat.avgBefore) * 100).toFixed(1);
+          const status = change > 0 ? '✓ 개선' : change < 0 ? '⚠️ 악화' : '— 유지';
+          const statusColor = change > 0 ? '#48bb78' : change < 0 ? '#f56565' : '#ed8936';
+
+          return `
+            <tr>
+              <td><strong>${cat.categoryId}</strong></td>
+              <td>${cat.patternCount}</td>
+              <td>${(cat.avgBefore * 100).toFixed(1)}%</td>
+              <td>${(cat.avgAfter * 100).toFixed(1)}%</td>
+              <td style="color: ${statusColor}; font-weight: bold;">${changePercent > 0 ? '+' : ''}${changePercent}%</td>
+              <td><span style="color: ${statusColor};">${status}</span></td>
+            </tr>
+          `;
+        })
+        .join('');
+    }
+
+    /**
+     * Phase 12: 상위 변동 패턴 업데이트
+     */
+    function updateTopMovers(movers) {
+      if (!movers) {
+        return;
+      }
+
+      // 개선 패턴
+      const improvementsHtml = (movers.improvements || []).length === 0
+        ? '<li style="color: #999;">데이터 없음</li>'
+        : (movers.improvements || [])
+            .map(p => `
+              <li>
+                <strong>${p.patternId}</strong>
+                <span style="color: #999; margin-left: 10px;">
+                  ${(p.originalConfidence * 100).toFixed(0)}% → ${(p.adjustedConfidence * 100).toFixed(0)}%
+                  <span style="color: #48bb78; margin-left: 5px;">+${(p.confidenceChange * 100).toFixed(1)}%</span>
+                </span>
+              </li>
+            `)
+            .join('');
+
+      // 악화 패턴
+      const degradationsHtml = (movers.degradations || []).length === 0
+        ? '<li style="color: #999;">데이터 없음</li>'
+        : (movers.degradations || [])
+            .map(p => `
+              <li>
+                <strong>${p.patternId}</strong>
+                <span style="color: #999; margin-left: 10px;">
+                  ${(p.originalConfidence * 100).toFixed(0)}% → ${(p.adjustedConfidence * 100).toFixed(0)}%
+                  <span style="color: #f56565; margin-left: 5px;">${(p.confidenceChange * 100).toFixed(1)}%</span>
+                </span>
+              </li>
+            `)
+            .join('');
+
+      document.getElementById('top-improvements').innerHTML = improvementsHtml;
+      document.getElementById('top-degradations').innerHTML = degradationsHtml;
+    }
+
+    /**
+     * Phase 12: 신뢰도 추이 업데이트
+     */
+    function updateConfidenceTrends(trends) {
+      const tbody = document.getElementById('confidence-trends-body');
+
+      if (!trends || trends.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">추이 데이터 없음</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = trends
+        .map(trend => {
+          const before = (trend.avgConfidenceBefore * 100).toFixed(1);
+          const after = (trend.avgConfidenceAfter * 100).toFixed(1);
+          const change = ((trend.avgConfidenceAfter - trend.avgConfidenceBefore) * 100).toFixed(1);
+          const changeColor = change > 0 ? '#48bb78' : change < 0 ? '#f56565' : '#999';
+
+          return `
+            <tr>
+              <td><strong>${trend.date}</strong></td>
+              <td>${before}%</td>
+              <td>${after}%</td>
+              <td>
+                <span style="color: ${changeColor}; font-weight: bold;">
+                  ${change > 0 ? '+' : ''}${change}% (${trend.improvedPatternCount}개)
+                </span>
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+
+      // 신뢰도 분포 히스토그램 업데이트
+      updateConfidenceHistogram(trends);
+    }
+
+    /**
+     * Phase 12: 신뢰도 분포 히스토그램
+     */
+    function updateConfidenceHistogram(trends) {
+      if (!trends || trends.length === 0) {
+        return;
+      }
+
+      const max = Math.max(...trends.map(t => Math.max(t.avgConfidenceBefore, t.avgConfidenceAfter))) * 100;
+      const histogram = document.getElementById('confidence-histogram');
+
+      histogram.innerHTML = trends
+        .map(trend => {
+          const before = trend.avgConfidenceBefore * 100;
+          const after = trend.avgConfidenceAfter * 100;
+          const beforeHeight = (before / max) * 150;
+          const afterHeight = (after / max) * 150;
+
+          return `
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+              <div style="display: flex; gap: 2px; height: 160px; align-items: flex-end;">
+                <div style="width: 50%; background: #667eea; height: ${beforeHeight}px; border-radius: 2px; opacity: 0.7;" title="조정 전: ${before.toFixed(0)}%"></div>
+                <div style="width: 50%; background: #48bb78; height: ${afterHeight}px; border-radius: 2px;" title="조정 후: ${after.toFixed(0)}%"></div>
+              </div>
+              <div style="font-size: 11px; color: #999; white-space: nowrap;">${trend.date.slice(-5)}</div>
+            </div>
+          `;
+        })
+        .join('');
+
+      // 범례 추가
+      histogram.innerHTML += `
+        <div style="position: absolute; right: 20px; top: 20px; font-size: 12px;">
+          <div style="color: #667eea; margin-bottom: 5px;">■ 조정 전</div>
+          <div style="color: #48bb78;">■ 조정 후</div>
+        </div>
+      `;
     }
 
     /**
