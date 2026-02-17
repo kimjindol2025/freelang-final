@@ -11,6 +11,7 @@
  */
 
 import { structManager, StructDefinition } from '../phase-8/struct-system';
+import { indexManager } from '../phase-8/indexing-system';
 
 /**
  * 내부 실행 결과
@@ -359,6 +360,74 @@ export class SmartREPL {
             return structManager.getField(instance, fieldName);
           } catch (error) {
             return undefined;
+          }
+        },
+
+        // ==================== 인덱싱 함수 (Phase 8.2) ====================
+        create_index: (structName: string, fieldName: string, isPrimary: boolean = false) => {
+          try {
+            indexManager.createIndex(structName, fieldName, isPrimary);
+            return { success: true, message: `Index '${structName}.${fieldName}' created (${isPrimary ? 'primary' : 'secondary'})` };
+          } catch (error) {
+            return { success: false, error: String(error) };
+          }
+        },
+
+        add_to_index: (structName: string, fieldName: string, key: any, value: any) => {
+          try {
+            indexManager.addToIndex(structName, fieldName, key, value);
+            return { success: true };
+          } catch (error) {
+            return { success: false, error: String(error) };
+          }
+        },
+
+        search_by_index: (structName: string, fieldName: string, key: any) => {
+          try {
+            return indexManager.searchByIndex(structName, fieldName, key);
+          } catch (error) {
+            return { success: false, error: String(error) };
+          }
+        },
+
+        range_search: (structName: string, fieldName: string, minKey: any, maxKey: any) => {
+          try {
+            return indexManager.rangeSearch(structName, fieldName, minKey, maxKey);
+          } catch (error) {
+            return { success: false, error: String(error) };
+          }
+        },
+
+        get_all_sorted: (structName: string, fieldName: string) => {
+          try {
+            return indexManager.getAllSorted(structName, fieldName);
+          } catch (error) {
+            return { success: false, error: String(error) };
+          }
+        },
+
+        list_indexes: () => {
+          try {
+            return indexManager.listIndexes();
+          } catch (error) {
+            return { success: false, error: String(error) };
+          }
+        },
+
+        drop_index: (structName: string, fieldName: string) => {
+          try {
+            indexManager.dropIndex(structName, fieldName);
+            return { success: true, message: `Index '${structName}.${fieldName}' dropped` };
+          } catch (error) {
+            return { success: false, error: String(error) };
+          }
+        },
+
+        get_index_stats: (structName: string, fieldName: string) => {
+          try {
+            return indexManager.getStats(structName, fieldName);
+          } catch (error) {
+            return { success: false, error: String(error) };
           }
         },
 
