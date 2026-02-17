@@ -20,6 +20,7 @@ import { StringUtils, RegexUtils } from '../phase-10/string-utils';
 import { FileIO } from '../phase-10/file-io';
 import { ThreadManager, ThreadPool, Mutex, Channel, parallelMap, parallelFilter } from '../phase-10/threading';
 import { HashMap, HashSet, Queue, Stack, PriorityQueue } from '../phase-10/collections';
+import { MathUtils, MathConstants, Random, Statistics } from '../phase-11/math-foundation';
 
 /**
  * 내부 실행 결과
@@ -869,6 +870,31 @@ export class SmartREPL {
           if (!stack) throw new Error('Stack not found');
           return stack.peek();
         },
+
+        // ==================== Phase 11: Math & Random (MT19937) ====================
+        // Phase 11은 고품질 난수(MT19937), 통계, 과학 함수를 제공함
+        // 기존 함수 (random, sin, cos, etc.)는 이미 정의되어 있으므로,
+        // Phase 11 특화 기능은 직접 import해서 사용하면 됨
+
+        // Phase 11 특화: 고품질 난수 (MT19937 Mersenne Twister)
+        random_mt: () => Random.random(),
+        random_normal: (mu: number = 0, sigma: number = 1) => Random.normal(mu, sigma),
+        random_int_mt: (min: number, max: number) => Random.int(min, max),
+        random_choice: (arr: any[]) => Random.choice(arr),
+        random_shuffle: (arr: any[]) => Random.shuffle(arr),
+        random_seed: (seed: number) => Random.seed(seed),
+
+        // Phase 11 특화: 쌍곡함수
+        sinh: (x: number) => MathUtils.sinh(x),
+        cosh: (x: number) => MathUtils.cosh(x),
+        tanh: (x: number) => MathUtils.tanh(x),
+
+        // Phase 11 특화: 고급 수학
+        distance: (x1: number, y1: number, x2: number, y2: number) => MathUtils.distance(x1, y1, x2, y2),
+        lerp: (a: number, b: number, t: number) => MathUtils.lerp(a, b, t),
+
+        // Phase 11 특화: 통계 (median, variance, stdDev은 이미 정의됨)
+        percentile: (arr: number[], p: number) => Statistics.percentile(arr, p),
 
         // ==================== I/O 함수 ====================
         print: (...args: any[]) => {
