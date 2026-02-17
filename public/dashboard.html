@@ -1053,7 +1053,7 @@
     // ========== Heatmap: 카테고리별 신뢰도 분포 ==========
 
     /**
-     * 히트맵 데이터 변환
+     * 히트맵 데이터 변환 (Matrix Chart용)
      */
     function transformHeatmapData(categories, report) {
       if (!categories || !report) {
@@ -1071,6 +1071,10 @@
 
       const data = [];
       const categoryNames = categories.map(c => c.categoryId);
+      const categoryIndices = {};
+      categoryNames.forEach((name, idx) => {
+        categoryIndices[name] = idx;
+      });
 
       categories.forEach(cat => {
         const categoryPatterns = (report.patterns || []).filter(p =>
@@ -1082,20 +1086,23 @@
             p.adjustedConfidence >= bin.min && p.adjustedConfidence < bin.max
           ).length;
 
-          if (count > 0) {
-            data.push({
-              x: binIndex,
-              y: categoryNames.indexOf(cat.categoryId),
-              v: count
-            });
-          }
+          // Matrix chart format: { x, y, v }
+          data.push({
+            x: bin.label,
+            y: cat.categoryId,
+            v: count
+          });
         });
       });
+
+      // 최대값 계산 (색상 정규화용)
+      const maxCount = Math.max(...data.map(d => d.v), 1);
 
       return {
         data,
         labels: bins.map(b => b.label),
-        categoryNames
+        categoryNames,
+        maxCount
       };
     }
 
@@ -1130,27 +1137,27 @@
           heatmapInstance.destroy();
         }
 
-        // 정규화: 최댓값 계산
-        const maxCount = Math.max(...heatData.data.map(d => d.v), 1);
+        // 색상 맵핑 함수: 값에 따라 색상 결정
+        function getHeatmapColor(value, maxCount) {
+          if (value === 0) return 'rgba(200, 200, 200, 0.2)'; // 데이터 없음
+          const intensity = value / maxCount;
+          if (intensity < 0.33) return 'rgb(245, 101, 101)';   // 낮음 (빨강)
+          if (intensity < 0.66) return 'rgb(237, 137, 54)';    // 중간 (주황)
+          return 'rgb(72, 187, 120)';                           // 높음 (초록)
+        }
 
         heatmapInstance = new Chart(ctx, {
-          type: 'bubble',
+          type: 'matrix',
           data: {
             datasets: [{
               label: '패턴 분포',
               data: heatData.data.map(d => ({
                 x: d.x,
                 y: d.y,
-                r: Math.sqrt(d.v) * 5,
-                value: d.v
+                v: d.v
               })),
-              backgroundColor: heatData.data.map(d => {
-                const intensity = d.v / maxCount;
-                if (intensity <= 0.33) return 'rgba(245, 101, 101, 0.6)';
-                if (intensity <= 0.66) return 'rgba(237, 137, 54, 0.6)';
-                return 'rgba(72, 187, 120, 0.6)';
-              }),
-              borderColor: heatData.data.map(() => 'rgba(0, 0, 0, 0.1)'),
+              backgroundColor: heatData.data.map(d => getHeatmapColor(d.v, heatData.maxCount)),
+              borderColor: 'rgba(0, 0, 0, 0.1)',
               borderWidth: 1
             }]
           },
@@ -1161,31 +1168,35 @@
               legend: { display: false },
               tooltip: {
                 callbacks: {
-                  title: (ctx) => heatData.categoryNames[ctx[0].raw.y],
-                  label: (ctx) => `${heatData.labels[ctx.raw.x]}: ${ctx.raw.value}개 패턴`
+                  title: (ctx) => {
+                    return `${ctx[0].raw.y} × ${ctx[0].raw.x}`;
+                  },
+                  label: (ctx) => {
+                    const value = ctx.raw.v || 0;
+                    return value > 0
+                      ? `${value}개 패턴`
+                      : '데이터 없음';
+                  }
                 },
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                padding: 10,
-                titleFont: { size: 12 },
+                padding: 12,
+                titleFont: { size: 12, weight: 'bold' },
                 bodyFont: { size: 11 }
               }
             },
             scales: {
               x: {
-                type: 'linear',
-                position: 'bottom',
-                min: -0.5,
-                max: 4.5,
+                type: 'category',
+                labels: heatData.labels,
                 ticks: {
-                  callback: (v) => heatData.labels[v] || '',
-                  font: { size: 10 }
+                  font: { size: 11 }
                 },
                 title: {
                   display: true,
                   text: '신뢰도 범위',
-                  font: { size: 11 }
+                  font: { size: 12, weight: 'bold' }
                 },
-                grid: { display: false }
+                offset: true
               },
               y: {
                 type: 'category',
@@ -1193,9 +1204,9 @@
                 title: {
                   display: true,
                   text: '카테고리',
-                  font: { size: 11 }
+                  font: { size: 12, weight: 'bold' }
                 },
-                grid: { display: false }
+                offset: true
               }
             }
           }
