@@ -33,7 +33,7 @@ FreeLang v2.2.0 (TypeScript + Kotlin)
 ├── src/lsp/server.ts → npm build → dist/lsp/server.js
 └── webstorm-plugin/
     ├── src/main/kotlin/ (Kotlin sources)
-    └── build.gradle.kts → gradlew build → freelang-0.1.0.zip
+    └── build.gradle.kts → gradlew build → freelang-2.2.0.zip
 ```
 
 ## Installation & Testing
@@ -65,14 +65,14 @@ gradle wrapper
 # Build plugin
 ./gradlew build
 
-# Output: build/distributions/freelang-0.1.0.zip
+# Output: build/distributions/freelang-2.2.0.zip
 ```
 
 ### Step 3: Install Plugin in WebStorm
 
 1. Open WebStorm
 2. Settings → Plugins → ⚙️ → "Install Plugin from Disk"
-3. Select `build/distributions/freelang-0.1.0.zip`
+3. Select `build/distributions/freelang-2.2.0.zip`
 4. Restart WebStorm
 
 ### Step 4: Test the Plugin
@@ -173,13 +173,13 @@ Settings → Languages → FreeLang:
 
 ```bash
 ./gradlew buildPlugin
-# Output: build/distributions/freelang-0.1.0.zip
+# Output: build/distributions/freelang-2.2.0.zip
 ```
 
 ### JetBrains Marketplace
 
 1. Create account: https://plugins.jetbrains.com
-2. Upload: `freelang-0.1.0.zip`
+2. Upload: `freelang-2.2.0.zip`
 3. Wait for approval (~1-2 days)
 
 ### Private Installation
@@ -249,6 +249,6 @@ For issues, questions, or contributions:
 
 ---
 
-**Version**: 0.1.0
+**Version**: 2.2.0
 **License**: MIT
 **Author**: FreeLang Contributors

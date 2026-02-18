@@ -4,7 +4,7 @@ Complete guide for publishing FreeLang WebStorm plugin to JetBrains Marketplace.
 
 ## Pre-Publication Checklist
 
-- [ ] Version bumped: `0.1.0` in `build.gradle.kts` and `plugin.xml`
+- [ ] Version bumped: `2.2.0` in `build.gradle.kts` and `plugin.xml`
 - [ ] All tests pass: `./gradlew test`
 - [ ] Plugin builds successfully: `./gradlew build`
 - [ ] Integration tests pass: `./test-lsp-integration.sh`
@@ -29,27 +29,27 @@ cd /home/kimjin/Desktop/kim/v2-freelang-ai/webstorm-plugin
 ./gradlew buildPlugin
 ```
 
-**Output**: `build/distributions/freelang-0.1.0.zip`
+**Output**: `build/distributions/freelang-2.2.0.zip`
 
 ### 1.2 Verify Distribution
 
 ```bash
 # Check archive contents
-unzip -l build/distributions/freelang-0.1.0.zip | head -20
+unzip -l build/distributions/freelang-2.2.0.zip | head -20
 
 # Verify plugin JAR exists
-unzip -l build/distributions/freelang-0.1.0.zip | grep -E "\.jar$"
+unzip -l build/distributions/freelang-2.2.0.zip | grep -E "\.jar$"
 
 # Verify size is reasonable (<50MB)
-ls -lh build/distributions/freelang-0.1.0.zip
+ls -lh build/distributions/freelang-2.2.0.zip
 ```
 
 Expected structure:
 ```
-freelang-0.1.0.zip
+freelang-2.2.0.zip
 ├── freelang/
 │   ├── lib/
-│   │   ├── freelang-0.1.0.jar  (main plugin)
+│   │   ├── freelang-2.2.0.jar  (main plugin)
 │   │   ├── lsp4ij-*.jar        (dependency)
 │   │   └── ...
 │   ├── META-INF/
@@ -65,7 +65,7 @@ freelang-0.1.0.zip
 ```bash
 # 1. Backup current plugin (if any)
 # 2. In WebStorm: Settings → Plugins → ⚙️ → Install Plugin from Disk
-# 3. Select: build/distributions/freelang-0.1.0.zip
+# 3. Select: build/distributions/freelang-2.2.0.zip
 # 4. Restart WebStorm
 # 5. Verify: All features work (see TESTING.md)
 # 6. Uninstall if not satisfied
@@ -149,14 +149,14 @@ Report issues or request features:
 
 ---
 
-**Version**: 0.1.0
+**Version**: 2.2.0
 **Author**: FreeLang Contributors
 **License**: MIT
 ```
 
 **Change Notes** (for this release):
 ```
-## 0.1.0 - Initial Release
+## 2.2.0 - Initial Release
 
 ### Features
 - Language Server Protocol (LSP) integration
@@ -208,7 +208,7 @@ Include in plugin by updating `plugin.xml`:
 1. Login: https://plugins.jetbrains.com
 2. Click "My Plugins" (top right)
 3. Click "Upload Plugin" (green button)
-4. Select: `build/distributions/freelang-0.1.0.zip`
+4. Select: `build/distributions/freelang-2.2.0.zip`
 
 ### 4.2 Fill Plugin Details
 
@@ -280,7 +280,7 @@ If rejection occurs:
 ```bash
 # Update GitHub
 git add webstorm-plugin/
-git commit -m "Phase 8: WebStorm plugin v0.1.0 released
+git commit -m "Phase 8: WebStorm plugin v2.2.0 released
 
 - Syntax highlighting
 - LSP integration
@@ -290,7 +290,7 @@ git commit -m "Phase 8: WebStorm plugin v0.1.0 released
 
 Available on: https://plugins.jetbrains.com/plugin/..."
 
-git tag v0.1.0
+git tag v2.2.0
 git push origin main --tags
 ```
 
@@ -321,7 +321,7 @@ Upcoming features for 0.2.0:
 - Kotlin version mismatch
 
 **Fix**:
-1. Verify plugin.xml: `xmllint build/distributions/freelang-0.1.0.zip`
+1. Verify plugin.xml: `xmllint build/distributions/freelang-2.2.0.zip`
 2. Check IntelliJ version: `grep "2023.1" plugin.xml`
 3. Rebuild: `./gradlew clean buildPlugin`
 
@@ -345,7 +345,7 @@ Upcoming features for 0.2.0:
 
 | Version | Date | Status |
 |---------|------|--------|
-| 0.1.0 | 2026-02-18 | 🎉 Released |
+| 2.2.0 | 2026-02-18 | 🎉 Released |
 | 0.2.0 | TBD | 📅 Planned |
 | 1.0.0 | TBD | 🎯 Long term |
 
@@ -395,7 +395,7 @@ By publishing on JetBrains Marketplace:
 ### Messaging Example
 
 ```
-🎉 Excited to announce: FreeLang WebStorm Plugin v0.1.0 is now available!
+🎉 Excited to announce: FreeLang WebStorm Plugin v2.2.0 is now available!
 
 Professional IDE support for #FreeLang with:
 ✅ Syntax highlighting

@@ -16,13 +16,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
-    <b>0.1.0</b> - Initial release
+    <b>2.2.0</b> - Initial release: WebStorm IDE Integration
     - Language Server Protocol (LSP) integration
     - Syntax highlighting for FreeLang code
     - Code completion and snippets
     - Type information on hover
     - Definition navigation
-    - Inline diagnostics
+    - Real-time diagnostics
+    - Project settings configuration
     ]]></change-notes>
 
     <!-- Minimal version: IntelliJ Platform 2023.1 -->

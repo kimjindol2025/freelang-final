@@ -60,7 +60,7 @@ fi
 echo "   Compiling and packaging..."
 ./gradlew build -q
 
-if [ -f "build/distributions/freelang-0.1.0.zip" ]; then
+if [ -f "build/distributions/freelang-2.2.0.zip" ]; then
     echo "   ✅ Plugin built successfully"
 else
     echo "❌ Plugin build failed"
@@ -72,7 +72,7 @@ echo ""
 # 4. Verify Distribution
 echo "4️⃣  Verifying distribution..."
 
-DIST_FILE="build/distributions/freelang-0.1.0.zip"
+DIST_FILE="build/distributions/freelang-2.2.0.zip"
 DIST_SIZE=$(ls -lh "$DIST_FILE" | awk '{print $5}')
 
 echo "   Distribution: $DIST_FILE"
@@ -127,7 +127,7 @@ echo "6️⃣  Creating release information..."
 
 RELEASE_INFO="
 === FreeLang Plugin Release ===
-Version: 0.1.0
+Version: 2.2.0
 Build Date: $(date)
 Distribution: $DIST_FILE
 Size: $DIST_SIZE

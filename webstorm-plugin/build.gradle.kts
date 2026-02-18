@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.freelang"
-version = "0.1.0"
+version = "2.2.0"
 
 repositories {
     mavenCentral()
