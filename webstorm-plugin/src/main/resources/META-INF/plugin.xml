@@ -44,10 +44,17 @@
             language="FreeLang"
             implementationClass="com.freelang.intellij.FreeLangParserDefinition"/>
 
-        <!-- Syntax Highlighter (Day 4) -->
+        <!-- Syntax Highlighter -->
         <lang.syntaxHighlighterFactory
             language="FreeLang"
             implementationClass="com.freelang.intellij.FreeLangSyntaxHighlighterFactory"/>
+
+        <!-- Settings Configuration -->
+        <projectConfigurable
+            id="FreeLang"
+            parentId="language"
+            displayName="FreeLang"
+            implementationClass="com.freelang.intellij.FreeLangSettingsConfigurable"/>
     </extensions>
 
     <!-- LSP Server Integration -->

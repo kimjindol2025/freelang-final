@@ -14,6 +14,10 @@ repositories {
 dependencies {
     // LSP4IJ for Language Server Protocol support
     implementation("com.redhat.devtools.lsp4ij:lsp4ij:0.3.0")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:1.9.0")
 }
 
 intellij {
@@ -43,6 +47,11 @@ tasks {
     // Build plugin distribution
     buildPlugin {
         dependsOn("copyLSPServer")
+    }
+
+    // Test task
+    test {
+        useJUnit()
     }
 }
 

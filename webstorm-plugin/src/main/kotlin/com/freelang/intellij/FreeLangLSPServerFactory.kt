@@ -8,8 +8,6 @@ import java.io.File
 /**
  * FreeLang LSP Server Factory
  * Creates LSP server connections for Node.js-based FreeLang language server
- *
- * Full implementation in Phase 5-6
  */
 class FreeLangLSPServerFactory : ServerFactory {
     override fun createConnectionProvider(project: Project): ProcessStreamConnectionProvider {
@@ -25,7 +23,8 @@ private class FreeLangStreamConnectionProvider(private val project: Project) : P
         // Find Node.js executable
         val nodePath = findNodeExecutable()
             ?: throw RuntimeException(
-                "Node.js not found. Please install Node.js 18+ and add it to your PATH"
+                "Node.js not found. Please install Node.js 18+ from https://nodejs.org " +
+                "and add it to your system PATH, then restart the IDE."
             )
 
         // Find bundled LSP server
@@ -72,11 +71,3 @@ private class FreeLangStreamConnectionProvider(private val project: Project) : P
     }
 }
 
-/**
- * Syntax Highlighter Factory (placeholder)
- * Full implementation in Phase 4
- */
-class FreeLangSyntaxHighlighterFactory : com.intellij.openapi.fileTypes.SyntaxHighlighterFactory() {
-    override fun getSyntaxHighlighter(project: Project?, fileType: com.intellij.openapi.fileTypes.FileType?) =
-        throw NotImplementedError("Syntax highlighter implementation deferred to Phase 4")
-}
