@@ -18,8 +18,7 @@ import com.intellij.psi.tree.TokenSet
  */
 class FreeLangParserDefinition : ParserDefinition {
     override fun createLexer(): Lexer {
-        // To be implemented in Phase 4
-        throw NotImplementedError("Lexer implementation deferred to Phase 4")
+        return FreeLangLexer()
     }
 
     override fun createParser(project: com.intellij.openapi.project.Project): PsiParser {
