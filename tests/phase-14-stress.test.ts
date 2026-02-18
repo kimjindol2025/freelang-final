@@ -15,10 +15,12 @@ import * as http from 'http';
 describe('Phase 14: Stress & Advanced Testing', () => {
   let server: RealtimeDashboardServer;
   let dashboard: Dashboard;
-  const TEST_PORT = 18001;
+  let TEST_PORT: number;
 
   beforeAll(async () => {
     dashboard = new Dashboard();
+    // Use random port to avoid conflicts (19000-29000 range)
+    TEST_PORT = Math.floor(Math.random() * 10000) + 19000;
     server = new RealtimeDashboardServer(TEST_PORT, dashboard, []);
     await server.start();
   });
