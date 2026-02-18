@@ -47,6 +47,8 @@ export enum Op {
   ARR_GET   = 0x62,
   ARR_SET   = 0x63,
   ARR_LEN   = 0x64,
+  ARR_DUP   = 0x65,  // Duplicate top array on stack
+  ARR_CONCAT= 0x66,  // Concatenate two arrays
 
   // Array aggregate ops (AI shorthand)
   ARR_SUM   = 0x70,
@@ -57,6 +59,9 @@ export enum Op {
   ARR_FILTER= 0x75,
   ARR_SORT  = 0x76,
   ARR_REV   = 0x77,
+
+  // Stack manipulation
+  SWAP      = 0x78,  // Swap top two stack values
 
   // Iterator (lazy evaluation)
   ITER_INIT = 0x80,  // stack: [start, end] → [iterator]
@@ -82,18 +87,22 @@ export enum Op {
   LAMBDA_CAPTURE  = 0xA1,  // arg: varname → capture variable into lambda
   LAMBDA_SET_BODY = 0xA2,  // arg: param_count, sub: body instructions
 
-  // Debug (AI reads structured output)
-  DUMP      = 0xF0,
+  // Function & Comment metadata
+  FUNC_DEF  = 0xA3,  // Define function (metadata)
+  COMMENT   = 0xA4,  // Comment/metadata (non-executable)
 
   // Threading (Phase 12 - Worker Threads)
-  SPAWN_THREAD = 0xA0,   // spawn_thread(fn) → thread_handle
-  JOIN_THREAD = 0xA1,    // join_thread(handle, timeout) → result
-  MUTEX_CREATE = 0xA2,   // create_mutex() → mutex_handle
-  MUTEX_LOCK = 0xA3,     // mutex_lock(mutex)
-  MUTEX_UNLOCK = 0xA4,   // mutex_unlock(mutex)
-  CHANNEL_CREATE = 0xA5, // create_channel() → channel_handle
-  CHANNEL_SEND = 0xA6,   // channel_send(channel, message)
-  CHANNEL_RECV = 0xA7,   // channel_recv(channel, timeout) → message
+  SPAWN_THREAD = 0xB0,   // spawn_thread(fn) → thread_handle
+  JOIN_THREAD = 0xB1,    // join_thread(handle, timeout) → result
+  MUTEX_CREATE = 0xB2,   // create_mutex() → mutex_handle
+  MUTEX_LOCK = 0xB3,     // mutex_lock(mutex)
+  MUTEX_UNLOCK = 0xB4,   // mutex_unlock(mutex)
+  CHANNEL_CREATE = 0xB5, // create_channel() → channel_handle
+  CHANNEL_SEND = 0xB6,   // channel_send(channel, message)
+  CHANNEL_RECV = 0xB7,   // channel_recv(channel, timeout) → message
+
+  // Debug (AI reads structured output)
+  DUMP      = 0xF0,
 }
 
 // ── IR Instruction ──────────────────────────────────────────

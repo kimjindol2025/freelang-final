@@ -627,8 +627,6 @@ export class Parser {
     let returnType: string | undefined;
     if (this.match(TokenType.ARROW)) {
       // This could be return type or body
-      const savedPos = this.tokens.getPosition?.() || 0;
-
       // Try to parse as type first
       if (this.check(TokenType.IDENT) || this.check(TokenType.LBRACKET)) {
         const typeStart = this.current();
@@ -1202,65 +1200,6 @@ export class Parser {
    * Phase 4.5에서 TokenBuffer가 SHR >> 토큰을 2개 GT > 토큰으로 자동 분해하므로
    * nested generics (array<array<number>>) 완벽 지원 ✅
    */
-  private parseType(): string {
-    let type = '';
-
-    // 기본 타입명
-    if (this.check(TokenType.IDENT)) {
-      type = this.current().value;
-      this.advance();
-    } else if (this.check(TokenType.LBRACKET)) {
-      // [타입] 형식 (배열)
-      this.advance(); // [
-      type = '[' + this.parseType() + ']';
-      this.expect(TokenType.RBRACKET);
-    } else {
-      throw new ParseError(
-        this.current().line,
-        this.current().column,
-        'Expected type name'
-      );
-    }
-
-    // 제네릭 타입 처리 (< > 안의 타입)
-    if (this.check(TokenType.LT)) {
-      this.advance(); // <
-      type += '<';
-
-      // 첫 번째 타입 인자
-      type += this.parseType();
-
-      // 추가 타입 인자 (쉼표로 구분)
-      while (this.check(TokenType.COMMA)) {
-        this.advance(); // ,
-        type += ', ';
-        type += this.parseType();
-      }
-
-      // GT 또는 SHR (>>) 처리
-      // >> 토큰은 일반적으로 두 개의 >로 나타나야 하는데,
-      // 렉서에서 >> 를 SHR로 토큰화함
-      if (this.check(TokenType.GT)) {
-        this.advance();
-        type += '>';
-      } else if (this.check(TokenType.SHR)) {
-        // >> 토큰: 첫 번째는 현재 제네릭 닫기, 두 번째는 부모에게 반환
-        // 하지만 우리는 한 개만 소비해야 함. 지금은 SHR 전체를 소비하고
-        // 파서 상태를 조정해야 하는데, 간단한 해결책으로 >> 를 하나의 >로 취급
-        this.advance();
-        type += '>';
-        // 두 번째 >는 부모 파서에서 처리될 것
-      } else {
-        throw new ParseError(
-          this.current().line,
-          this.current().column,
-          'Expected ">" after generic types'
-        );
-      }
-    }
-
-    return type;
-  }
 
   /**
    * Phase 4 Step 2: Import 문 파싱
