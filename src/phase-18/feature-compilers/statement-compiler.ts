@@ -45,7 +45,7 @@ export class StatementCompiler extends IntegratedCompilerBase {
     });
 
     this.parser = new Parser();
-    this.irGenerator = new IRGenerator();
+    this.irGenerator = new IRGenerator()
   }
 
   /**

@@ -41,7 +41,7 @@ export class TypeInferenceCompiler extends IntegratedCompilerBase {
     } as any);
 
     this.typeEngine = new TypeInferenceEngine({} as any);
-    this.irGenerator = new IRGenerator({} as any);
+    this.irGenerator = new IRGenerator()
     this.parser = new Parser('default' as any);
   }
 

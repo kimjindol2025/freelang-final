@@ -58,7 +58,7 @@ export class GenericsCompiler extends IntegratedCompilerBase {
       include_runtime: true,
     } as any);
 
-    this.irGenerator = new IRGenerator({} as any);
+    this.irGenerator = new IRGenerator()
     this.parser = new Parser('default' as any);
   }
 
