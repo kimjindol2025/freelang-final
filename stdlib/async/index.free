@@ -80,7 +80,12 @@ export class Promise {
         try {
           if typeof onRejected == "function" {
             let result = onRejected(err)
-            resolve(result)
+            // If error handler returns a promise, chain it
+            if result instanceof Promise {
+              result.then(resolve, reject)
+            } else {
+              resolve(result)
+            }
           } else {
             reject(err)
           }
@@ -188,13 +193,10 @@ export class Promise {
  */
 export const sleep = (ms) => {
   return new Promise((resolve) => {
-    // TODO: Use setTimeout or libuv timer
-    // For now, simulate with busy-wait (not ideal)
-    let start = Date.now()
-    while Date.now() - start < ms {
-      // Busy wait
-    }
-    resolve()
+    // Use setTimeout for non-blocking delay
+    setTimeout(() => {
+      resolve()
+    }, ms)
   })
 }
 
@@ -301,15 +303,23 @@ export class Queue {
   }
 
   /**
-   * Add task to queue
+   * Enqueue task to the queue
+   * @param {Function} task - Async function to execute
    */
-  add(task) {
+  enqueue(task) {
     this.tasks.push(task)
-    this.process()
+    return this.process()
   }
 
   /**
-   * Process queue
+   * Alias for enqueue
+   */
+  add(task) {
+    return this.enqueue(task)
+  }
+
+  /**
+   * Process queue sequentially
    */
   async process() {
     if this.running || this.tasks.length == 0
@@ -329,10 +339,41 @@ export class Queue {
   }
 
   /**
-   * Get queue size
+   * Cancel all pending tasks
+   * @returns {number} Number of cancelled tasks
+   */
+  cancel() {
+    let cancelled = this.tasks.length
+    this.tasks = []
+    return cancelled
+  }
+
+  /**
+   * Get queue size (pending tasks)
    */
   size() {
     return this.tasks.length
+  }
+
+  /**
+   * Check if queue is currently processing
+   */
+  isRunning() {
+    return this.running
+  }
+
+  /**
+   * Check if queue is empty
+   */
+  isEmpty() {
+    return this.tasks.length == 0
+  }
+
+  /**
+   * Clear all tasks
+   */
+  clear() {
+    return this.cancel()
   }
 }
 
@@ -372,6 +413,34 @@ export class Semaphore {
   }
 }
 
+/**
+ * Uncaught rejection handler
+ * Global error handler for unhandled promise rejections
+ */
+let uncaughtRejectionHandlers = []
+
+export const onUncaughtRejection = (handler) => {
+  uncaughtRejectionHandlers.push(handler)
+}
+
+export const offUncaughtRejection = (handler) => {
+  uncaughtRejectionHandlers = uncaughtRejectionHandlers.filter((h) => h != handler)
+}
+
+/**
+ * Report uncaught rejection
+ * @internal
+ */
+export const reportUncaughtRejection = (reason) => {
+  uncaughtRejectionHandlers.forEach((handler) => {
+    try {
+      handler(reason)
+    } catch (e) {
+      console.error("[async] Error in uncaught rejection handler:", e)
+    }
+  })
+}
+
 export default {
   Promise,
   sleep,
@@ -381,4 +450,7 @@ export default {
   throttle,
   Queue,
   Semaphore,
+  onUncaughtRejection,
+  offUncaughtRejection,
+  reportUncaughtRejection,
 }
