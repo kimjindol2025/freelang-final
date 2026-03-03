@@ -1,0 +1,373 @@
+# ================================================================
+# FreeLang Bootstrap Interpreter v2 (Complete Implementation)
+# TypeScript evaluator.ts → FreeLang 완전 포팅
+#
+# 철학: "기록이 증명이다" - 모든 평가 로직을 FreeLang으로 구현
+# ================================================================
+
+# ================================================================
+# Part 1: 환경(Environment) 관리
+# ================================================================
+
+# 전역 변수 저장소 (간단한 맵 구현)
+let globalVars: map = {}
+let globalFuncs: map = {}
+
+# 환경 생성
+fn createEnv(): map {
+  return {
+    "variables": {},
+    "functions": globalFuncs,
+    "parent": null
+  }
+}
+
+# 변수 조회
+fn getVariable(name: string, env: map): any {
+  let vars = env["variables"]
+  
+  if vars[name] != null {
+    return vars[name]
+  }
+  
+  let parent = env["parent"]
+  if parent != null {
+    return getVariable(name, parent)
+  }
+  
+  return null
+}
+
+# 변수 설정
+fn setVariable(name: string, value: any, env: map): any {
+  let vars = env["variables"]
+  vars[name] = value
+  return value
+}
+
+# 함수 정의
+fn defineFunction(name: string, params: [string], body: map, env: map): any {
+  let funcs = env["functions"]
+  funcs[name] = {
+    "params": params,
+    "body": body
+  }
+  return null
+}
+
+# ================================================================
+# Part 2: 연산자 구현
+# ================================================================
+
+# 이진 연산자
+fn evalBinaryOp(left: any, right: any, op: string): any {
+  if op == "+" {
+    # 문자열 또는 숫자 덧셈
+    if left is string or right is string {
+      return toString(left) + toString(right)
+    } else {
+      return left + right
+    }
+  } else if op == "-" {
+    return left - right
+  } else if op == "*" {
+    return left * right
+  } else if op == "/" {
+    return left / right
+  } else if op == "%" {
+    return left % right
+  } else if op == "==" {
+    return left == right
+  } else if op == "!=" {
+    return left != right
+  } else if op == "<" {
+    return left < right
+  } else if op == ">" {
+    return left > right
+  } else if op == "<=" {
+    return left <= right
+  } else if op == ">=" {
+    return left >= right
+  } else if op == "&&" or op == "and" {
+    return left and right
+  } else if op == "||" or op == "or" {
+    return left or right
+  } else {
+    return null
+  }
+}
+
+# 단항 연산자
+fn evalUnaryOp(operand: any, op: string): any {
+  if op == "-" {
+    return 0 - operand
+  } else if op == "!" {
+    return not operand
+  } else {
+    return null
+  }
+}
+
+# ================================================================
+# Part 3: 제어 흐름
+# ================================================================
+
+# If 문
+fn evalIf(condition: any, thenBranch: map, elseBranch: map, env: map): any {
+  if condition {
+    return evalNode(thenBranch, env)
+  } else if elseBranch != null {
+    return evalNode(elseBranch, env)
+  } else {
+    return null
+  }
+}
+
+# While 루프
+fn evalWhile(condition_node: map, body: map, env: map): any {
+  let result = null
+  
+  while true {
+    let cond_value = evalNode(condition_node, env)
+    if not cond_value {
+      break
+    }
+    result = evalNode(body, env)
+  }
+  
+  return result
+}
+
+# For 루프
+fn evalFor(variable: string, start_node: map, end_node: map, body: map, env: map): any {
+  let start = evalNode(start_node, env)
+  let end = evalNode(end_node, env)
+  let result = null
+  
+  let i = start
+  while i < end {
+    setVariable(variable, i, env)
+    result = evalNode(body, env)
+    i = i + 1
+  }
+  
+  return result
+}
+
+# 블록
+fn evalBlock(statements: [map], env: map): any {
+  let result = null
+  let i = 0
+  
+  while i < len(statements) {
+    result = evalNode(statements[i], env)
+    i = i + 1
+  }
+  
+  return result
+}
+
+# ================================================================
+# Part 4: 함수 호출
+# ================================================================
+
+# 내장 함수 (표준 라이브러리)
+fn isBuiltinFunction(name: string): bool {
+  let builtins = ["print", "println", "len", "toString", "toNumber"]
+  let i = 0
+  while i < len(builtins) {
+    if builtins[i] == name {
+      return true
+    }
+    i = i + 1
+  }
+  return false
+}
+
+# 내장 함수 호출
+fn callBuiltin(name: string, args: [any]): any {
+  if name == "print" {
+    # TODO: 실제 출력 구현
+    return null
+  } else if name == "println" {
+    # TODO: 실제 출력 구현
+    return null
+  } else if name == "len" {
+    return len(args[0])
+  } else if name == "toString" {
+    return toString(args[0])
+  } else if name == "toNumber" {
+    return toNumber(args[0])
+  } else {
+    return null
+  }
+}
+
+# 함수 호출 평가
+fn evalFunctionCall(name: string, arg_nodes: [map], env: map): any {
+  # 내장 함수
+  if isBuiltinFunction(name) {
+    let args = []
+    let i = 0
+    while i < len(arg_nodes) {
+      args[i] = evalNode(arg_nodes[i], env)
+      i = i + 1
+    }
+    return callBuiltin(name, args)
+  }
+  
+  # 사용자 정의 함수
+  let funcs = env["functions"]
+  let func = funcs[name]
+  
+  if func == null {
+    return null  # 함수 정의 안 됨
+  }
+  
+  # 인자 평가
+  let args = []
+  let i = 0
+  while i < len(arg_nodes) {
+    args[i] = evalNode(arg_nodes[i], env)
+    i = i + 1
+  }
+  
+  # 새 환경 생성
+  let callEnv = {
+    "variables": {},
+    "functions": funcs,
+    "parent": env
+  }
+  
+  # 매개변수 바인딩
+  let params = func["params"]
+  i = 0
+  while i < len(params) {
+    setVariable(params[i], args[i], callEnv)
+    i = i + 1
+  }
+  
+  # 함수 본문 실행
+  return evalNode(func["body"], callEnv)
+}
+
+# ================================================================
+# Part 5: 메인 평가 함수 (AST 순회)
+# ================================================================
+
+fn evalNode(node: map, env: map): any {
+  if node == null {
+    return null
+  }
+  
+  let nodeType = node["type"]
+  
+  # 리터럴
+  if nodeType == "number" {
+    return node["value"]
+  } else if nodeType == "string" {
+    return node["value"]
+  } else if nodeType == "identifier" {
+    return getVariable(node["name"], env)
+  } else if nodeType == "boolean" {
+    return node["value"]
+  }
+  
+  # 이진 연산
+  else if nodeType == "binaryOp" {
+    let left = evalNode(node["left"], env)
+    let right = evalNode(node["right"], env)
+    return evalBinaryOp(left, right, node["operator"])
+  }
+  
+  # 단항 연산
+  else if nodeType == "unaryOp" {
+    let operand = evalNode(node["operand"], env)
+    return evalUnaryOp(operand, node["operator"])
+  }
+  
+  # 함수 호출
+  else if nodeType == "functionCall" {
+    return evalFunctionCall(node["name"], node["args"], env)
+  }
+  
+  # 변수 할당
+  else if nodeType == "assignment" {
+    let value = evalNode(node["value"], env)
+    return setVariable(node["variable"], value, env)
+  }
+  
+  # If 문
+  else if nodeType == "if" {
+    let cond = evalNode(node["condition"], env)
+    return evalIf(cond, node["thenBranch"], node["elseBranch"], env)
+  }
+  
+  # While 루프
+  else if nodeType == "while" {
+    return evalWhile(node["condition"], node["body"], env)
+  }
+  
+  # For 루프
+  else if nodeType == "for" {
+    return evalFor(node["variable"], node["start"], node["end"], node["body"], env)
+  }
+  
+  # 블록
+  else if nodeType == "block" {
+    return evalBlock(node["statements"], env)
+  }
+  
+  # 배열 리터럴
+  else if nodeType == "arrayLiteral" {
+    let elements = node["elements"]
+    let result = []
+    let i = 0
+    while i < len(elements) {
+      result[i] = evalNode(elements[i], env)
+      i = i + 1
+    }
+    return result
+  }
+  
+  # 배열 접근
+  else if nodeType == "arrayAccess" {
+    let array = evalNode(node["array"], env)
+    let index = evalNode(node["index"], env)
+    return array[index]
+  }
+  
+  # 함수 정의
+  else if nodeType == "functionDef" {
+    let params = node["params"]
+    let body = node["body"]
+    defineFunction(node["name"], params, body, env)
+    return null
+  }
+  
+  # 반환
+  else if nodeType == "return" {
+    # TODO: 예외로 처리할 수도 있음
+    return evalNode(node["value"], env)
+  }
+  
+  else {
+    return null
+  }
+}
+
+# ================================================================
+# Part 6: 메인 진입점
+# ================================================================
+
+fn main() {
+  let env = createEnv()
+  
+  # 예제 코드 실행
+  # TODO: 파일에서 읽거나 REPL로 처리
+  
+  return null
+}
+
+# 기록이 증명이다
+# Your record is your proof

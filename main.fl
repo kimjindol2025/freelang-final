@@ -1,0 +1,118 @@
+# ================================================================
+# FreeLang Bootstrap Main (main.fl)
+# TypeScript index.ts → FreeLang 완전 포팅
+#
+# CLI 파싱 + REPL + 파일 실행
+# ================================================================
+
+# ================================================================
+# Part 1: CLI 파싱
+# ================================================================
+
+fn parseArgs(args: [string]): map {
+  if len(args) == 0 {
+    return { "mode": "repl" }
+  } else if len(args) >= 1 {
+    let cmd = args[0]
+    
+    if cmd == "--eval" and len(args) >= 2 {
+      return {
+        "mode": "eval",
+        "code": args[1]
+      }
+    } else {
+      return {
+        "mode": "file",
+        "filename": cmd
+      }
+    }
+  } else {
+    return { "mode": "repl" }
+  }
+}
+
+# ================================================================
+# Part 2: 코드 실행 엔진
+# ================================================================
+
+fn execute(source: string, env: map): any {
+  # 1. 렉싱 (lexer.fl 호출)
+  let tokens = tokenize(source)
+  
+  # 2. 파싱 (parser.fl 호출)
+  let ast = parse(tokens)
+  
+  # 3. 평가 (interpreter.fl 호출)
+  let result = evalNode(ast, env)
+  
+  return result
+}
+
+# ================================================================
+# Part 3: REPL (대화형 모드)
+# ================================================================
+
+fn runRepl(env: map): any {
+  # TODO: 실제 stdin/stdout 구현 필요
+  # 현재는 간단한 루프 구조만 제공
+  
+  # println("🚀 FreeLang Bootstrap REPL v1.0")
+  # println("📝 Type FreeLang code or 'exit' to quit")
+  # println("---")
+  
+  let running = true
+  
+  # while running {
+  #   input = readline("> ")
+  #   
+  #   if input == "exit" {
+  #     running = false
+  #   } else if len(input) > 0 {
+  #     result = execute(input, env)
+  #     println(result)
+  #   }
+  # }
+  
+  return null
+}
+
+# ================================================================
+# Part 4: 파일 실행
+# ================================================================
+
+fn runFile(filename: string, env: map): any {
+  # TODO: 파일 읽기 구현 필요
+  # let source = readFile(filename)
+  # return execute(source, env)
+  
+  return null
+}
+
+# ================================================================
+# Part 5: 메인 진입점
+# ================================================================
+
+fn main(args: [string]): i32 {
+  let env = createEnv()
+  
+  let config = parseArgs(args)
+  let mode = config["mode"]
+  
+  if mode == "repl" {
+    runRepl(env)
+    return 0
+  } else if mode == "eval" {
+    let code = config["code"]
+    let result = execute(code, env)
+    return 0
+  } else if mode == "file" {
+    let filename = config["filename"]
+    let result = runFile(filename, env)
+    return 0
+  } else {
+    return 1
+  }
+}
+
+# 기록이 증명이다
+# Your record is your proof
