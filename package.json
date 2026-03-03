@@ -8,6 +8,8 @@
     "build": "tsc",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:stage1": "ts-node test-freelang-complete.ts",
+    "compile": "tsc src/compiler/compiler.ts src/compiler/isa-generator.ts src/vm/vm-executor.ts test-freelang-complete.ts --outDir dist --target es2020 --module commonjs",
     "lint": "eslint src --ext .ts",
     "start": "node dist/cli/index.js",
     "dev": "ts-node src/cli/index.ts",
