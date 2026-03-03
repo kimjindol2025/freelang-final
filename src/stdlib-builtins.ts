@@ -1063,5 +1063,223 @@ export function registerStdlibFunctions(registry: NativeFunctionRegistry): void 
     executor: (args) => (args[0] as any[]).lastIndexOf(args[1])
   });
 
+  // ────────────────────────────────────────────────────────────
+  // Phase F: 정규표현식 (Regex)
+  // ────────────────────────────────────────────────────────────
+
+  registry.register({
+    name: 'regex_match',
+    module: 'regex',
+    executor: (args) => {
+      const pattern = new RegExp(args[0] as string);
+      const text = String(args[1]);
+      return text.match(pattern) !== null;
+    }
+  });
+
+  registry.register({
+    name: 'regex_extract',
+    module: 'regex',
+    executor: (args) => {
+      const pattern = new RegExp(args[0] as string);
+      const text = String(args[1]);
+      const matches = text.match(pattern);
+      return matches ? matches[0] : null;
+    }
+  });
+
+  registry.register({
+    name: 'regex_extract_all',
+    module: 'regex',
+    executor: (args) => {
+      const pattern = new RegExp(args[0] as string, 'g');
+      const text = String(args[1]);
+      const matches = text.match(pattern);
+      return matches || [];
+    }
+  });
+
+  registry.register({
+    name: 'regex_replace',
+    module: 'regex',
+    executor: (args) => {
+      const pattern = new RegExp(args[0] as string, 'g');
+      const text = String(args[1]);
+      const replacement = String(args[2]);
+      return text.replace(pattern, replacement);
+    }
+  });
+
+  registry.register({
+    name: 'regex_split',
+    module: 'regex',
+    executor: (args) => {
+      const pattern = new RegExp(args[0] as string);
+      const text = String(args[1]);
+      return text.split(pattern);
+    }
+  });
+
+  registry.register({
+    name: 'regex_test',
+    module: 'regex',
+    executor: (args) => {
+      const pattern = new RegExp(args[0] as string);
+      return pattern.test(String(args[1]));
+    }
+  });
+
+  // ────────────────────────────────────────────────────────────
+  // Phase G: 날짜/시간 (Date/Time)
+  // ────────────────────────────────────────────────────────────
+
+  registry.register({
+    name: 'date_now',
+    module: 'datetime',
+    executor: () => Date.now()
+  });
+
+  registry.register({
+    name: 'date_parse',
+    module: 'datetime',
+    executor: (args) => {
+      const date = new Date(String(args[0]));
+      return date.getTime();
+    }
+  });
+
+  registry.register({
+    name: 'date_format',
+    module: 'datetime',
+    executor: (args) => {
+      const timestamp = args[0] as number;
+      const date = new Date(timestamp);
+
+      // 간단한 포맷: YYYY-MM-DD HH:MM:SS
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+  });
+
+  registry.register({
+    name: 'date_format_iso',
+    module: 'datetime',
+    executor: (args) => {
+      const timestamp = args[0] as number;
+      const date = new Date(timestamp);
+      return date.toISOString();
+    }
+  });
+
+  registry.register({
+    name: 'time_sleep',
+    module: 'datetime',
+    executor: async (args) => {
+      const ms = args[0] as number;
+      await new Promise(resolve => setTimeout(resolve, ms));
+      return ms;
+    }
+  });
+
+  registry.register({
+    name: 'time_benchmark',
+    module: 'datetime',
+    executor: async (args) => {
+      const startTime = Date.now();
+      // args[0]은 실행할 함수 (FreeLang에서 전달)
+      if (typeof args[0] === 'function') {
+        await (args[0] as Function)();
+      }
+      const endTime = Date.now();
+      return endTime - startTime;
+    }
+  });
+
+  registry.register({
+    name: 'date_year',
+    module: 'datetime',
+    executor: (args) => {
+      const timestamp = args[0] as number;
+      return new Date(timestamp).getFullYear();
+    }
+  });
+
+  registry.register({
+    name: 'date_month',
+    module: 'datetime',
+    executor: (args) => {
+      const timestamp = args[0] as number;
+      return new Date(timestamp).getMonth() + 1;
+    }
+  });
+
+  registry.register({
+    name: 'date_day',
+    module: 'datetime',
+    executor: (args) => {
+      const timestamp = args[0] as number;
+      return new Date(timestamp).getDate();
+    }
+  });
+
+  registry.register({
+    name: 'date_hour',
+    module: 'datetime',
+    executor: (args) => {
+      const timestamp = args[0] as number;
+      return new Date(timestamp).getHours();
+    }
+  });
+
+  registry.register({
+    name: 'date_minute',
+    module: 'datetime',
+    executor: (args) => {
+      const timestamp = args[0] as number;
+      return new Date(timestamp).getMinutes();
+    }
+  });
+
+  registry.register({
+    name: 'date_second',
+    module: 'datetime',
+    executor: (args) => {
+      const timestamp = args[0] as number;
+      return new Date(timestamp).getSeconds();
+    }
+  });
+
+  registry.register({
+    name: 'date_timestamp',
+    module: 'datetime',
+    executor: (args) => {
+      const year = args[0] as number;
+      const month = (args[1] as number) - 1;
+      const day = args[2] as number;
+      const hour = (args[3] as number) || 0;
+      const minute = (args[4] as number) || 0;
+      const second = (args[5] as number) || 0;
+
+      const date = new Date(year, month, day, hour, minute, second);
+      return date.getTime();
+    }
+  });
+
+  registry.register({
+    name: 'time_diff',
+    module: 'datetime',
+    executor: (args) => {
+      const t1 = args[0] as number;
+      const t2 = args[1] as number;
+      return Math.abs(t2 - t1);
+    }
+  });
+
   // Silent registration (no console output)
 }

@@ -16,6 +16,7 @@ import { VM } from '../vm';
 import { FunctionRegistry } from '../parser/function-registry';
 import { Inst, VMResult } from '../types';
 import { optimizeIR } from '../phase-14-llvm';
+import { registerStdlibFunctions } from '../stdlib-builtins';
 
 export interface RunResult {
   success: boolean;
@@ -37,6 +38,8 @@ export class ProgramRunner {
     this.registry = registry || new FunctionRegistry();
     this.gen = new IRGenerator();
     this.vm = new VM(this.registry);
+    // Register all stdlib functions from Phase A-G after VM creation
+    registerStdlibFunctions(this.vm.getNativeFunctionRegistry());
   }
 
   /**
