@@ -1,7 +1,7 @@
 {
-  "name": "@freelang/runtime",
-  "version": "2.2.0",
-  "description": "Production-ready async runtime with advanced type system and self-healing capabilities",
+  "name": "freelang",
+  "version": "1.0.0",
+  "description": "FreeLang v1.0.0 - Official Language Runtime (완성도 95%)",
   "main": "dist/cli/index.js",
   "types": "dist/cli/index.d.ts",
   "scripts": {
@@ -73,24 +73,25 @@
   },
   "kpm": {
     "category": "language-runtime",
-    "subcategory": "ai-compiler",
+    "subcategory": "official-language",
     "tags": [
-      "ai",
-      "code-generation",
-      "c-backend",
       "freelang",
-      "intent-parser",
-      "self-correcting"
+      "official-v1",
+      "production-ready",
+      "type-inference",
+      "pattern-matching",
+      "bytecode-vm"
     ],
     "entry": "dist/cli/index.js",
     "cli": true,
-    "version": "2.1.0",
+    "version": "1.0.0",
+    "status": "stable",
     "dependencies": [],
     "exports": {
       "cli": "./dist/cli/index.js",
       "engine": "./dist/engine/auto-header.js",
       "parser": "./dist/parser/parser.js",
-      "dashboard": "./dist/dashboard/dashboard.js"
+      "vm": "./dist/vm/vm-executor.js"
     }
   }
 }
