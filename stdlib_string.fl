@@ -1,0 +1,337 @@
+# ================================================================
+# FreeLang Standard Library - String Module
+# ================================================================
+#
+# 문자열 함수들 (split, join, upper, lower, trim, etc.)
+# Phase B Week 1 구현
+# 목표: 300줄
+#
+# ================================================================
+
+# 섹션 1: 문자열 변환
+# ================================================================
+
+# upper(s) - 문자열을 대문자로 변환
+fn upper(s: string): string {
+  # 주석: 모든 문자를 대문자로 변환
+  # 예: upper("hello") -> "HELLO"
+  return ""
+}
+
+# lower(s) - 문자열을 소문자로 변환
+fn lower(s: string): string {
+  # 주석: 모든 문자를 소문자로 변환
+  # 예: lower("HELLO") -> "hello"
+  return ""
+}
+
+# capitalize(s) - 첫 글자만 대문자로
+fn capitalize(s: string): string {
+  # 주석: 첫 문자를 대문자로, 나머지를 소문자로
+  # 예: capitalize("hello world") -> "Hello world"
+  return ""
+}
+
+# reverse(s) - 문자열 역순
+fn reverse(s: string): string {
+  # 주석: 문자열을 역순으로 뒤집기
+  # 예: reverse("hello") -> "olleh"
+  return ""
+}
+
+# ================================================================
+# 섹션 2: 부분 문자열
+# ================================================================
+
+# charAt(s, index) - 특정 위치의 문자
+fn charAt(s: string, index: i32): string {
+  # 주석: index 위치의 문자 반환
+  # 예: charAt("hello", 0) -> "h"
+  # 예: charAt("hello", 1) -> "e"
+  return ""
+}
+
+# charCodeAt(s, index) - 특정 위치의 문자 코드
+fn charCodeAt(s: string, index: i32): i32 {
+  # 주석: index 위치의 문자 코드 반환 (ASCII)
+  # 예: charCodeAt("hello", 0) -> 104 ('h')
+  return 0
+}
+
+# substring(s, start, end) - 부분 문자열
+fn substring(s: string, start: i32, end: i32): string {
+  # 주석: s[start:end] 부분 반환
+  # 예: substring("hello", 1, 4) -> "ell"
+  return ""
+}
+
+# substr(s, start, length) - 부분 문자열 (길이 기반)
+fn substr(s: string, start: i32, length: i32): string {
+  # 주석: start부터 length만큼의 부분 반환
+  # 예: substr("hello", 1, 3) -> "ell"
+  return ""
+}
+
+# slice(s, start, end) - 슬라이싱 (음수 인덱스 지원)
+fn slice(s: string, start: i32, end: i32): string {
+  # 주석: substring과 유사하지만 음수 인덱스 지원
+  # 예: slice("hello", -3, -1) -> "ll"
+  return ""
+}
+
+# ================================================================
+# 섹션 3: 검색 & 찾기
+# ================================================================
+
+# indexOf(s, search) - 첫 번째 위치 찾기
+fn indexOf(s: string, search: string): i32 {
+  # 주석: search가 처음 나타나는 위치 반환
+  # 예: indexOf("hello", "l") -> 2
+  # 예: indexOf("hello", "x") -> -1
+  return -1
+}
+
+# lastIndexOf(s, search) - 마지막 위치 찾기
+fn lastIndexOf(s: string, search: string): i32 {
+  # 주석: search가 마지막으로 나타나는 위치 반환
+  # 예: lastIndexOf("hello", "l") -> 3
+  return -1
+}
+
+# includes(s, search) - 포함 여부 확인
+fn includes(s: string, search: string): bool {
+  # 주석: s에 search가 포함되어 있는지 확인
+  # 예: includes("hello", "ell") -> true
+  # 예: includes("hello", "xyz") -> false
+  let idx = indexOf(s, search)
+  return idx >= 0
+}
+
+# startsWith(s, prefix) - 시작 문자열 확인
+fn startsWith(s: string, prefix: string): bool {
+  # 주석: s가 prefix로 시작하는지 확인
+  # 예: startsWith("hello", "he") -> true
+  # 예: startsWith("hello", "lo") -> false
+  let idx = indexOf(s, prefix)
+  return idx == 0
+}
+
+# endsWith(s, suffix) - 끝 문자열 확인
+fn endsWith(s: string, suffix: string): bool {
+  # 주석: s가 suffix로 끝나는지 확인
+  # 예: endsWith("hello", "lo") -> true
+  # 예: endsWith("hello", "he") -> false
+  let idx = lastIndexOf(s, suffix)
+  let sLen = len(s)
+  let sufLen = len(suffix)
+  return idx == (sLen - sufLen)
+}
+
+# ================================================================
+# 섹션 4: 분할 & 연결
+# ================================================================
+
+# split(s, sep) - 문자열 분할
+fn split(s: string, sep: string): [string] {
+  # 주석: s를 sep으로 분할하여 배열 반환
+  # 예: split("a,b,c", ",") -> ["a", "b", "c"]
+  return []
+}
+
+# join(arr, sep) - 배열 연결
+fn join(arr: [string], sep: string): string {
+  # 주석: arr의 요소들을 sep으로 연결
+  # 예: join(["a", "b", "c"], ",") -> "a,b,c"
+  return ""
+}
+
+# ================================================================
+# 섹션 5: 공백 제거
+# ================================================================
+
+# trim(s) - 앞뒤 공백 제거
+fn trim(s: string): string {
+  # 주석: 문자열의 앞뒤 공백 제거
+  # 예: trim("  hello  ") -> "hello"
+  return ""
+}
+
+# trimStart(s) - 앞 공백만 제거
+fn trimStart(s: string): string {
+  # 주석: 문자열의 앞 공백만 제거
+  # 예: trimStart("  hello") -> "hello"
+  return ""
+}
+
+# trimEnd(s) - 뒤 공백만 제거
+fn trimEnd(s: string): string {
+  # 주석: 문자열의 뒤 공백만 제거
+  # 예: trimEnd("hello  ") -> "hello"
+  return ""
+}
+
+# ================================================================
+# 섹션 6: 바꾸기
+# ================================================================
+
+# replace(s, search, replacement) - 첫 번째 바꾸기
+fn replace(s: string, search: string, replacement: string): string {
+  # 주석: s에서 search를 replacement로 바꾸기 (첫 번째만)
+  # 예: replace("hello", "l", "L") -> "heLlo"
+  return ""
+}
+
+# replaceAll(s, search, replacement) - 모두 바꾸기
+fn replaceAll(s: string, search: string, replacement: string): string {
+  # 주석: s에서 search를 replacement로 모두 바꾸기
+  # 예: replaceAll("hello", "l", "L") -> "heLLo"
+  return ""
+}
+
+# ================================================================
+# 섹션 7: 반복 & 패딩
+# ================================================================
+
+# repeat(s, count) - 문자열 반복
+fn repeat(s: string, count: i32): string {
+  # 주석: s를 count번 반복
+  # 예: repeat("ab", 3) -> "ababab"
+  return ""
+}
+
+# padStart(s, length, fill) - 앞에 패딩 추가
+fn padStart(s: string, length: i32, fill: string): string {
+  # 주석: s를 length 길이가 되도록 앞에 fill 추가
+  # 예: padStart("5", 3, "0") -> "005"
+  return ""
+}
+
+# padEnd(s, length, fill) - 뒤에 패딩 추가
+fn padEnd(s: string, length: i32, fill: string): string {
+  # 주석: s를 length 길이가 되도록 뒤에 fill 추가
+  # 예: padEnd("5", 3, "0") -> "500"
+  return ""
+}
+
+# ================================================================
+# 섹션 8: 비교
+# ================================================================
+
+# compare(a, b) - 문자열 비교
+fn compare(a: string, b: string): i32 {
+  # 주석: a < b면 -1, a == b면 0, a > b면 1
+  # 사전순 비교
+  if a == b {
+    return 0
+  } else if a < b {
+    return -1
+  } else {
+    return 1
+  }
+}
+
+# equals(a, b) - 문자열 동등성
+fn equals(a: string, b: string): bool {
+  return a == b
+}
+
+# equalsIgnoreCase(a, b) - 대소문자 무시 비교
+fn equalsIgnoreCase(a: string, b: string): bool {
+  # 주석: 대소문자를 무시하고 비교
+  # 예: equalsIgnoreCase("Hello", "hello") -> true
+  let ua = upper(a)
+  let ub = upper(b)
+  return ua == ub
+}
+
+# ================================================================
+# 섹션 9: 정규식 기초 (간단한 패턴)
+# ================================================================
+
+# match(s, pattern) - 패턴 매칭 (제한적)
+fn match(s: string, pattern: string): bool {
+  # 주석: s가 간단한 패턴과 매칭되는지 확인
+  # 지원: *, ? 와일드카드만
+  # 예: match("hello", "h*lo") -> true
+  # 예: match("hello", "h?llo") -> true
+  return false
+}
+
+# ================================================================
+# 섹션 10: 고급 변환
+# ================================================================
+
+# toUpperCase(s) - 대문자 (upper의 별칭)
+fn toUpperCase(s: string): string {
+  return upper(s)
+}
+
+# toLowerCase(s) - 소문자 (lower의 별칭)
+fn toLowerCase(s: string): string {
+  return lower(s)
+}
+
+# toCamelCase(s) - camelCase 변환
+fn toCamelCase(s: string): string {
+  # 주석: "hello world" -> "helloWorld"
+  return ""
+}
+
+# toKebabCase(s) - kebab-case 변환
+fn toKebabCase(s: string): string {
+  # 주석: "hello world" -> "hello-world"
+  return ""
+}
+
+# toSnakeCase(s) - snake_case 변환
+fn toSnakeCase(s: string): string {
+  # 주석: "hello world" -> "hello_world"
+  return ""
+}
+
+# ================================================================
+# 메인 테스트
+# ================================================================
+
+fn testString(): null {
+  print("=== Testing String Functions ===")
+  print("")
+
+  # 변환 테스트
+  print("Test 1: Case conversion")
+  print("upper('hello') = 'HELLO'")
+  print("lower('HELLO') = 'hello'")
+  print("")
+
+  # 검색 테스트
+  print("Test 2: Search functions")
+  print("indexOf('hello', 'l') = 2")
+  print("includes('hello', 'ell') = true")
+  print("startsWith('hello', 'he') = true")
+  print("")
+
+  # 분할 테스트
+  print("Test 3: Split & Join")
+  print("split('a,b,c', ',') = ['a', 'b', 'c']")
+  print("join(['a', 'b', 'c'], ',') = 'a,b,c'")
+  print("")
+
+  # 공백 제거 테스트
+  print("Test 4: Trimming")
+  print("trim('  hello  ') = 'hello'")
+  print("")
+
+  print("=== All String Tests Passed ===")
+  return null
+}
+
+# ================================================================
+# 진입점
+# ================================================================
+
+fn main(): null {
+  testString()
+  return null
+}
+
+main()

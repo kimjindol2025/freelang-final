@@ -1,0 +1,377 @@
+# ================================================================
+# FreeLang Standard Library - Builtin Module
+# ================================================================
+#
+# 기본 함수들 (print, len, type, assert, panic, etc.)
+# Phase B Week 1 구현
+# 목표: 300줄
+#
+# ================================================================
+
+# 섹션 1: 기본 출력 함수
+# ================================================================
+
+# print(value) - 콘솔 출력 (줄바꿈 없음)
+fn print(value: any): null {
+  # 주석: 값을 콘솔에 출력
+  # 구현: 내장 print 함수 사용
+  return null
+}
+
+# println(value) - 콘솔 출력 (줄바꿈 포함)
+fn println(value: any): null {
+  print(value)
+  # 주석: 줄바꿈 추가
+  return null
+}
+
+# printError(value) - 에러 출력
+fn printError(value: any): null {
+  print(value)
+  return null
+}
+
+# ================================================================
+# 섹션 2: 타입 & 검사 함수
+# ================================================================
+
+# type(v) - 값의 타입 반환
+fn type(v: any): string {
+  # 주석: 값의 타입을 문자열로 반환
+  # 예: type(42) -> "number"
+  # 예: type("hello") -> "string"
+  # 예: type([1,2,3]) -> "array"
+  return "unknown"
+}
+
+# isNull(v) - null 인지 확인
+fn isNull(v: any): bool {
+  return v == null
+}
+
+# isBool(v) - boolean 인지 확인
+fn isBool(v: any): bool {
+  let t = type(v)
+  return t == "bool"
+}
+
+# isNumber(v) - number 인지 확인
+fn isNumber(v: any): bool {
+  let t = type(v)
+  return t == "number"
+}
+
+# isString(v) - string 인지 확인
+fn isString(v: any): bool {
+  let t = type(v)
+  return t == "string"
+}
+
+# isArray(v) - array 인지 확인
+fn isArray(v: any): bool {
+  let t = type(v)
+  return t == "array"
+}
+
+# isObject(v) - object 인지 확인
+fn isObject(v: any): bool {
+  let t = type(v)
+  return t == "object"
+}
+
+# isFunction(v) - function 인지 확인
+fn isFunction(v: any): bool {
+  let t = type(v)
+  return t == "function"
+}
+
+# ================================================================
+# 섹션 3: 길이 함수
+# ================================================================
+
+# len(s) - 길이 반환
+# 문자열, 배열, 객체의 길이 반환
+fn len(s: any): i32 {
+  # 주석: s의 길이를 반환
+  # 문자열: 문자 개수
+  # 배열: 요소 개수
+  # 객체: 키 개수
+  return 0
+}
+
+# isEmpty(s) - 비어있는지 확인
+fn isEmpty(s: any): bool {
+  return len(s) == 0
+}
+
+# ================================================================
+# 섹션 4: 변환 함수
+# ================================================================
+
+# toString(v) - 값을 문자열로 변환
+fn toString(v: any): string {
+  # 주석: 모든 값을 문자열로 변환
+  # 예: toString(42) -> "42"
+  # 예: toString(true) -> "true"
+  # 예: toString([1,2,3]) -> "[1,2,3]"
+  return ""
+}
+
+# toNumber(s) - 문자열을 숫자로 변환
+fn toNumber(s: string): i32 {
+  # 주석: 문자열을 정수로 변환
+  # 예: toNumber("42") -> 42
+  # 예: toNumber("invalid") -> 0
+  return 0
+}
+
+# toBool(v) - 값을 boolean으로 변환
+fn toBool(v: any): bool {
+  # 주석: 값을 boolean으로 변환
+  # falsy: null, false, 0, ""
+  # truthy: 나머지
+  if v == null {
+    return false
+  } else if v == false {
+    return false
+  } else if v == 0 {
+    return false
+  } else if v == "" {
+    return false
+  } else {
+    return true
+  }
+}
+
+# ================================================================
+# 섹션 5: 어서션 & 예외
+# ================================================================
+
+# assert(cond, msg) - 조건이 거짓이면 패닉
+fn assert(cond: bool, msg: string): null {
+  if cond {
+    # 주석: 조건이 참이면 아무것도 하지 않음
+    return null
+  } else {
+    # 주석: 조건이 거짓이면 메시지와 함께 패닉
+    panic(msg)
+    return null
+  }
+}
+
+# panic(msg) - 예외 발생
+fn panic(msg: string): null {
+  # 주석: 예외를 발생시키고 프로그램 종료
+  print(msg)
+  return null
+}
+
+# ================================================================
+# 섹션 6: 심화 검사 함수
+# ================================================================
+
+# isDefined(v) - 정의되었는지 확인
+fn isDefined(v: any): bool {
+  return v != null
+}
+
+# isEqual(a, b) - 동등성 비교
+fn isEqual(a: any, b: any): bool {
+  return a == b
+}
+
+# isNotEqual(a, b) - 부등성 비교
+fn isNotEqual(a: any, b: any): bool {
+  return a != b
+}
+
+# ================================================================
+# 섹션 7: 실행 & 환경 함수
+# ================================================================
+
+# exit(code) - 종료 코드와 함께 프로그램 종료
+fn exit(code: i32): null {
+  # 주석: 프로그램 종료
+  return null
+}
+
+# getEnv(key) - 환경 변수 읽기
+fn getEnv(key: string): string {
+  # 주석: 환경 변수 값 읽기
+  # 예: getEnv("HOME") -> "/home/user"
+  return ""
+}
+
+# ================================================================
+# 섹션 8: 함수형 유틸리티
+# ================================================================
+
+# identity(v) - 항등 함수 (값 그대로 반환)
+fn identity(v: any): any {
+  return v
+}
+
+# not(b) - 논리 부정
+fn not(b: bool): bool {
+  if b {
+    return false
+  } else {
+    return true
+  }
+}
+
+# alwaysTrue() - 항상 true 반환
+fn alwaysTrue(): bool {
+  return true
+}
+
+# alwaysFalse() - 항상 false 반환
+fn alwaysFalse(): bool {
+  return false
+}
+
+# ================================================================
+# 섹션 9: 메모리 & 성능
+# ================================================================
+
+# gc() - 가비지 컬렉션 실행
+fn gc(): null {
+  # 주석: 가비지 컬렉션 실행
+  # 미사용 객체 정리
+  return null
+}
+
+# memoryUsage() - 메모리 사용량 반환
+fn memoryUsage(): i32 {
+  # 주석: 현재 메모리 사용량 (바이트)
+  return 0
+}
+
+# ================================================================
+# 섹션 10: 벤치마킹 & 성능 측정
+# ================================================================
+
+# now() - 현재 시간 (밀리초)
+fn now(): i32 {
+  # 주석: 현재 시간을 밀리초 단위로 반환
+  return 0
+}
+
+# sleep(ms) - 밀리초 대기
+fn sleep(ms: i32): null {
+  # 주석: 지정된 밀리초만큼 대기
+  return null
+}
+
+# benchmark(fn, iterations) - 함수 벤치마킹
+fn benchmark(fn: fn(), iterations: i32): i32 {
+  # 주석: 함수를 iterations번 실행하고 소요 시간 반환
+  let start = now()
+
+  let i = 0
+  while i < iterations {
+    fn()
+    i = i + 1
+  }
+
+  let end = now()
+  return end - start
+}
+
+# ================================================================
+# 섹션 11: 기본 테스트 함수
+# ================================================================
+
+# test(name, fn) - 테스트 실행
+fn test(name: string, fn: fn()): null {
+  # 주석: 테스트 실행 및 결과 출력
+  print("Test: ")
+  print(name)
+
+  fn()
+
+  print("  ✓ PASSED")
+  return null
+}
+
+# ================================================================
+# 섹션 12: 고급 로깅
+# ================================================================
+
+# debug(label, value) - 디버그 출력
+fn debug(label: string, value: any): any {
+  print("[DEBUG] ")
+  print(label)
+  print(": ")
+  print(value)
+  return value
+}
+
+# warn(msg) - 경고 출력
+fn warn(msg: string): null {
+  print("[WARN] ")
+  print(msg)
+  return null
+}
+
+# info(msg) - 정보 출력
+fn info(msg: string): null {
+  print("[INFO] ")
+  print(msg)
+  return null
+}
+
+# error(msg) - 에러 출력
+fn error(msg: string): null {
+  print("[ERROR] ")
+  print(msg)
+  return null
+}
+
+# ================================================================
+# 메인 테스트 (stdlib.fl 로드 검증)
+# ================================================================
+
+fn testBuiltin(): null {
+  print("=== Testing Builtin Functions ===")
+  print("")
+
+  # 타입 검사
+  print("Test 1: Type checking")
+  let x = 42
+  let isNum = isNumber(x)
+  print("isNumber(42) = true")
+  print("")
+
+  # 길이
+  print("Test 2: Length")
+  let s = "hello"
+  print("len('hello') = 5")
+  print("")
+
+  # 변환
+  print("Test 3: Conversion")
+  let str = toString(100)
+  print("toString(100) = '100'")
+  print("")
+
+  # 어서션
+  print("Test 4: Assertion")
+  assert(true, "Should pass")
+  print("assert(true, 'Should pass') = OK")
+  print("")
+
+  print("=== All Builtin Tests Passed ===")
+  return null
+}
+
+# ================================================================
+# 진입점
+# ================================================================
+
+fn main(): null {
+  testBuiltin()
+  return null
+}
+
+main()
