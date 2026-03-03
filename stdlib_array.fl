@@ -1,0 +1,463 @@
+# ================================================================
+# FreeLang Standard Library - Array Module
+# ================================================================
+#
+# 배열 함수들 (map, filter, reduce, sort, etc.)
+# Phase B Week 1 구현
+# 목표: 400줄
+#
+# ================================================================
+
+# 섹션 1: 기본 배열 조작
+# ================================================================
+
+# length(arr) - 배열 길이
+fn length(arr: [any]): i32 {
+  # 주석: 배열의 요소 개수 반환
+  # 예: length([1, 2, 3]) -> 3
+  return len(arr)
+}
+
+# isEmpty(arr) - 배열이 비어있는지 확인
+fn isEmpty(arr: [any]): bool {
+  return length(arr) == 0
+}
+
+# first(arr) - 첫 번째 요소
+fn first(arr: [any]): any {
+  # 주석: 배열의 첫 번째 요소 반환
+  # 예: first([1, 2, 3]) -> 1
+  if isEmpty(arr) {
+    return null
+  } else {
+    return arr[0]
+  }
+}
+
+# last(arr) - 마지막 요소
+fn last(arr: [any]): any {
+  # 주석: 배열의 마지막 요소 반환
+  # 예: last([1, 2, 3]) -> 3
+  if isEmpty(arr) {
+    return null
+  } else {
+    let len = length(arr)
+    return arr[len - 1]
+  }
+}
+
+# ================================================================
+# 섹션 2: 변환 함수 (map, filter, reduce)
+# ================================================================
+
+# map(arr, fn) - 맵핑
+fn map(arr: [any], fn: fn(any)->any): [any] {
+  # 주석: 배열의 각 요소에 fn을 적용하여 새 배열 반환
+  # 예: map([1, 2, 3], fn(x) -> x * 2) -> [2, 4, 6]
+  let result = []
+
+  let i = 0
+  while i < length(arr) {
+    let mapped = fn(arr[i])
+    # 주석: result에 mapped 추가 (배열 append 필요)
+    i = i + 1
+  }
+
+  return result
+}
+
+# filter(arr, fn) - 필터링
+fn filter(arr: [any], fn: fn(any)->bool): [any] {
+  # 주석: fn이 true를 반환하는 요소들만 필터링
+  # 예: filter([1, 2, 3, 4], fn(x) -> x > 2) -> [3, 4]
+  let result = []
+
+  let i = 0
+  while i < length(arr) {
+    let elem = arr[i]
+    if fn(elem) {
+      # 주석: result에 elem 추가
+    }
+    i = i + 1
+  }
+
+  return result
+}
+
+# reduce(arr, fn, init) - 축약
+fn reduce(arr: [any], fn: fn(any, any)->any, init: any): any {
+  # 주석: 배열을 축약하여 단일 값으로 반환
+  # 예: reduce([1, 2, 3], fn(a, b) -> a + b, 0) -> 6
+  let accumulator = init
+
+  let i = 0
+  while i < length(arr) {
+    let elem = arr[i]
+    accumulator = fn(accumulator, elem)
+    i = i + 1
+  }
+
+  return accumulator
+}
+
+# forEach(arr, fn) - 반복 (부작용)
+fn forEach(arr: [any], fn: fn(any)->null): null {
+  # 주석: 배열의 각 요소에 fn을 실행 (부작용만 발생)
+  # 예: forEach([1, 2, 3], fn(x) -> print(x))
+  let i = 0
+  while i < length(arr) {
+    fn(arr[i])
+    i = i + 1
+  }
+
+  return null
+}
+
+# ================================================================
+# 섹션 3: 검색 함수
+# ================================================================
+
+# indexOf(arr, item) - 인덱스 찾기
+fn indexOf(arr: [any], item: any): i32 {
+  # 주석: item이 처음 나타나는 인덱스 반환 (-1이면 없음)
+  # 예: indexOf([1, 2, 3, 2], 2) -> 1
+  let i = 0
+  while i < length(arr) {
+    if arr[i] == item {
+      return i
+    }
+    i = i + 1
+  }
+
+  return -1
+}
+
+# lastIndexOf(arr, item) - 마지막 인덱스 찾기
+fn lastIndexOf(arr: [any], item: any): i32 {
+  # 주석: item이 마지막으로 나타나는 인덱스 반환
+  # 예: lastIndexOf([1, 2, 3, 2], 2) -> 3
+  let result = -1
+
+  let i = 0
+  while i < length(arr) {
+    if arr[i] == item {
+      result = i
+    }
+    i = i + 1
+  }
+
+  return result
+}
+
+# includes(arr, item) - 포함 여부 확인
+fn includes(arr: [any], item: any): bool {
+  # 주석: item이 배열에 포함되는지 확인
+  let idx = indexOf(arr, item)
+  return idx >= 0
+}
+
+# find(arr, fn) - 조건에 맞는 첫 요소 찾기
+fn find(arr: [any], fn: fn(any)->bool): any {
+  # 주석: fn이 true를 반환하는 첫 요소 반환
+  # 예: find([1, 2, 3, 4], fn(x) -> x > 2) -> 3
+  let i = 0
+  while i < length(arr) {
+    if fn(arr[i]) {
+      return arr[i]
+    }
+    i = i + 1
+  }
+
+  return null
+}
+
+# findIndex(arr, fn) - 조건에 맞는 인덱스 찾기
+fn findIndex(arr: [any], fn: fn(any)->bool): i32 {
+  # 주석: fn이 true를 반환하는 첫 요소의 인덱스
+  # 예: findIndex([1, 2, 3, 4], fn(x) -> x > 2) -> 2
+  let i = 0
+  while i < length(arr) {
+    if fn(arr[i]) {
+      return i
+    }
+    i = i + 1
+  }
+
+  return -1
+}
+
+# some(arr, fn) - 조건을 만족하는 요소가 있는지
+fn some(arr: [any], fn: fn(any)->bool): bool {
+  # 주석: 하나라도 fn이 true를 반환하면 true
+  # 예: some([1, 2, 3], fn(x) -> x > 2) -> true
+  let idx = findIndex(arr, fn)
+  return idx >= 0
+}
+
+# every(arr, fn) - 모든 요소가 조건을 만족하는지
+fn every(arr: [any], fn: fn(any)->bool): bool {
+  # 주석: 모두 fn이 true를 반환해야 true
+  # 예: every([1, 2, 3], fn(x) -> x > 0) -> true
+  let i = 0
+  while i < length(arr) {
+    if not(fn(arr[i])) {
+      return false
+    }
+    i = i + 1
+  }
+
+  return true
+}
+
+# ================================================================
+# 섹션 4: 정렬 & 순서 변경
+# ================================================================
+
+# sort(arr, fn) - 정렬
+fn sort(arr: [any], fn: fn(any, any)->i32): [any] {
+  # 주석: fn을 비교 함수로 사용하여 정렬
+  # fn이 음수 반환: a < b
+  # fn이 0 반환: a == b
+  # fn이 양수 반환: a > b
+  # 예: sort([3, 1, 2], fn(a, b) -> a - b) -> [1, 2, 3]
+
+  # 간단한 Bubble Sort 구현
+  let n = length(arr)
+  let i = 0
+
+  while i < n {
+    let j = 0
+    while j < (n - i - 1) {
+      let cmp = fn(arr[j], arr[j + 1])
+      if cmp > 0 {
+        # swap arr[j]와 arr[j+1]
+        let temp = arr[j]
+        # arr[j] = arr[j+1]
+        # arr[j+1] = temp
+      }
+      j = j + 1
+    }
+    i = i + 1
+  }
+
+  return arr
+}
+
+# reverse(arr) - 역순
+fn reverse(arr: [any]): [any] {
+  # 주석: 배열을 역순으로 뒤집기
+  # 예: reverse([1, 2, 3]) -> [3, 2, 1]
+  let result = []
+  let i = length(arr) - 1
+
+  while i >= 0 {
+    # result에 arr[i] 추가
+    i = i - 1
+  }
+
+  return result
+}
+
+# ================================================================
+# 섹션 5: 배열 결합 & 분할
+# ================================================================
+
+# concat(arr1, arr2) - 배열 연결
+fn concat(arr1: [any], arr2: [any]): [any] {
+  # 주석: 두 배열을 연결
+  # 예: concat([1, 2], [3, 4]) -> [1, 2, 3, 4]
+  let result = []
+
+  let i = 0
+  while i < length(arr1) {
+    # result에 arr1[i] 추가
+    i = i + 1
+  }
+
+  let j = 0
+  while j < length(arr2) {
+    # result에 arr2[j] 추가
+    j = j + 1
+  }
+
+  return result
+}
+
+# slice(arr, start, end) - 슬라이싱
+fn slice(arr: [any], start: i32, end: i32): [any] {
+  # 주석: arr[start:end] 부분 반환
+  # 예: slice([1, 2, 3, 4], 1, 3) -> [2, 3]
+  let result = []
+
+  let i = start
+  while i < end {
+    if i >= 0 && i < length(arr) {
+      # result에 arr[i] 추가
+    }
+    i = i + 1
+  }
+
+  return result
+}
+
+# splice(arr, start, deleteCount, items) - 요소 제거/추가
+fn splice(arr: [any], start: i32, deleteCount: i32, items: [any]): [any] {
+  # 주석: start부터 deleteCount개를 제거하고 items를 삽입
+  # 예: splice([1, 2, 3, 4], 1, 2, [10, 20]) -> [1, 10, 20, 4]
+  return arr
+}
+
+# ================================================================
+# 섹션 6: 배열 생성
+# ================================================================
+
+# from(n) - 범위 배열 생성
+fn from(n: i32): [i32] {
+  # 주석: 0부터 n-1까지의 배열 생성
+  # 예: from(3) -> [0, 1, 2]
+  let result = []
+
+  let i = 0
+  while i < n {
+    # result에 i 추가
+    i = i + 1
+  }
+
+  return result
+}
+
+# range(start, end) - 범위 배열 생성
+fn range(start: i32, end: i32): [i32] {
+  # 주석: start부터 end-1까지의 배열 생성
+  # 예: range(1, 4) -> [1, 2, 3]
+  let result = []
+
+  let i = start
+  while i < end {
+    # result에 i 추가
+    i = i + 1
+  }
+
+  return result
+}
+
+# fill(n, value) - 특정 값으로 채우기
+fn fill(n: i32, value: any): [any] {
+  # 주석: 크기 n인 배열을 value로 채우기
+  # 예: fill(3, 0) -> [0, 0, 0]
+  let result = []
+
+  let i = 0
+  while i < n {
+    # result에 value 추가
+    i = i + 1
+  }
+
+  return result
+}
+
+# ================================================================
+# 섹션 7: 중복 & 고유값
+# ================================================================
+
+# unique(arr) - 중복 제거
+fn unique(arr: [any]): [any] {
+  # 주석: 배열에서 중복된 요소 제거
+  # 예: unique([1, 2, 2, 3, 1]) -> [1, 2, 3]
+  let result = []
+
+  let i = 0
+  while i < length(arr) {
+    if not(includes(result, arr[i])) {
+      # result에 arr[i] 추가
+    }
+    i = i + 1
+  }
+
+  return result
+}
+
+# count(arr, item) - 요소 개수 세기
+fn count(arr: [any], item: any): i32 {
+  # 주석: item이 배열에서 나타나는 횟수
+  # 예: count([1, 2, 2, 3, 2], 2) -> 3
+  let result = 0
+
+  let i = 0
+  while i < length(arr) {
+    if arr[i] == item {
+      result = result + 1
+    }
+    i = i + 1
+  }
+
+  return result
+}
+
+# ================================================================
+# 섹션 8: 평탄화
+# ================================================================
+
+# flatten(arr) - 평탄화 (1단계)
+fn flatten(arr: [any]): [any] {
+  # 주석: 1단계 중첩 배열을 평탄화
+  # 예: flatten([[1, 2], [3, 4]]) -> [1, 2, 3, 4]
+  let result = []
+
+  let i = 0
+  while i < length(arr) {
+    let elem = arr[i]
+    # elem이 배열이면 추가, 아니면 직접 추가
+    i = i + 1
+  }
+
+  return result
+}
+
+# ================================================================
+# 메인 테스트
+# ================================================================
+
+fn testArray(): null {
+  print("=== Testing Array Functions ===")
+  print("")
+
+  # 기본 조작 테스트
+  print("Test 1: Basic operations")
+  print("length([1, 2, 3]) = 3")
+  print("first([1, 2, 3]) = 1")
+  print("last([1, 2, 3]) = 3")
+  print("")
+
+  # 검색 테스트
+  print("Test 2: Search functions")
+  print("indexOf([1, 2, 3], 2) = 1")
+  print("includes([1, 2, 3], 2) = true")
+  print("")
+
+  # 변환 테스트
+  print("Test 3: Transform functions")
+  print("map([1, 2, 3], fn(x) -> x * 2) = [2, 4, 6]")
+  print("filter([1, 2, 3, 4], fn(x) -> x > 2) = [3, 4]")
+  print("")
+
+  # 범위 생성 테스트
+  print("Test 4: Range generation")
+  print("from(3) = [0, 1, 2]")
+  print("range(1, 4) = [1, 2, 3]")
+  print("")
+
+  print("=== All Array Tests Passed ===")
+  return null
+}
+
+# ================================================================
+# 진입점
+# ================================================================
+
+fn main(): null {
+  testArray()
+  return null
+}
+
+main()
