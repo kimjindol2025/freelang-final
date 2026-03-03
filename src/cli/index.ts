@@ -498,8 +498,22 @@ async function main(): Promise<void> {
         if (!arg.startsWith('-') && arg.endsWith('.free')) {
           try {
             const runner = new ProgramRunner();
-            runner.runFile(arg);
-            process.exit(0);
+            const result = runner.runFile(arg);
+
+            // 실행 결과 출력
+            if (result.success) {
+              // 성공: 출력값이 있으면 표시
+              if (result.output !== undefined && result.output !== null) {
+                console.log(result.output);
+              }
+              process.exit(0);
+            } else {
+              // 실패: 에러 메시지 표시
+              if (result.error) {
+                console.error(`❌ ${result.error}`);
+              }
+              process.exit(result.exitCode || 1);
+            }
           } catch (error) {
             console.error(`❌ Failed to run ${arg}:`, error instanceof Error ? error.message : String(error));
             process.exit(1);
