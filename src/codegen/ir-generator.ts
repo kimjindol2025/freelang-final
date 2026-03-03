@@ -560,11 +560,8 @@ export class IRGenerator {
         // Load index
         out.push({ op: Op.LOAD, arg: indexVar });
 
-        // Load array
-        out.push({ op: Op.LOAD, arg: arrayVar });
-
-        // Get array length (ARR_LEN)
-        out.push({ op: Op.ARR_LEN });
+        // Get array length using variable-based ARR_LEN
+        out.push({ op: Op.ARR_LEN, arg: arrayVar });
 
         // Compare: index < length
         out.push({ op: Op.LT });
