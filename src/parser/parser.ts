@@ -755,6 +755,15 @@ export class Parser {
       } as IdentifierExpression;
     }
 
+    // 괄호 표현식 (expression in parentheses)
+    // Format: (expr) or (5) or (val + 2)
+    if (this.check(TokenType.LPAREN)) {
+      this.advance(); // consume (
+      const expr = this.parseExpression();
+      this.expect(TokenType.RPAREN, 'Expected ")" after expression');
+      return expr;
+    }
+
     // Phase 3 Step 3: Lambda Expression
     // Format: fn(param1: type1, param2: type2) -> returnType -> body
     // or: fn(param1, param2) -> body
