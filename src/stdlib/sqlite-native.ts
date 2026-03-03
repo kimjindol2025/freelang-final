@@ -74,6 +74,16 @@ export function registerSQLiteNativeFunctions(registry: NativeFunctionRegistry):
         return false;
       }
     },
+    signature: {
+      name: 'db_exec',
+      returnType: 'boolean',
+      parameters: [
+        { name: 'db_id', type: 'number' },
+        { name: 'sql', type: 'string' },
+        { name: 'params', type: 'array' }
+      ],
+      category: 'event'
+    } as FFIFunctionSignature
   });
 
   // ────────────────────────────────────────────────────────────
@@ -103,6 +113,16 @@ export function registerSQLiteNativeFunctions(registry: NativeFunctionRegistry):
         return [];
       }
     },
+    signature: {
+      name: 'db_query',
+      returnType: 'array',
+      parameters: [
+        { name: 'db_id', type: 'number' },
+        { name: 'sql', type: 'string' },
+        { name: 'params', type: 'array' }
+      ],
+      category: 'event'
+    } as FFIFunctionSignature
   });
 
   // ────────────────────────────────────────────────────────────
@@ -132,6 +152,16 @@ export function registerSQLiteNativeFunctions(registry: NativeFunctionRegistry):
         return null;
       }
     },
+    signature: {
+      name: 'db_one',
+      returnType: 'object',
+      parameters: [
+        { name: 'db_id', type: 'number' },
+        { name: 'sql', type: 'string' },
+        { name: 'params', type: 'array' }
+      ],
+      category: 'event'
+    } as FFIFunctionSignature
   });
 
   // ────────────────────────────────────────────────────────────
