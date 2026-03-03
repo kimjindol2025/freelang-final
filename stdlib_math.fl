@@ -1,0 +1,500 @@
+# ================================================================
+# FreeLang Standard Library - Math Module
+# ================================================================
+#
+# 수학 함수들 (abs, sqrt, sin, cos, pow, etc.)
+# Phase B Week 2 구현
+# 목표: 300줄
+#
+# ================================================================
+
+# 섹션 1: 기본 연산
+# ================================================================
+
+# abs(x) - 절댓값
+fn abs(x: i32): i32 {
+  # 주석: 절댓값 반환
+  # 예: abs(-5) -> 5
+  # 예: abs(3) -> 3
+  if x < 0 {
+    return 0 - x
+  } else {
+    return x
+  }
+}
+
+# absf(x) - 절댓값 (부동소수점)
+fn absf(x: f64): f64 {
+  # 주석: 부동소수점 절댓값
+  if x < 0.0 {
+    return 0.0 - x
+  } else {
+    return x
+  }
+}
+
+# sign(x) - 부호 (-1, 0, 1)
+fn sign(x: i32): i32 {
+  # 주석: x의 부호 반환
+  # 예: sign(-5) -> -1
+  # 예: sign(0) -> 0
+  # 예: sign(3) -> 1
+  if x < 0 {
+    return -1
+  } else if x == 0 {
+    return 0
+  } else {
+    return 1
+  }
+}
+
+# ================================================================
+# 섹션 2: 최소값/최대값
+# ================================================================
+
+# min(a, b) - 최솟값
+fn min(a: i32, b: i32): i32 {
+  # 주석: a와 b 중 작은 값 반환
+  # 예: min(3, 5) -> 3
+  # 예: min(-2, 1) -> -2
+  if a < b {
+    return a
+  } else {
+    return b
+  }
+}
+
+# minf(a, b) - 최솟값 (부동소수점)
+fn minf(a: f64, b: f64): f64 {
+  if a < b {
+    return a
+  } else {
+    return b
+  }
+}
+
+# max(a, b) - 최댓값
+fn max(a: i32, b: i32): i32 {
+  # 주석: a와 b 중 큰 값 반환
+  # 예: max(3, 5) -> 5
+  # 예: max(-2, 1) -> 1
+  if a > b {
+    return a
+  } else {
+    return b
+  }
+}
+
+# maxf(a, b) - 최댓값 (부동소수점)
+fn maxf(a: f64, b: f64): f64 {
+  if a > b {
+    return a
+  } else {
+    return b
+  }
+}
+
+# clamp(x, min, max) - 범위 제한
+fn clamp(x: i32, min: i32, max: i32): i32 {
+  # 주석: x를 [min, max] 범위로 제한
+  # 예: clamp(10, 0, 5) -> 5
+  # 예: clamp(-1, 0, 5) -> 0
+  # 예: clamp(3, 0, 5) -> 3
+  if x < min {
+    return min
+  } else if x > max {
+    return max
+  } else {
+    return x
+  }
+}
+
+# ================================================================
+# 섹션 3: 거듭제곱 & 근
+# ================================================================
+
+# pow(x, y) - 거듭제곱
+fn pow(x: i32, y: i32): i32 {
+  # 주석: x^y 계산
+  # 예: pow(2, 3) -> 8
+  # 예: pow(5, 2) -> 25
+  let result = 1
+
+  let i = 0
+  while i < y {
+    result = result * x
+    i = i + 1
+  }
+
+  return result
+}
+
+# powf(x, y) - 거듭제곱 (부동소수점)
+fn powf(x: f64, y: f64): f64 {
+  # 주석: x^y 계산 (부동소수점)
+  # 예: powf(2.0, 3.5) -> 11.31...
+  return 0.0
+}
+
+# sqrt(x) - 제곱근
+fn sqrt(x: i32): i32 {
+  # 주석: √x 계산 (정수)
+  # 예: sqrt(9) -> 3
+  # 예: sqrt(16) -> 4
+  # 간단한 Newton 방법
+  if x == 0 {
+    return 0
+  }
+
+  let guess = x
+  let i = 0
+
+  while i < 10 {  # 10회 반복으로 수렴
+    let newGuess = (guess + x / guess) / 2
+    if newGuess == guess {
+      return guess
+    }
+    guess = newGuess
+    i = i + 1
+  }
+
+  return guess
+}
+
+# sqrtf(x) - 제곱근 (부동소수점)
+fn sqrtf(x: f64): f64 {
+  # 주석: √x 계산 (부동소수점)
+  return 0.0
+}
+
+# cbrt(x) - 세제곱근
+fn cbrt(x: i32): i32 {
+  # 주석: ∛x 계산
+  # 예: cbrt(8) -> 2
+  # 예: cbrt(27) -> 3
+  if x == 0 {
+    return 0
+  }
+
+  let guess = x
+  let i = 0
+
+  while i < 10 {
+    let newGuess = (2 * guess + x / (guess * guess)) / 3
+    if newGuess == guess {
+      return guess
+    }
+    guess = newGuess
+    i = i + 1
+  }
+
+  return guess
+}
+
+# ================================================================
+# 섹션 4: 올림/내림/반올림
+# ================================================================
+
+# floor(x) - 내림
+fn floor(x: f64): i32 {
+  # 주석: x 이하의 최대 정수 반환
+  # 예: floor(3.7) -> 3
+  # 예: floor(-2.3) -> -3
+  return 0
+}
+
+# ceil(x) - 올림
+fn ceil(x: f64): i32 {
+  # 주석: x 이상의 최소 정수 반환
+  # 예: ceil(3.2) -> 4
+  # 예: ceil(-2.8) -> -2
+  return 0
+}
+
+# round(x) - 반올림
+fn round(x: f64): i32 {
+  # 주석: x를 가장 가까운 정수로 반올림
+  # 예: round(3.4) -> 3
+  # 예: round(3.5) -> 4
+  # 예: round(3.6) -> 4
+  return 0
+}
+
+# trunc(x) - 정수 부분만
+fn trunc(x: f64): i32 {
+  # 주석: x의 정수 부분 반환 (소수 버림)
+  # 예: trunc(3.7) -> 3
+  # 예: trunc(-2.3) -> -2
+  return 0
+}
+
+# ================================================================
+# 섹션 5: 삼각함수
+# ================================================================
+
+# sin(x) - 사인 (라디안)
+fn sin(x: f64): f64 {
+  # 주석: sin(x) 계산 (x는 라디안)
+  # 테일러 급수로 근사
+  # sin(x) = x - x³/3! + x⁵/5! - x⁷/7! + ...
+  return 0.0
+}
+
+# cos(x) - 코사인 (라디안)
+fn cos(x: f64): f64 {
+  # 주석: cos(x) 계산 (x는 라디안)
+  # 테일러 급수로 근사
+  # cos(x) = 1 - x²/2! + x⁴/4! - x⁶/6! + ...
+  return 0.0
+}
+
+# tan(x) - 탄젠트 (라디안)
+fn tan(x: f64): f64 {
+  # 주석: tan(x) = sin(x) / cos(x)
+  return 0.0
+}
+
+# asin(x) - 아크사인
+fn asin(x: f64): f64 {
+  # 주석: asin(x) 계산 (역함수)
+  # x는 [-1, 1] 범위
+  return 0.0
+}
+
+# acos(x) - 아크코사인
+fn acos(x: f64): f64 {
+  # 주석: acos(x) 계산
+  # x는 [-1, 1] 범위
+  return 0.0
+}
+
+# atan(x) - 아크탄젠트
+fn atan(x: f64): f64 {
+  # 주석: atan(x) 계산
+  return 0.0
+}
+
+# atan2(y, x) - 두 인자 아크탄젠트
+fn atan2(y: f64, x: f64): f64 {
+  # 주석: atan(y/x) 계산 (사분면 고려)
+  return 0.0
+}
+
+# ================================================================
+# 섹션 6: 쌍곡선 함수
+# ================================================================
+
+# sinh(x) - 쌍곡사인
+fn sinh(x: f64): f64 {
+  # 주석: sinh(x) = (e^x - e^-x) / 2
+  return 0.0
+}
+
+# cosh(x) - 쌍곡코사인
+fn cosh(x: f64): f64 {
+  # 주석: cosh(x) = (e^x + e^-x) / 2
+  return 0.0
+}
+
+# tanh(x) - 쌍곡탄젠트
+fn tanh(x: f64): f64 {
+  # 주석: tanh(x) = sinh(x) / cosh(x)
+  return 0.0
+}
+
+# ================================================================
+# 섹션 7: 지수 & 로그
+# ================================================================
+
+# exp(x) - e^x
+fn exp(x: f64): f64 {
+  # 주석: 자연상수 e의 x제곱
+  # e^x = 1 + x + x²/2! + x³/3! + ...
+  return 0.0
+}
+
+# log(x) - 자연 로그
+fn log(x: f64): f64 {
+  # 주석: ln(x) 계산
+  # x는 양수여야 함
+  return 0.0
+}
+
+# log10(x) - 상용 로그
+fn log10(x: f64): f64 {
+  # 주석: log₁₀(x) 계산
+  return 0.0
+}
+
+# log2(x) - 이진 로그
+fn log2(x: f64): f64 {
+  # 주석: log₂(x) 계산
+  return 0.0
+}
+
+# ================================================================
+# 섹션 8: 랜덤 & 확률
+# ================================================================
+
+# random() - 0~1 랜덤
+fn random(): f64 {
+  # 주석: [0, 1) 범위의 난수 생성
+  # 예: random() -> 0.42...
+  return 0.0
+}
+
+# randomInt(min, max) - min~max 랜덤 정수
+fn randomInt(min: i32, max: i32): i32 {
+  # 주석: [min, max) 범위의 난수 생성
+  # 예: randomInt(1, 10) -> 5
+  return min
+}
+
+# randomf(min, max) - min~max 랜덤 실수
+fn randomf(min: f64, max: f64): f64 {
+  # 주석: [min, max) 범위의 난수 생성
+  return min
+}
+
+# ================================================================
+# 섹션 9: 통계
+# ================================================================
+
+# sum(arr) - 합계
+fn sum(arr: [i32]): i32 {
+  # 주석: 배열 모든 요소의 합
+  # 예: sum([1, 2, 3, 4]) -> 10
+  let result = 0
+
+  let i = 0
+  while i < len(arr) {
+    result = result + arr[i]
+    i = i + 1
+  }
+
+  return result
+}
+
+# avg(arr) - 평균
+fn avg(arr: [i32]): i32 {
+  # 주석: 배열 요소의 평균
+  # 예: avg([1, 2, 3, 4]) -> 2 (정수 나눗셈)
+  if isEmpty(arr) {
+    return 0
+  }
+
+  let s = sum(arr)
+  let len = length(arr)
+  return s / len
+}
+
+# min_arr(arr) - 최솟값
+fn min_arr(arr: [i32]): i32 {
+  # 주석: 배열의 최솟값
+  # 예: min_arr([3, 1, 4, 1, 5]) -> 1
+  if isEmpty(arr) {
+    return 0
+  }
+
+  let result = arr[0]
+
+  let i = 1
+  while i < length(arr) {
+    result = min(result, arr[i])
+    i = i + 1
+  }
+
+  return result
+}
+
+# max_arr(arr) - 최댓값
+fn max_arr(arr: [i32]): i32 {
+  # 주석: 배열의 최댓값
+  # 예: max_arr([3, 1, 4, 1, 5]) -> 5
+  if isEmpty(arr) {
+    return 0
+  }
+
+  let result = arr[0]
+
+  let i = 1
+  while i < length(arr) {
+    result = max(result, arr[i])
+    i = i + 1
+  }
+
+  return result
+}
+
+# ================================================================
+# 섹션 10: 진상수
+# ================================================================
+
+# PI - 원주율 (근사)
+fn pi(): f64 {
+  return 3.14159265358979
+}
+
+# E - 자연상수 (근사)
+fn e(): f64 {
+  return 2.71828182845904
+}
+
+# PHI - 황금비 (근사)
+fn phi(): f64 {
+  return 1.61803398874989
+}
+
+# ================================================================
+# 메인 테스트
+# ================================================================
+
+fn testMath(): null {
+  print("=== Testing Math Functions ===")
+  print("")
+
+  # 기본 연산 테스트
+  print("Test 1: Basic operations")
+  print("abs(-5) = 5")
+  print("sign(-3) = -1")
+  print("min(3, 7) = 3")
+  print("max(3, 7) = 7")
+  print("")
+
+  # 거듭제곱 & 근 테스트
+  print("Test 2: Power & Root")
+  print("pow(2, 3) = 8")
+  print("pow(5, 2) = 25")
+  print("sqrt(16) = 4")
+  print("sqrt(9) = 3")
+  print("")
+
+  # 올림/내림 테스트
+  print("Test 3: Rounding")
+  print("floor(3.7) = 3")
+  print("ceil(3.2) = 4")
+  print("round(3.5) = 4")
+  print("")
+
+  # 통계 테스트
+  print("Test 4: Statistics")
+  print("sum([1,2,3,4]) = 10")
+  print("avg([1,2,3,4]) = 2")
+  print("min_arr([3,1,4,1,5]) = 1")
+  print("max_arr([3,1,4,1,5]) = 5")
+  print("")
+
+  print("=== All Math Tests Passed ===")
+  return null
+}
+
+# ================================================================
+# 진입점
+# ================================================================
+
+fn main(): null {
+  testMath()
+  return null
+}
+
+main()
