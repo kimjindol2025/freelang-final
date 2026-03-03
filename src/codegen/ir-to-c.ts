@@ -8,6 +8,16 @@
 import { Inst, Op } from '../types';
 
 export class IRToCGenerator {
+  private varIndexMap: Map<string, number> = new Map();
+  private nextVarIndex = 0;
+
+  private getVarIndex(varName: string): number {
+    if (!this.varIndexMap.has(varName)) {
+      this.varIndexMap.set(varName, this.nextVarIndex++);
+    }
+    return this.varIndexMap.get(varName)!;
+  }
+
   static generate(instructions: Inst[]): string {
     const gen = new IRToCGenerator();
     return gen.generateProgram(instructions);
@@ -30,7 +40,8 @@ export class IRToCGenerator {
       code += this.generateInstruction(inst, i);
     }
 
-    code += '\n  return 0;\n';
+    code += '\n  printf("%g\\n", stack[sp > 0 ? sp - 1 : 0]);\n';
+    code += '  return 0;\n';
     code += '}\n';
 
     return code;
@@ -79,13 +90,18 @@ export class IRToCGenerator {
         code += `  stack[sp - 2] = (stack[sp - 2] ${this.getOpSymbol(op)} stack[sp - 1]) ? 1.0 : 0.0;\n  sp--;\n`;
         break;
       case Op.STORE:
-        code += `  vars[${arg}] = stack[--sp];\n`;
+        // STORE: pop from stack and store in variable
+        const varIdx = this.getVarIndex(arg as string);
+        code += `  vars[${varIdx}] = stack[--sp];\n`;
         break;
       case Op.LOAD:
-        code += `  stack[sp++] = vars[${arg}];\n`;
+        // LOAD: push variable onto stack
+        const loadIdx = this.getVarIndex(arg as string);
+        code += `  stack[sp++] = vars[${loadIdx}];\n`;
         break;
       case Op.HALT:
-        code += `  return 0;\n`;
+        // Don't emit return here, it will be added at the end
+        code += `  /* halt */\n`;
         break;
     }
 

@@ -715,16 +715,46 @@ export function registerStdlibFunctions(registry: NativeFunctionRegistry): void 
     executor: (args) => Math.abs(args[0])
   });
 
+  // min/max with variadic parameters
+  // Special signature to prevent incorrect parameter count detection
   registry.register({
     name: 'min',
     module: 'math',
-    executor: (args) => Math.min(...(Array.isArray(args[0]) ? args[0] : args))
+    signature: {
+      name: 'freelang_min',
+      parameters: [
+        { name: 'a', type: 'number' },
+        { name: 'b', type: 'number' },
+        { name: 'c', type: 'number' }
+      ],
+      returnType: 'number',
+      category: 'stream' as const  // Dummy category, just to match the interface
+    },
+    executor: (args) => {
+      // Accept variadic args - filter out undefined/null values
+      const values = args.filter(v => v !== undefined && v !== null);
+      return values.length > 0 ? Math.min(...values) : Infinity;
+    }
   });
 
   registry.register({
     name: 'max',
     module: 'math',
-    executor: (args) => Math.max(...(Array.isArray(args[0]) ? args[0] : args))
+    signature: {
+      name: 'freelang_max',
+      parameters: [
+        { name: 'a', type: 'number' },
+        { name: 'b', type: 'number' },
+        { name: 'c', type: 'number' }
+      ],
+      returnType: 'number',
+      category: 'stream' as const  // Dummy category, just to match the interface
+    },
+    executor: (args) => {
+      // Accept variadic args - filter out undefined/null values
+      const values = args.filter(v => v !== undefined && v !== null);
+      return values.length > 0 ? Math.max(...values) : -Infinity;
+    }
   });
 
   // 배열: map, filter, reduce, find

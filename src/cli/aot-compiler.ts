@@ -35,10 +35,10 @@ export class AOTCompiler {
       const tokenBuffer = new TokenBuffer(lexer);
 
       const parser = new Parser(tokenBuffer);
-      const ast = parser.parse() as any;
+      const ast = parser.parseModule() as any;  // Parse full module, not just function
 
       const irGen = new IRGenerator();
-      const ir = irGen.generateIR(ast);
+      const ir = irGen.generateModuleIR(ast);  // Use generateModuleIR for module-level IR
 
       const cCode = IRToCGenerator.generate(ir);
 

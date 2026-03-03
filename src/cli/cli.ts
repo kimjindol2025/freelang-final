@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import { ProgramRunner } from './runner';
-// import { compileAOT } from './aot-compiler';
+import { compileAOT } from './aot-compiler';
 
 interface CLIOptions {
   verbose?: boolean;
@@ -111,11 +111,25 @@ Examples:
             return 1;
           }
 
-          // AOT compilation disabled
-          // if (options.aot) {
-          //   console.error('Error: AOT compilation not yet implemented');
-          //   return 1;
-          // }
+          // Phase 5: AOT compilation
+          if (options.aot) {
+            if (!options.output) {
+              console.error('Error: --aot requires -o <output_path>');
+              return 1;
+            }
+            const aotResult = compileAOT(file, options.output);
+            if (!aotResult.success) {
+              console.error(`AOT Compilation Error: ${aotResult.error}`);
+              return 1;
+            }
+            if (options.verbose) {
+              console.log(`[aot] Compiled to ${aotResult.binaryPath}`);
+              console.log(`[time] ${aotResult.duration}ms`);
+            } else {
+              console.log(aotResult.binaryPath);
+            }
+            return 0;
+          }
 
           const result = this.runner.runFile(file);
 
