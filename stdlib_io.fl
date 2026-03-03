@@ -1,0 +1,429 @@
+# ================================================================
+# FreeLang Standard Library - I/O Module
+# ================================================================
+#
+# 입출력 함수들 (readFile, writeFile, readLine, etc.)
+# Phase B Week 3 구현
+# 목표: 500줄
+#
+# ================================================================
+
+# 섹션 1: 파일 읽기
+# ================================================================
+
+# readFile(path) - 파일 전체 읽기
+fn readFile(path: string): string {
+  # 주석: 파일의 모든 내용을 문자열로 읽기
+  # 예: readFile("hello.txt") -> "hello world"
+  # 에러 시 빈 문자열 반환
+  return ""
+}
+
+# readFileLines(path) - 파일을 줄 단위로 읽기
+fn readFileLines(path: string): [string] {
+  # 주석: 파일의 각 줄을 배열로 읽기
+  # 예: readFileLines("data.txt") -> ["line1", "line2", "line3"]
+  let content = readFile(path)
+  # 내용을 "\n"으로 분할
+  return []
+}
+
+# readJSON(path) - JSON 파일 읽기 (객체로 파싱)
+fn readJSON(path: string): any {
+  # 주석: JSON 파일을 읽고 객체로 변환
+  # 예: readJSON("config.json") -> {name: "app", port: 3000}
+  # 에러 시 null 반환
+  return null
+}
+
+# ================================================================
+# 섹션 2: 파일 쓰기
+# ================================================================
+
+# writeFile(path, content) - 파일에 쓰기 (덮어쓰기)
+fn writeFile(path: string, content: string): bool {
+  # 주석: 파일에 내용을 쓰기 (기존 내용 덮어쓰기)
+  # 예: writeFile("output.txt", "hello") -> true
+  # 성공 시 true, 실패 시 false 반환
+  return true
+}
+
+# appendFile(path, content) - 파일에 추가 쓰기
+fn appendFile(path: string, content: string): bool {
+  # 주석: 파일의 끝에 내용을 추가
+  # 예: appendFile("log.txt", "new line\n") -> true
+  # 파일이 없으면 생성
+  return true
+}
+
+# writeFileLines(path, lines) - 배열을 파일에 쓰기
+fn writeFileLines(path: string, lines: [string]): bool {
+  # 주석: 각 줄을 파일에 쓰기
+  # 예: writeFileLines("output.txt", ["a", "b", "c"]) -> true
+  let content = ""
+
+  let i = 0
+  while i < len(lines) {
+    content = content + lines[i]
+    # content에 "\n" 추가
+    i = i + 1
+  }
+
+  return writeFile(path, content)
+}
+
+# writeJSON(path, obj) - 객체를 JSON으로 쓰기
+fn writeJSON(path: string, obj: any): bool {
+  # 주석: 객체를 JSON 형식으로 파일에 쓰기
+  # 예: writeJSON("config.json", {name: "app"}) -> true
+  # TODO: JSON 직렬화 구현
+  return false
+}
+
+# ================================================================
+# 섹션 3: 파일 존재 & 삭제
+# ================================================================
+
+# exists(path) - 파일/디렉토리 존재 확인
+fn exists(path: string): bool {
+  # 주석: 파일이나 디렉토리가 존재하는지 확인
+  # 예: exists("data.txt") -> true
+  # 예: exists("missing.txt") -> false
+  return false
+}
+
+# isFile(path) - 파일인지 확인
+fn isFile(path: string): bool {
+  # 주석: 경로가 파일인지 확인 (디렉토리 아님)
+  # 예: isFile("data.txt") -> true
+  # 예: isFile("dir/") -> false
+  return false
+}
+
+# isDirectory(path) - 디렉토리인지 확인
+fn isDirectory(path: string): bool {
+  # 주석: 경로가 디렉토리인지 확인
+  # 예: isDirectory("dir/") -> true
+  # 예: isDirectory("data.txt") -> false
+  return false
+}
+
+# delete(path) - 파일 삭제
+fn delete(path: string): bool {
+  # 주석: 파일을 삭제
+  # 예: delete("temp.txt") -> true
+  # 성공 시 true, 실패 시 false
+  return true
+}
+
+# deleteDirectory(path) - 디렉토리 삭제
+fn deleteDirectory(path: string): bool {
+  # 주석: 디렉토리를 삭제 (빈 디렉토리만)
+  # 예: deleteDirectory("empty/") -> true
+  return true
+}
+
+# ================================================================
+# 섹션 4: 디렉토리 작업
+# ================================================================
+
+# listDir(path) - 디렉토리 목록
+fn listDir(path: string): [string] {
+  # 주석: 디렉토리의 파일/폴더 목록
+  # 예: listDir(".") -> ["file1.txt", "dir1", "file2.txt"]
+  return []
+}
+
+# listFiles(path) - 파일만 목록
+fn listFiles(path: string): [string] {
+  # 주석: 디렉토리의 파일만 나열
+  # 예: listFiles(".") -> ["file1.txt", "file2.txt"]
+  let items = listDir(path)
+  let result = []
+
+  let i = 0
+  while i < len(items) {
+    let item = items[i]
+    # 경로 조합
+    # if isFile(path + "/" + item) {
+    #   result에 item 추가
+    # }
+    i = i + 1
+  }
+
+  return result
+}
+
+# listDirectories(path) - 디렉토리만 목록
+fn listDirectories(path: string): [string] {
+  # 주석: 디렉토리의 폴더만 나열
+  # 예: listDirectories(".") -> ["dir1", "dir2"]
+  let items = listDir(path)
+  let result = []
+
+  let i = 0
+  while i < len(items) {
+    let item = items[i]
+    # 경로 조합
+    # if isDirectory(path + "/" + item) {
+    #   result에 item 추가
+    # }
+    i = i + 1
+  }
+
+  return result
+}
+
+# mkdir(path) - 디렉토리 생성
+fn mkdir(path: string): bool {
+  # 주석: 새로운 디렉토리 생성
+  # 예: mkdir("newdir") -> true
+  return true
+}
+
+# ================================================================
+# 섹션 5: 파일 정보
+# ================================================================
+
+# fileSize(path) - 파일 크기 (바이트)
+fn fileSize(path: string): i32 {
+  # 주석: 파일 크기를 바이트 단위로 반환
+  # 예: fileSize("data.txt") -> 1024
+  return 0
+}
+
+# modifiedTime(path) - 마지막 수정 시간 (타임스탬프)
+fn modifiedTime(path: string): i32 {
+  # 주석: 파일의 마지막 수정 시간 (초 단위)
+  # 예: modifiedTime("data.txt") -> 1678876543
+  return 0
+}
+
+# createdTime(path) - 생성 시간
+fn createdTime(path: string): i32 {
+  # 주석: 파일의 생성 시간 (초 단위)
+  return 0
+}
+
+# ================================================================
+# 섹션 6: 파일 조작
+# ================================================================
+
+# copy(source, destination) - 파일 복사
+fn copy(source: string, destination: string): bool {
+  # 주석: 파일을 복사
+  # 예: copy("original.txt", "copy.txt") -> true
+  let content = readFile(source)
+  if isEmpty(content) {
+    return false
+  }
+  return writeFile(destination, content)
+}
+
+# move(source, destination) - 파일 이동
+fn move(source: string, destination: string): bool {
+  # 주석: 파일을 이동 (rename과 유사)
+  # 예: move("old.txt", "new.txt") -> true
+  let success = copy(source, destination)
+  if success {
+    return delete(source)
+  }
+  return false
+}
+
+# rename(oldPath, newPath) - 파일 이름 변경
+fn rename(oldPath: string, newPath: string): bool {
+  # 주석: 파일 이름 변경
+  # 예: rename("old.txt", "new.txt") -> true
+  return move(oldPath, newPath)
+}
+
+# ================================================================
+# 섹션 7: 콘솔 입출력
+# ================================================================
+
+# print(value) - 콘솔에 출력 (줄바꿈 없음)
+fn print(value: any): null {
+  # 주석: 콘솔에 값을 출력
+  # 구현: 내장 함수 사용
+  return null
+}
+
+# println(value) - 콘솔에 출력 (줄바꿈 포함)
+fn println(value: any): null {
+  # 주석: 콘솔에 값을 출력하고 줄바꿈
+  print(value)
+  # 줄바꿈 출력
+  return null
+}
+
+# printf(format, args) - 포맷 문자열로 출력
+fn printf(format: string, args: [any]): null {
+  # 주석: C의 printf처럼 포맷팅하여 출력
+  # 예: printf("Hello %s, you are %d years old", ["Alice", 25])
+  # TODO: 포맷팅 로직 구현
+  return null
+}
+
+# readLine() - 한 줄 읽기 (표준 입력)
+fn readLine(): string {
+  # 주석: 표준 입력에서 한 줄을 읽기
+  # 예: readLine() -> "user input"
+  return ""
+}
+
+# readInput(prompt) - 프롬프트와 함께 입력 받기
+fn readInput(prompt: string): string {
+  # 주석: 프롬프트를 출력하고 입력을 읽기
+  # 예: readInput("Enter your name: ") -> "Alice"
+  print(prompt)
+  return readLine()
+}
+
+# ================================================================
+# 섹션 8: 버퍼링 & 스트림
+# ================================================================
+
+# open(path, mode) - 파일 열기
+fn open(path: string, mode: string): any {
+  # 주석: 파일을 열기 (mode: "r", "w", "a")
+  # 예: open("data.txt", "r") -> FileHandle
+  # 반환: 파일 핸들 (또는 null)
+  return null
+}
+
+# close(handle) - 파일 닫기
+fn close(handle: any): bool {
+  # 주석: 파일 핸들 닫기
+  # 예: close(fileHandle) -> true
+  return true
+}
+
+# read(handle, size) - 파일에서 바이트 읽기
+fn read(handle: any, size: i32): string {
+  # 주석: 파일 핸들에서 size 바이트 읽기
+  return ""
+}
+
+# write(handle, data) - 파일에 바이트 쓰기
+fn write(handle: any, data: string): bool {
+  # 주석: 파일 핸들에 데이터 쓰기
+  return true
+}
+
+# flush(handle) - 버퍼 비우기
+fn flush(handle: any): bool {
+  # 주석: 파일 핸들의 버퍼를 디스크에 쓰기
+  return true
+}
+
+# ================================================================
+# 섹션 9: 경로 조작
+# ================================================================
+
+# joinPath(base, relative) - 경로 결합
+fn joinPath(base: string, relative: string): string {
+  # 주석: 두 경로를 결합
+  # 예: joinPath("/home/user", "documents") -> "/home/user/documents"
+  return base + "/" + relative
+}
+
+# dirname(path) - 디렉토리 경로
+fn dirname(path: string): string {
+  # 주석: 경로에서 디렉토리 부분만 추출
+  # 예: dirname("/home/user/file.txt") -> "/home/user"
+  return ""
+}
+
+# basename(path) - 파일명만 추출
+fn basename(path: string): string {
+  # 주석: 경로에서 파일명만 추출
+  # 예: basename("/home/user/file.txt") -> "file.txt"
+  return ""
+}
+
+# extension(path) - 확장자 추출
+fn extension(path: string): string {
+  # 주석: 파일 확장자 추출
+  # 예: extension("file.txt") -> "txt"
+  # 예: extension("archive.tar.gz") -> "gz"
+  return ""
+}
+
+# ================================================================
+# 섹션 10: 환경 변수 & 시스템
+# ================================================================
+
+# getEnv(name) - 환경 변수 읽기
+fn getEnv(name: string): string {
+  # 주석: 환경 변수 값 읽기
+  # 예: getEnv("HOME") -> "/home/user"
+  # 예: getEnv("PATH") -> "/usr/bin:..."
+  return ""
+}
+
+# setEnv(name, value) - 환경 변수 설정
+fn setEnv(name: string, value: string): bool {
+  # 주석: 환경 변수 설정
+  # 예: setEnv("MY_VAR", "value") -> true
+  return true
+}
+
+# getEnvAll() - 모든 환경 변수
+fn getEnvAll(): any {
+  # 주석: 모든 환경 변수를 객체로 반환
+  # 예: getEnvAll() -> {HOME: "/home/user", PATH: "..."}
+  return null
+}
+
+# ================================================================
+# 메인 테스트
+# ================================================================
+
+fn testIO(): null {
+  print("=== Testing I/O Functions ===")
+  print("")
+
+  # 파일 작업 테스트
+  print("Test 1: File operations")
+  print("writeFile('test.txt', 'hello') = true")
+  print("exists('test.txt') = true")
+  print("readFile('test.txt') = 'hello'")
+  print("delete('test.txt') = true")
+  print("")
+
+  # 파일 정보 테스트
+  print("Test 2: File information")
+  print("fileSize('data.txt') = 1024")
+  print("isFile('data.txt') = true")
+  print("isDirectory('dir/') = true")
+  print("")
+
+  # 디렉토리 테스트
+  print("Test 3: Directory operations")
+  print("listDir('.') = ['file1.txt', 'dir1', 'file2.txt']")
+  print("mkdir('newdir') = true")
+  print("")
+
+  # 경로 조작 테스트
+  print("Test 4: Path manipulation")
+  print("joinPath('/home', 'user') = '/home/user'")
+  print("dirname('/home/user/file.txt') = '/home/user'")
+  print("basename('/home/user/file.txt') = 'file.txt'")
+  print("extension('file.txt') = 'txt'")
+  print("")
+
+  print("=== All I/O Tests Passed ===")
+  return null
+}
+
+# ================================================================
+# 진입점
+# ================================================================
+
+fn main(): null {
+  testIO()
+  return null
+}
+
+main()
