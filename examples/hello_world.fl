@@ -1,3 +1,82 @@
-println("=== FreeLang Hello World ===");
-println("Hello, FreeLang!");
-println("Version: 2.5.0");
+// FreeLang v2.5.0 - Hello World Example
+// Run with: freelang hello_world.fl
+
+// 1. Basic Output
+console.log("Hello, FreeLang v2.5.0! 🚀")
+console.log("")
+
+// 2. Variables and Types
+let message = "Welcome"
+let version = 2.5
+let isReady = true
+
+console.log(`${message} to FreeLang ${version}`)
+console.log(`Ready: ${isReady}`)
+console.log("")
+
+// 3. Functions
+let greet = (name) => {
+  return `Hello, ${name}!`
+}
+
+console.log(greet("World"))
+console.log(greet("Developer"))
+console.log("")
+
+// 4. Arrays
+let numbers = [1, 2, 3, 4, 5]
+let doubled = numbers.map(n => n * 2)
+console.log("Original:", numbers)
+console.log("Doubled:", doubled)
+let sum = numbers.reduce((a, b) => a + b, 0)
+console.log("Sum:", sum)
+console.log("")
+
+// 5. Objects
+let person = {
+  name: "Alice",
+  age: 30,
+  languages: ["JavaScript", "FreeLang", "Python"]
+}
+
+console.log("Person:", person)
+console.log(`${person.name} knows ${person.languages.length} languages`)
+console.log("")
+
+// 6. Control Flow
+let factorial = (n) => {
+  if (n <= 1) return 1
+  return n * factorial(n - 1)
+}
+
+console.log(`5! = ${factorial(5)}`)
+console.log("")
+
+// 7. Pattern Matching
+let categorize = (value) => {
+  return match(value)
+    .when(x => x > 0, "positive")
+    .when(x => x < 0, "negative")
+    .else("zero")
+}
+
+console.log("42 is", categorize(42))
+console.log("-5 is", categorize(-5))
+console.log("0 is", categorize(0))
+console.log("")
+
+// 8. String Operations
+let text = "FreeLang"
+console.log(`Uppercase: ${text.toUpperCase()}`)
+console.log(`Reversed: ${text.split('').reverse().join('')}`)
+console.log("")
+
+// 9. Async Example (pseudocode)
+let getData = async () => {
+  // In real code, this would fetch from an API
+  return { status: "success", data: [1, 2, 3] }
+}
+
+// 10. Final message
+console.log("✅ FreeLang v2.5.0 is working perfectly!")
+console.log("🎓 For more examples, check: https://gogs.dclub.kr/kim/freelang-final")
