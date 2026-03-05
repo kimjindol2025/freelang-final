@@ -1,0 +1,27 @@
+/**
+ * FreeLang v2.6.0 - Union Types
+ * type Status = "loading" | "success" | "error" | "pending"
+ */
+
+// Basic Union
+type Status = "loading" | "success" | "error" | "pending"
+
+// Tagged Union (Discriminated Union)
+type Result = 
+  | { tag: "ok", value: number }
+  | { tag: "err", message: string }
+
+// Union with Actions
+type Action = 
+  | { type: "LOAD" }
+  | { type: "LOADED", data: any }
+  | { type: "ERROR", error: string }
+
+let processAction = (action: Action) => {
+  return match(action)
+    .when(a => a.type === "LOAD", "Loading...")
+    .when(a => a.type === "LOADED", a => `Loaded: ${JSON.stringify(a.data)}`)
+    .when(a => a.type === "ERROR", a => `Error: ${a.error}`)
+}
+
+export { Status, Result, Action }
