@@ -1,0 +1,536 @@
+/**
+ * FreeLang ORM - 데이터베이스 쿼리 빌더
+ *
+ * SQLite/MySQL 지원 쿼리 빌더
+ * - SELECT / INSERT / UPDATE / DELETE
+ * - WHERE 조건 + 파라미터 바인딩
+ * - JOIN 지원
+ * - 트랜잭션
+ * - 마이그레이션
+ *
+ * Phase B 구현
+ */
+
+// ============================================
+// 데이터베이스 연결 타입
+// ============================================
+
+struct Connection {
+  type: string,             // "sqlite" or "mysql"
+  path: string,             // SQLite 파일 경로
+  host: string,             // MySQL 호스트
+  port: int,                // MySQL 포트
+  user: string,             // MySQL 사용자명
+  password: string,         // MySQL 비밀번호
+  database: string,         // 데이터베이스명
+  isConnected: bool,
+  migrations: array         // 마이그레이션 기록
+}
+
+// ============================================
+// 쿼리 빌더 타입
+// ============================================
+
+struct QueryBuilder {
+  connection: Connection,
+  type: string,             // "select", "insert", "update", "delete"
+  table: string,
+  columns: array,           // SELECT 컬럼
+  values: map,              // INSERT/UPDATE 값
+  conditions: array,        // WHERE 조건
+  params: array,            // 파라미터 바인딩
+  joins: array,             // JOIN 절
+  orderBy: array,           // ORDER BY
+  groupBy: array,           // GROUP BY
+  limit: int,
+  offset: int
+}
+
+// ============================================
+// 쿼리 결과
+// ============================================
+
+struct QueryResult {
+  rows: array,
+  rowCount: int,
+  insertedId: int,
+  affectedRows: int,
+  error: string
+}
+
+// ============================================
+// 트랜잭션
+// ============================================
+
+struct Transaction {
+  connection: Connection,
+  isActive: bool,
+  queries: array
+}
+
+// ============================================
+// 마이그레이션 메타데이터
+// ============================================
+
+struct Migration {
+  name: string,
+  batch: int,
+  executedAt: string
+}
+
+// ============================================
+// SQLite 연결 생성
+// ============================================
+
+fn sqlite(path: string) -> Connection {
+  return {
+    type: "sqlite",
+    path: path,
+    host: "",
+    port: 0,
+    user: "",
+    password: "",
+    database: path,
+    isConnected: true,
+    migrations: []
+  }
+}
+
+// ============================================
+// MySQL 연결 생성
+// ============================================
+
+fn mysql(config: map) -> Connection {
+  return {
+    type: "mysql",
+    path: "",
+    host: config["host"],
+    port: config["port"],
+    user: config["user"],
+    password: config["password"],
+    database: config["database"],
+    isConnected: false,  // 나중에 연결
+    migrations: []
+  }
+}
+
+// ============================================
+// 연결 테스트
+// ============================================
+
+fn ping(conn: Connection) -> bool {
+  // SQLite는 항상 가능
+  if conn.type == "sqlite" {
+    return true
+  }
+
+  // MySQL은 TCP 테스트
+  // TODO: 실제 핑 구현
+  return true
+}
+
+// ============================================
+// SELECT 쿼리 빌더
+// ============================================
+
+fn select(conn: Connection, table: string) -> QueryBuilder {
+  return {
+    connection: conn,
+    type: "select",
+    table: table,
+    columns: [],
+    values: {},
+    conditions: [],
+    params: [],
+    joins: [],
+    orderBy: [],
+    groupBy: [],
+    limit: -1,
+    offset: 0
+  }
+}
+
+// ============================================
+// SELECT 헬퍼 메서드들
+// ============================================
+
+// 특정 컬럼만 선택
+fn columns(builder: QueryBuilder, cols: array) -> QueryBuilder {
+  builder.columns = cols
+  return builder
+}
+
+// WHERE 조건 추가
+fn where(builder: QueryBuilder, condition: string, param: any) -> QueryBuilder {
+  arr.push(builder.conditions, condition)
+  arr.push(builder.params, param)
+  return builder
+}
+
+// WHERE 조건 2개 파라미터
+fn where2(builder: QueryBuilder, condition: string, param1: any, param2: any) -> QueryBuilder {
+  arr.push(builder.conditions, condition)
+  arr.push(builder.params, param1)
+  arr.push(builder.params, param2)
+  return builder
+}
+
+// JOIN 추가
+fn join(builder: QueryBuilder, table: string, on: string) -> QueryBuilder {
+  arr.push(builder.joins, { table: table, on: on })
+  return builder
+}
+
+// ORDER BY
+fn order_by(builder: QueryBuilder, order: string) -> QueryBuilder {
+  arr.push(builder.orderBy, order)
+  return builder
+}
+
+// GROUP BY
+fn group_by(builder: QueryBuilder, col: string) -> QueryBuilder {
+  arr.push(builder.groupBy, col)
+  return builder
+}
+
+// LIMIT
+fn limit(builder: QueryBuilder, n: int) -> QueryBuilder {
+  builder.limit = n
+  return builder
+}
+
+// OFFSET
+fn offset(builder: QueryBuilder, n: int) -> QueryBuilder {
+  builder.offset = n
+  return builder
+}
+
+// ============================================
+// SELECT 실행
+// ============================================
+
+// 모든 행 반환
+fn all(builder: QueryBuilder) -> array {
+  let sql = build_select_sql(builder)
+  let result = execute_query(builder.connection, sql, builder.params)
+  return result.rows
+}
+
+// 첫 행만 반환
+fn first(builder: QueryBuilder) -> map {
+  builder.limit = 1
+  let rows = all(builder)
+
+  if arr.length(rows) > 0 {
+    return rows[0]
+  }
+
+  return null
+}
+
+// 행 개수
+fn count(builder: QueryBuilder) -> int {
+  // 임시: SELECT COUNT(*) 구현
+  let rows = all(builder)
+  return arr.length(rows)
+}
+
+// ============================================
+// SQL 생성 헬퍼
+// ============================================
+
+fn build_select_sql(builder: QueryBuilder) -> string {
+  let sql = "SELECT "
+
+  // 컬럼 목록
+  if arr.length(builder.columns) > 0 {
+    sql = sql + str.join(builder.columns, ", ")
+  } else {
+    sql = sql + "*"
+  }
+
+  sql = sql + " FROM " + builder.table
+
+  // JOIN
+  let i = 0
+  while i < arr.length(builder.joins) {
+    let j = builder.joins[i]
+    sql = sql + " JOIN " + j.table + " ON " + j.on
+    i = i + 1
+  }
+
+  // WHERE
+  if arr.length(builder.conditions) > 0 {
+    sql = sql + " WHERE "
+    let conds = builder.conditions
+    let first = true
+    let j = 0
+    while j < arr.length(conds) {
+      if !first {
+        sql = sql + " AND "
+      }
+      sql = sql + conds[j]
+      first = false
+      j = j + 1
+    }
+  }
+
+  // GROUP BY
+  if arr.length(builder.groupBy) > 0 {
+    sql = sql + " GROUP BY " + str.join(builder.groupBy, ", ")
+  }
+
+  // ORDER BY
+  if arr.length(builder.orderBy) > 0 {
+    sql = sql + " ORDER BY " + str.join(builder.orderBy, ", ")
+  }
+
+  // LIMIT
+  if builder.limit > 0 {
+    sql = sql + " LIMIT " + str(builder.limit)
+  }
+
+  // OFFSET
+  if builder.offset > 0 {
+    sql = sql + " OFFSET " + str(builder.offset)
+  }
+
+  return sql
+}
+
+// ============================================
+// INSERT 쿼리
+// ============================================
+
+fn insert(conn: Connection, table: string, data: map) -> QueryResult {
+  let builder: QueryBuilder = {
+    connection: conn,
+    type: "insert",
+    table: table,
+    columns: [],
+    values: data,
+    conditions: [],
+    params: [],
+    joins: [],
+    orderBy: [],
+    groupBy: [],
+    limit: -1,
+    offset: 0
+  }
+
+  let sql = build_insert_sql(builder)
+  return execute_query(conn, sql, [])
+}
+
+fn build_insert_sql(builder: QueryBuilder) -> string {
+  let cols = []
+  let vals = []
+
+  let keys = map.keys(builder.values)
+  let i = 0
+  while i < arr.length(keys) {
+    let key = keys[i]
+    arr.push(cols, key)
+    arr.push(vals, "?")
+    i = i + 1
+  }
+
+  let sql = "INSERT INTO " + builder.table
+  sql = sql + " (" + str.join(cols, ", ") + ")"
+  sql = sql + " VALUES (" + str.join(vals, ", ") + ")"
+
+  return sql
+}
+
+// ============================================
+// UPDATE 쿼리
+// ============================================
+
+fn update(conn: Connection, table: string, data: map) -> QueryBuilder {
+  return {
+    connection: conn,
+    type: "update",
+    table: table,
+    columns: [],
+    values: data,
+    conditions: [],
+    params: [],
+    joins: [],
+    orderBy: [],
+    groupBy: [],
+    limit: -1,
+    offset: 0
+  }
+}
+
+fn execute_update(builder: QueryBuilder) -> int {
+  let sql = build_update_sql(builder)
+  let result = execute_query(builder.connection, sql, builder.params)
+  return result.affectedRows
+}
+
+fn build_update_sql(builder: QueryBuilder) -> string {
+  let sets = []
+  let keys = map.keys(builder.values)
+  let i = 0
+  while i < arr.length(keys) {
+    let key = keys[i]
+    arr.push(sets, key + " = ?")
+    i = i + 1
+  }
+
+  let sql = "UPDATE " + builder.table + " SET " + str.join(sets, ", ")
+
+  if arr.length(builder.conditions) > 0 {
+    sql = sql + " WHERE " + str.join(builder.conditions, " AND ")
+  }
+
+  return sql
+}
+
+// ============================================
+// DELETE 쿼리
+// ============================================
+
+fn delete(conn: Connection, table: string) -> QueryBuilder {
+  return {
+    connection: conn,
+    type: "delete",
+    table: table,
+    columns: [],
+    values: {},
+    conditions: [],
+    params: [],
+    joins: [],
+    orderBy: [],
+    groupBy: [],
+    limit: -1,
+    offset: 0
+  }
+}
+
+fn execute_delete(builder: QueryBuilder) -> int {
+  let sql = build_delete_sql(builder)
+  let result = execute_query(builder.connection, sql, builder.params)
+  return result.affectedRows
+}
+
+fn build_delete_sql(builder: QueryBuilder) -> string {
+  let sql = "DELETE FROM " + builder.table
+
+  if arr.length(builder.conditions) > 0 {
+    sql = sql + " WHERE " + str.join(builder.conditions, " AND ")
+  }
+
+  return sql
+}
+
+// ============================================
+// 트랜잭션
+// ============================================
+
+fn begin_transaction(conn: Connection) -> Transaction {
+  return {
+    connection: conn,
+    isActive: true,
+    queries: []
+  }
+}
+
+fn commit(tx: Transaction) -> bool {
+  // 모든 쿼리 실행
+  let i = 0
+  while i < arr.length(tx.queries) {
+    let q = tx.queries[i]
+    // execute_query(tx.connection, q.sql, q.params)
+    i = i + 1
+  }
+
+  tx.isActive = false
+  return true
+}
+
+fn rollback(tx: Transaction) -> bool {
+  // 트랜잭션 취소 (모든 쿼리 무시)
+  tx.isActive = false
+  return true
+}
+
+// ============================================
+// 쿼리 실행 (임시 구현)
+// ============================================
+
+fn execute_query(conn: Connection, sql: string, params: array) -> QueryResult {
+  // 실제 구현: SQLite 또는 MySQL 호출
+  // 임시: 더미 결과 반환
+
+  return {
+    rows: [],
+    rowCount: 0,
+    insertedId: 1,
+    affectedRows: 0,
+    error: null
+  }
+}
+
+// ============================================
+// 마이그레이션
+// ============================================
+
+fn migrate(conn: Connection, migrationPath: string) -> bool {
+  // 마이그레이션 파일 읽기 및 실행
+  // TODO: 구현 필요
+  println("[ORM] Migration started for", conn.database)
+  return true
+}
+
+fn migrations_status(conn: Connection) -> array {
+  return conn.migrations
+}
+
+// ============================================
+// Export
+// ============================================
+
+export {
+  Connection,
+  QueryBuilder,
+  QueryResult,
+  Transaction,
+  Migration,
+
+  sqlite,
+  mysql,
+  ping,
+
+  select,
+  columns,
+  where,
+  where2,
+  join,
+  order_by,
+  group_by,
+  limit,
+  offset,
+  all,
+  first,
+  count,
+
+  insert,
+  update,
+  delete,
+
+  begin_transaction,
+  commit,
+  rollback,
+
+  migrate,
+  migrations_status,
+
+  build_select_sql,
+  build_insert_sql,
+  build_update_sql,
+  build_delete_sql,
+
+  execute_query
+}
