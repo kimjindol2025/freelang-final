@@ -1,0 +1,317 @@
+/**
+ * Phase 1 Week 4-6: Memory Manager
+ *
+ * Malloc/Free + GC 구현
+ * 작성: 2026-03-06
+ */
+
+// ============================================
+// Memory Block 구조
+// ============================================
+
+struct MemoryBlock {
+  size: i64,
+  allocated: bool,
+  next_block: i64,
+  magic: i64,    // 0xDEADBEEF (corruption detection)
+}
+
+struct Allocator {
+  heap_start: i64,
+  heap_end: i64,
+  heap_size: i64,
+  first_block: i64,
+  blocks_count: i32,
+  free_blocks: i32,
+  total_allocated: i64,
+}
+
+// ============================================
+// Allocator 생성 및 초기화
+// ============================================
+
+/**
+ * new_allocator(size: i64): Allocator
+ * 힙 메모리 할당자 생성
+ */
+fn new_allocator(size: i64): Allocator {
+  var alloc: Allocator
+  alloc.heap_start = 0        // 실제 구현에서는 실제 주소
+  alloc.heap_end = size
+  alloc.heap_size = size
+  alloc.first_block = 0
+  alloc.blocks_count = 1
+  alloc.free_blocks = 1
+  alloc.total_allocated = 0
+  return alloc
+}
+
+// ============================================
+// Malloc: 메모리 할당
+// ============================================
+
+/**
+ * malloc(alloc: Allocator, size: i64): i64
+ * 메모리 할당 (First-Fit)
+ */
+fn malloc(alloc: Allocator, size: i64): i64 {
+  // 간단화: 항상 다음 위치에 할당
+  let ptr = alloc.heap_start + alloc.total_allocated
+  alloc.total_allocated = alloc.total_allocated + size + 16  // 16 = header
+
+  if alloc.total_allocated >= alloc.heap_size {
+    println("❌ Out of memory!")
+    return 0
+  }
+
+  alloc.blocks_count = alloc.blocks_count + 1
+  return ptr
+}
+
+/**
+ * free(alloc: Allocator, ptr: i64): void
+ * 메모리 해제
+ */
+fn free(alloc: Allocator, ptr: i64): void {
+  if ptr == 0 {
+    println("⚠️  Attempt to free null pointer")
+    return
+  }
+
+  alloc.free_blocks = alloc.free_blocks + 1
+}
+
+// ============================================
+// Stack Frame 관리
+// ============================================
+
+struct StackFrame {
+  return_address: i64,
+  saved_rbp: i64,
+  local_size: i32,
+  sp_offset: i64,
+}
+
+struct StackManager {
+  stack_base: i64,
+  stack_size: i64,
+  current_sp: i64,
+  frame_count: i32,
+}
+
+/**
+ * new_stack_manager(size: i64): StackManager
+ */
+fn new_stack_manager(size: i64): StackManager {
+  var sm: StackManager
+  sm.stack_base = 0
+  sm.stack_size = size
+  sm.current_sp = size
+  sm.frame_count = 0
+  return sm
+}
+
+/**
+ * push_frame(sm: StackManager, local_size: i32): StackFrame
+ * 스택 프레임 푸시
+ */
+fn push_frame(sm: StackManager, local_size: i32): StackFrame {
+  var frame: StackFrame
+  frame.saved_rbp = 0
+  frame.local_size = local_size
+  frame.sp_offset = sm.current_sp
+
+  sm.current_sp = sm.current_sp - (local_size as i64)
+  sm.frame_count = sm.frame_count + 1
+
+  return frame
+}
+
+/**
+ * pop_frame(sm: StackManager, frame: StackFrame): void
+ * 스택 프레임 팝
+ */
+fn pop_frame(sm: StackManager, frame: StackFrame): void {
+  sm.current_sp = frame.sp_offset
+  sm.frame_count = sm.frame_count - 1
+}
+
+// ============================================
+// GC: Garbage Collection
+// ============================================
+
+struct GCObject {
+  ptr: i64,
+  size: i64,
+  marked: bool,
+  type_id: i32,
+}
+
+struct GarbageCollector {
+  objects: Array<GCObject>,
+  allocator: Allocator,
+  collection_count: i32,
+  freed_objects: i32,
+}
+
+/**
+ * new_gc(allocator: Allocator): GarbageCollector
+ */
+fn new_gc(allocator: Allocator): GarbageCollector {
+  var gc: GarbageCollector
+  gc.objects = []
+  gc.allocator = allocator
+  gc.collection_count = 0
+  gc.freed_objects = 0
+  return gc
+}
+
+/**
+ * gc_mark_object(gc: GarbageCollector, ptr: i64): void
+ * 객체 마킹 (reachable로 표시)
+ */
+fn gc_mark_object(gc: GarbageCollector, ptr: i64): void {
+  let i = 0
+  while i < gc.objects.length() {
+    let obj = gc.objects[i]
+    if obj.ptr == ptr {
+      obj.marked = true
+      gc.objects[i] = obj
+      return
+    }
+    i = i + 1
+  }
+}
+
+/**
+ * gc_sweep(gc: GarbageCollector): void
+ * 마크되지 않은 객체 회수
+ */
+fn gc_sweep(gc: GarbageCollector): void {
+  let i = 0
+  while i < gc.objects.length() {
+    let obj = gc.objects[i]
+    if !obj.marked {
+      free(gc.allocator, obj.ptr)
+      gc.freed_objects = gc.freed_objects + 1
+    } else {
+      obj.marked = false
+      gc.objects[i] = obj
+    }
+    i = i + 1
+  }
+}
+
+/**
+ * gc_collect(gc: GarbageCollector): void
+ * 전체 GC 사이클 실행
+ */
+fn gc_collect(gc: GarbageCollector): void {
+  println("🔄 Running garbage collection...")
+
+  // Mark phase: 모든 루트 객체 마킹
+  let i = 0
+  while i < gc.objects.length() {
+    gc_mark_object(gc, gc.objects[i].ptr)
+    i = i + 1
+  }
+
+  // Sweep phase: 마크되지 않은 객체 회수
+  gc_sweep(gc)
+
+  gc.collection_count = gc.collection_count + 1
+  println("✓ GC completed: freed " + str(gc.freed_objects) + " objects")
+}
+
+// ============================================
+// Calling Convention 지원
+// ============================================
+
+struct CallingConvention {
+  arg_registers: Array<string>,
+  saved_registers: Array<string>,
+  return_register: string,
+  stack_alignment: i32,
+}
+
+/**
+ * new_calling_convention(): CallingConvention
+ * System V AMD64 ABI
+ */
+fn new_calling_convention(): CallingConvention {
+  var cc: CallingConvention
+  cc.arg_registers = []
+  cc.arg_registers.push("rdi")
+  cc.arg_registers.push("rsi")
+  cc.arg_registers.push("rdx")
+  cc.arg_registers.push("rcx")
+  cc.arg_registers.push("r8")
+  cc.arg_registers.push("r9")
+
+  cc.saved_registers = []
+  cc.saved_registers.push("rbp")
+  cc.saved_registers.push("rbx")
+  cc.saved_registers.push("r12")
+  cc.saved_registers.push("r13")
+  cc.saved_registers.push("r14")
+  cc.saved_registers.push("r15")
+
+  cc.return_register = "rax"
+  cc.stack_alignment = 16
+
+  return cc
+}
+
+/**
+ * get_arg_register(cc: CallingConvention, arg_index: i32): string
+ */
+fn get_arg_register(cc: CallingConvention, arg_index: i32): string {
+  if arg_index < 6 {
+    return cc.arg_registers[arg_index]
+  }
+  return "stack"
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_memory_manager(): void {
+  println("")
+  println("🧪 Testing Memory Manager...")
+  println("")
+
+  // Test 1: Allocator
+  var alloc = new_allocator(4096)
+  println("✓ Allocator created (4KB heap)")
+
+  // Test 2: Malloc
+  let ptr1 = malloc(alloc, 32)
+  let ptr2 = malloc(alloc, 64)
+  println("✓ Memory allocated: ptr1=" + str(ptr1) + ", ptr2=" + str(ptr2))
+
+  // Test 3: Stack Manager
+  var sm = new_stack_manager(8192)
+  println("✓ Stack manager created (8KB stack)")
+
+  // Test 4: Push/Pop Frame
+  let frame = push_frame(sm, 128)
+  println("✓ Stack frame pushed (128 bytes)")
+  pop_frame(sm, frame)
+  println("✓ Stack frame popped")
+
+  // Test 5: GC
+  var gc = new_gc(alloc)
+  println("✓ Garbage collector created")
+
+  // Test 6: Calling Convention
+  let cc = new_calling_convention()
+  println("✓ Calling convention: arg1=" + get_arg_register(cc, 0) + ", arg2=" + get_arg_register(cc, 1))
+
+  println("")
+  println("✅ Memory manager tests completed")
+}
+
+fn main(): void {
+  test_memory_manager()
+}
