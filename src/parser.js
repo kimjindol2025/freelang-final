@@ -106,6 +106,37 @@ class ContinueStatement extends ASTNode {
   }
 }
 
+class TryStatement extends ASTNode {
+  constructor(body, handler, finalizer) {
+    super('TryStatement');
+    this.body = body;
+    this.handler = handler;
+    this.finalizer = finalizer;
+  }
+}
+
+class CatchClause extends ASTNode {
+  constructor(param, body) {
+    super('CatchClause');
+    this.param = param;
+    this.body = body;
+  }
+}
+
+class ThrowStatement extends ASTNode {
+  constructor(argument) {
+    super('ThrowStatement');
+    this.argument = argument;
+  }
+}
+
+class QuestionOp extends ASTNode {
+  constructor(operand) {
+    super('QuestionOp');
+    this.operand = operand;
+  }
+}
+
 class BinaryExpression extends ASTNode {
   constructor(left, operator, right) {
     super('BinaryExpression');
@@ -222,6 +253,68 @@ class Literal extends ASTNode {
   }
 }
 
+class FStringExpression extends ASTNode {
+  constructor(parts) {
+    super('FStringExpression');
+    this.parts = parts; // Array of {type: 'text'|'expr', value/expr, format?}
+  }
+}
+
+class ImportDeclaration extends ASTNode {
+  constructor(specifiers, source) {
+    super('ImportDeclaration');
+    this.specifiers = specifiers;
+    this.source = source;
+  }
+}
+
+class ImportSpecifier extends ASTNode {
+  constructor(imported, local) {
+    super('ImportSpecifier');
+    this.imported = imported;
+    this.local = local;
+  }
+}
+
+class ImportDefaultSpecifier extends ASTNode {
+  constructor(local) {
+    super('ImportDefaultSpecifier');
+    this.local = local;
+  }
+}
+
+class ImportNamespaceSpecifier extends ASTNode {
+  constructor(local) {
+    super('ImportNamespaceSpecifier');
+    this.local = local;
+  }
+}
+
+class ExportDeclaration extends ASTNode {
+  constructor(declaration, isDefault) {
+    super('ExportDeclaration');
+    this.declaration = declaration;
+    this.isDefault = isDefault || false;
+  }
+}
+
+class ExportNamedDeclaration extends ASTNode {
+  constructor(declaration, specifiers, source) {
+    super('ExportNamedDeclaration');
+    this.declaration = declaration;
+    this.specifiers = specifiers;
+    this.source = source;
+  }
+}
+
+class ExportSpecifier extends ASTNode {
+  constructor(exported, local) {
+    super('ExportSpecifier');
+    this.exported = exported;
+    this.local = local;
+  }
+}
+
 // Parser class
 class Parser {
   constructor(tokens) {
@@ -277,6 +370,18 @@ class Parser {
   }
 
   statement() {
+    // Import declaration
+    if (this.peek().type === TokenType.IMPORT) {
+      this.advance(); // consume 'import'
+      return this.parseImportDeclaration();
+    }
+
+    // Export declaration
+    if (this.peek().type === TokenType.EXPORT) {
+      this.advance(); // consume 'export'
+      return this.parseExportDeclaration();
+    }
+
     // Variable declaration
     if (this.match(TokenType.LET, TokenType.CONST, TokenType.VAR)) {
       return this.variableDeclaration();
@@ -322,6 +427,16 @@ class Parser {
     if (this.match(TokenType.CONTINUE)) {
       this.match(TokenType.SEMICOLON);
       return new ContinueStatement();
+    }
+
+    // Try statement
+    if (this.match(TokenType.TRY)) {
+      return this.tryStatement();
+    }
+
+    // Throw statement
+    if (this.match(TokenType.THROW)) {
+      return this.throwStatement();
     }
 
     // Expression statement
@@ -464,6 +579,42 @@ class Parser {
     const expr = this.expression();
     this.match(TokenType.SEMICOLON);
     return new ExpressionStatement(expr);
+  }
+
+  tryStatement() {
+    // try { ... }
+    this.consume(TokenType.LBRACE, 'Expected { after try');
+    const body = new BlockStatement(this.blockStatementBody());
+
+    let handler = null;
+    // catch (e) { ... }
+    if (this.match(TokenType.CATCH)) {
+      this.consume(TokenType.LPAREN, 'Expected ( after catch');
+      const param = this.consume(TokenType.IDENTIFIER, 'Expected parameter name').value;
+      this.consume(TokenType.RPAREN, 'Expected ) after catch parameter');
+      this.consume(TokenType.LBRACE, 'Expected { before catch body');
+      const catchBody = new BlockStatement(this.blockStatementBody());
+      handler = new CatchClause(param, catchBody);
+    }
+
+    let finalizer = null;
+    // finally { ... }
+    if (this.match(TokenType.FINALLY)) {
+      this.consume(TokenType.LBRACE, 'Expected { after finally');
+      finalizer = new BlockStatement(this.blockStatementBody());
+    }
+
+    if (!handler && !finalizer) {
+      throw new Error('try statement must have catch or finally block');
+    }
+
+    return new TryStatement(body, handler, finalizer);
+  }
+
+  throwStatement() {
+    const argument = this.expression();
+    this.match(TokenType.SEMICOLON);
+    return new ThrowStatement(argument);
   }
 
   expression() {
@@ -641,7 +792,14 @@ class Parser {
   }
 
   postfix() {
-    return this.call();
+    let expr = this.call();
+
+    // ? operator (postfix error propagation)
+    if (this.match(TokenType.QUESTION)) {
+      expr = new QuestionOp(expr);
+    }
+
+    return expr;
   }
 
   call() {
@@ -705,6 +863,35 @@ class Parser {
 
     if (this.match(TokenType.STRING)) {
       return new Literal(this.tokens[this.current - 1].value, `"${this.tokens[this.current - 1].value}"`);
+    }
+
+    // F-string
+    if (this.match(TokenType.FSTRING)) {
+      const partsJson = this.tokens[this.current - 1].value;
+      const parts = JSON.parse(partsJson);
+
+      // Convert parts: text parts as strings, expr parts as parsed expressions
+      const processedParts = parts.map(part => {
+        if (part.type === 'text') {
+          return {
+            type: 'text',
+            value: part.value
+          };
+        } else {
+          // Parse the expression string
+          const exprLexer = new (require('./lexer')).Lexer(part.expr);
+          const exprTokens = exprLexer.tokenize();
+          const exprParser = new Parser(exprTokens);
+          const exprAst = exprParser.expression();
+          return {
+            type: 'expr',
+            expr: exprAst,
+            format: part.format
+          };
+        }
+      });
+
+      return new FStringExpression(processedParts);
     }
 
     // Identifier
@@ -778,14 +965,98 @@ class Parser {
 
     throw new Error(`Unexpected token: ${this.peek().type}`);
   }
+
+  /**
+   * Parse import declaration
+   * import { a, b } from "module"
+   * import * as alias from "module"
+   * import defaultName from "module"
+   */
+  parseImportDeclaration() {
+    // 'import' token already consumed by statement()
+    const specifiers = [];
+
+    if (this.peek().type === TokenType.STAR) {
+      // import * as alias from "module"
+      this.advance(); // consume '*'
+      this.consume(TokenType.AS, 'Expected "as" after *');
+      const alias = this.advance();
+      specifiers.push(new ImportNamespaceSpecifier(new Identifier(alias.value)));
+    } else if (this.peek().type === TokenType.LBRACE) {
+      // import { a, b, c } from "module"
+      this.advance(); // consume '{'
+      while (this.peek().type !== TokenType.RBRACE) {
+        const imported = this.advance();
+        let local = imported;
+        if (this.peek().type === TokenType.AS) {
+          this.advance(); // consume 'as'
+          local = this.advance();
+        }
+        specifiers.push(
+          new ImportSpecifier(
+            new Identifier(imported.value),
+            new Identifier(local.value)
+          )
+        );
+        if (this.peek().type === TokenType.COMMA) {
+          this.advance(); // consume ','
+        }
+      }
+      this.consume(TokenType.RBRACE, 'Expected } after imports');
+    } else if (this.peek().type === TokenType.IDENTIFIER) {
+      // import defaultName from "module"
+      const defaultName = this.advance();
+      specifiers.push(new ImportDefaultSpecifier(new Identifier(defaultName.value)));
+    }
+
+    this.consume(TokenType.FROM, 'Expected "from" after import specifiers');
+    const source = this.consume(TokenType.STRING, 'Expected string literal for module source');
+    this.match(TokenType.SEMICOLON);
+
+    return new ImportDeclaration(specifiers, new Literal(source.value, source.value));
+  }
+
+  /**
+   * Parse export declaration
+   * export fn foo() { ... }
+   * export let x = 10
+   * export default fn main() { ... }
+   */
+  parseExportDeclaration() {
+    // 'export' token already consumed by statement()
+    let isDefault = false;
+
+    if (this.peek().type === TokenType.DEFAULT) {
+      isDefault = true;
+      this.advance(); // consume 'default'
+    }
+
+    // Parse the declaration (function, variable, etc.)
+    let declaration = null;
+
+    if (this.match(TokenType.FN)) {
+      // FN consumed by match(), now call functionDeclaration
+      declaration = this.functionDeclaration();
+    } else if (this.match(TokenType.LET, TokenType.CONST, TokenType.VAR)) {
+      // Var type already consumed, variableDeclaration expects that
+      declaration = this.variableDeclaration();
+    } else {
+      throw new Error('Expected function or variable declaration after export');
+    }
+
+    return new ExportDeclaration(declaration, isDefault);
+  }
 }
 
 module.exports = {
   Parser,
   Program, VariableDeclaration, FunctionDeclaration, BlockStatement, ExpressionStatement,
   IfStatement, WhileStatement, ForStatement, ForInStatement, ReturnStatement,
-  BreakStatement, ContinueStatement, BinaryExpression, UnaryExpression, LogicalExpression,
+  BreakStatement, ContinueStatement, TryStatement, CatchClause, ThrowStatement, QuestionOp,
+  BinaryExpression, UnaryExpression, LogicalExpression,
   CallExpression, MemberExpression, AssignmentExpression, ConditionalExpression,
   ArrayExpression, ObjectExpression, Property, FunctionExpression, ArrowFunctionExpression,
-  Identifier, Literal
+  Identifier, Literal, FStringExpression,
+  ImportDeclaration, ImportSpecifier, ImportDefaultSpecifier, ImportNamespaceSpecifier,
+  ExportDeclaration, ExportNamedDeclaration, ExportSpecifier
 };

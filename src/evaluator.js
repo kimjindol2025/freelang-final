@@ -8,9 +8,12 @@ const moduleLoader = require('./module-loader');
 const {
   Program, VariableDeclaration, FunctionDeclaration, BlockStatement, ExpressionStatement,
   IfStatement, WhileStatement, ForStatement, ForInStatement, ReturnStatement,
-  BreakStatement, ContinueStatement, BinaryExpression, UnaryExpression, LogicalExpression,
+  BreakStatement, ContinueStatement, TryStatement, CatchClause, ThrowStatement, QuestionOp,
+  BinaryExpression, UnaryExpression, LogicalExpression,
   CallExpression, MemberExpression, AssignmentExpression, ConditionalExpression,
-  ArrayExpression, ObjectExpression, Property, FunctionExpression, Identifier, Literal
+  ArrayExpression, ObjectExpression, Property, FunctionExpression, Identifier, Literal, FStringExpression,
+  ImportDeclaration, ImportSpecifier, ImportDefaultSpecifier, ImportNamespaceSpecifier,
+  ExportDeclaration, ExportNamedDeclaration, ExportSpecifier
 } = require('./parser');
 
 // Control flow signals
@@ -78,6 +81,17 @@ class ContinueException extends Error {
   constructor() {
     super();
     this.isContinue = true;
+  }
+}
+
+class FreeLangError extends Error {
+  constructor(message) {
+    super(message);
+    this.isFreeLangError = true;
+    this.__error = true;
+    this.message = message;
+    this.stack = new Error(message).stack;
+    this.name = 'Error';
   }
 }
 
@@ -159,6 +173,14 @@ class Evaluator {
         const fn = new FreeLangFunction(node.params, node.body, env, node.name);
         env.define(node.name, fn);
         return fn;
+      }
+
+      if (node instanceof ImportDeclaration) {
+        return this.evalImportDeclaration(node, env);
+      }
+
+      if (node instanceof ExportDeclaration) {
+        return this.evalExportDeclaration(node, env);
       }
 
       if (node instanceof BlockStatement) {
@@ -440,6 +462,22 @@ class Evaluator {
         return node.value;
       }
 
+      if (node instanceof FStringExpression) {
+        return this.evalFString(node, env);
+      }
+
+      if (node instanceof TryStatement) {
+        return this.evalTryStatement(node, env);
+      }
+
+      if (node instanceof ThrowStatement) {
+        return this.evalThrowStatement(node, env);
+      }
+
+      if (node instanceof QuestionOp) {
+        return this.evalQuestionOp(node, env);
+      }
+
       throw new Error(`Unknown node type: ${node.type || node.constructor.name}`);
     } finally {
       this.currentEnv = prevEnv;
@@ -461,6 +499,300 @@ class Evaluator {
     if (typeof value === 'string') return value.length > 0;
     return true;
   }
+
+  evalTryStatement(node, env) {
+    let result = null;
+    let caughtError = null;
+
+    // Execute try block
+    try {
+      result = this.eval(node.body, env);
+    } catch (e) {
+      // If it's a control flow signal (return/break/continue), re-throw
+      if (e.isReturn || e.isBreak || e.isContinue) {
+        throw e;
+      }
+
+      // Catch other errors
+      caughtError = e;
+
+      // Execute catch block if present
+      if (node.handler) {
+        const catchEnv = new Environment(env);
+        // Store error message as string in catch variable
+        const errorMsg = e instanceof FreeLangError
+          ? e.message
+          : (e.message || String(e));
+        catchEnv.define(node.handler.param, errorMsg);
+
+        try {
+          result = this.eval(node.handler.body, catchEnv);
+          // If catch block succeeds, clear the error
+          caughtError = null;
+        } catch (catchErr) {
+          // Control flow in catch block
+          if (catchErr.isReturn || catchErr.isBreak || catchErr.isContinue) {
+            throw catchErr;
+          }
+          // New error in catch block
+          caughtError = catchErr;
+        }
+      }
+    }
+
+    // Execute finally block regardless of error
+    if (node.finalizer) {
+      try {
+        this.eval(node.finalizer, env);
+      } catch (finallyErr) {
+        // Control flow in finally block
+        if (finallyErr.isReturn || finallyErr.isBreak || finallyErr.isContinue) {
+          throw finallyErr;
+        }
+        // Error in finally block overrides previous error
+        caughtError = finallyErr;
+      }
+    }
+
+    // If there was an uncaught error, throw it
+    if (caughtError) {
+      throw caughtError;
+    }
+
+    return result;
+  }
+
+  evalThrowStatement(node, env) {
+    const value = this.eval(node.argument, env);
+
+    // If value is already an error object, throw it
+    if (value instanceof FreeLangError) {
+      throw value;
+    }
+
+    // If value is a string, create error with that message
+    if (typeof value === 'string') {
+      throw new FreeLangError(value);
+    }
+
+    // If value is an object with message property
+    if (typeof value === 'object' && value !== null && value.message) {
+      throw new FreeLangError(value.message);
+    }
+
+    // Otherwise throw as is
+    throw new FreeLangError(String(value));
+  }
+
+  evalQuestionOp(node, env) {
+    const operand = this.eval(node.operand, env);
+
+    // Check if operand is a Result type
+    if (typeof operand === 'object' && operand !== null) {
+      // Ok(val) pattern
+      if (operand.__ok === true) {
+        return operand.value;
+      }
+      // Err(msg) pattern - propagate error
+      if (operand.__err === true) {
+        throw new FreeLangError(operand.message || operand.value);
+      }
+    }
+
+    // For non-Result types, just return the value
+    return operand;
+  }
+
+  evalFString(node, env) {
+    let result = '';
+
+    for (const part of node.parts) {
+      if (part.type === 'text') {
+        result += part.value;
+      } else if (part.type === 'expr') {
+        // Evaluate the expression
+        const value = this.eval(part.expr, env);
+
+        // Apply formatting if specified
+        const formatted = this.formatValue(value, part.format);
+        result += formatted;
+      }
+    }
+
+    return result;
+  }
+
+  formatValue(value, format) {
+    if (!format) {
+      // Default: convert to string
+      if (value === null) return 'null';
+      if (value === undefined) return 'undefined';
+      return String(value);
+    }
+
+    // Parse format specifier (don't lowercase yet to preserve case for hex)
+    const formatStr = format.trim();
+    const formatLower = formatStr.toLowerCase();
+
+    if (formatLower.startsWith('.') && formatLower.endsWith('f')) {
+      // :.2f format - floating point with decimal places
+      const decimalPlaces = parseInt(formatStr.substring(1, formatStr.length - 1), 10);
+      if (typeof value === 'number') {
+        return value.toFixed(decimalPlaces);
+      }
+      return String(value);
+    }
+
+    if (formatLower === 'x') {
+      // :x format - lowercase hexadecimal
+      if (typeof value === 'number') {
+        return Math.floor(value).toString(16);
+      }
+      return String(value);
+    }
+
+    if (formatStr === 'X') {
+      // :X format - uppercase hexadecimal
+      if (typeof value === 'number') {
+        return Math.floor(value).toString(16).toUpperCase();
+      }
+      return String(value);
+    }
+
+    if (formatLower === 'o') {
+      // :o format - octal
+      if (typeof value === 'number') {
+        return Math.floor(value).toString(8);
+      }
+      return String(value);
+    }
+
+    if (formatLower === 'b') {
+      // :b format - binary
+      if (typeof value === 'number') {
+        return Math.floor(value).toString(2);
+      }
+      return String(value);
+    }
+
+    if (formatLower === 'd') {
+      // :d format - decimal (integer)
+      if (typeof value === 'number') {
+        return Math.floor(value).toString();
+      }
+      return String(value);
+    }
+
+    if (formatLower === 's') {
+      // :s format - string
+      return String(value);
+    }
+
+    // Unknown format, just return string representation
+    return String(value);
+  }
+
+  /**
+   * Evaluate import declaration
+   * import { a, b } from "module"
+   * import * as alias from "module"
+   * import defaultName from "module"
+   */
+  evalImportDeclaration(node, env) {
+    const moduleName = node.source.value;
+    let moduleExports;
+
+    try {
+      moduleExports = moduleLoader.require(moduleName);
+    } catch (error) {
+      throw new FreeLangError(`Failed to import module '${moduleName}': ${error.message}`);
+    }
+
+    // Track imported modules for circular dependency detection
+    if (!this.importedModules) {
+      this.importedModules = new Set();
+    }
+
+    // Detect circular imports
+    if (this.importedModules.has(moduleName)) {
+      throw new FreeLangError(`Circular import detected: '${moduleName}'`);
+    }
+
+    this.importedModules.add(moduleName);
+
+    try {
+      // Process each specifier
+      for (const specifier of node.specifiers) {
+        if (specifier instanceof ImportDefaultSpecifier) {
+          // import defaultName from "module"
+          if (moduleExports.default) {
+            env.define(specifier.local.name, moduleExports.default);
+          } else {
+            env.define(specifier.local.name, moduleExports);
+          }
+        } else if (specifier instanceof ImportNamespaceSpecifier) {
+          // import * as alias from "module"
+          env.define(specifier.local.name, moduleExports);
+        } else if (specifier instanceof ImportSpecifier) {
+          // import { a, b } from "module"
+          const importedName = specifier.imported.name;
+          const localName = specifier.local.name;
+
+          if (!(importedName in moduleExports)) {
+            throw new FreeLangError(`Export '${importedName}' not found in module '${moduleName}'`);
+          }
+
+          env.define(localName, moduleExports[importedName]);
+        }
+      }
+    } finally {
+      this.importedModules.delete(moduleName);
+    }
+
+    return null;
+  }
+
+  /**
+   * Evaluate export declaration
+   * export fn foo() { ... }
+   * export let x = 10
+   * export default fn main() { ... }
+   */
+  evalExportDeclaration(node, env) {
+    // Initialize module exports if not exists
+    if (!this.moduleExports) {
+      this.moduleExports = {};
+    }
+
+    // First, evaluate the declaration (function or variable)
+    const declarationResult = this.eval(node.declaration, env);
+
+    // For named exports
+    if (node.declaration instanceof FunctionDeclaration) {
+      const name = node.declaration.name;
+      if (node.isDefault) {
+        this.moduleExports.default = env.get(name);
+      } else {
+        this.moduleExports[name] = env.get(name);
+      }
+    } else if (node.declaration instanceof VariableDeclaration) {
+      const name = node.declaration.name;
+      if (node.isDefault) {
+        this.moduleExports.default = env.get(name);
+      } else {
+        this.moduleExports[name] = env.get(name);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get module exports (for use with require)
+   */
+  getModuleExports() {
+    return this.moduleExports || {};
+  }
 }
 
-module.exports = { Evaluator, Environment, FreeLangFunction };
+module.exports = { Evaluator, Environment, FreeLangFunction, FreeLangError };

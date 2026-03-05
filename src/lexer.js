@@ -9,6 +9,7 @@ const TokenType = {
   // Literals
   NUMBER: 'number',
   STRING: 'string',
+  FSTRING: 'fstring',
   IDENTIFIER: 'identifier',
 
   // Keywords
@@ -29,6 +30,15 @@ const TokenType = {
   ENUM: 'enum',
   BREAK: 'break',
   CONTINUE: 'continue',
+  TRY: 'try',
+  CATCH: 'catch',
+  FINALLY: 'finally',
+  THROW: 'throw',
+  IMPORT: 'import',
+  FROM: 'from',
+  EXPORT: 'export',
+  DEFAULT: 'default',
+  AS: 'as',
 
   // Operators
   PLUS: 'plus',
@@ -101,6 +111,15 @@ const KEYWORDS = {
   enum: TokenType.ENUM,
   break: TokenType.BREAK,
   continue: TokenType.CONTINUE,
+  try: TokenType.TRY,
+  catch: TokenType.CATCH,
+  finally: TokenType.FINALLY,
+  throw: TokenType.THROW,
+  import: TokenType.IMPORT,
+  from: TokenType.FROM,
+  export: TokenType.EXPORT,
+  default: TokenType.DEFAULT,
+  as: TokenType.AS,
   and: TokenType.AND,
   or: TokenType.OR
 };
@@ -278,6 +297,108 @@ class Lexer {
     this.addToken(TokenType.STRING, str);
   }
 
+  readFString() {
+    const quote = this.peek(1); // " or '
+    this.advance(); // f/F
+    this.advance(); // opening quote
+
+    const parts = [];
+    let currentText = '';
+
+    while (this.peek() && this.peek() !== quote) {
+      if (this.peek() === '\\') {
+        this.advance();
+        const escaped = this.peek();
+        if (escaped === 'n') {
+          currentText += '\n';
+          this.advance();
+        } else if (escaped === 't') {
+          currentText += '\t';
+          this.advance();
+        } else if (escaped === 'r') {
+          currentText += '\r';
+          this.advance();
+        } else if (escaped === '\\') {
+          currentText += '\\';
+          this.advance();
+        } else if (escaped === quote) {
+          currentText += quote;
+          this.advance();
+        } else {
+          currentText += escaped || '';
+          this.advance();
+        }
+      } else if (this.peek() === '{') {
+        // Save current text
+        if (currentText) {
+          parts.push({ type: 'text', value: currentText });
+          currentText = '';
+        }
+
+        // Read expression
+        this.advance(); // {
+
+        // Handle escaped braces: {{ and }}
+        if (this.peek() === '{') {
+          this.advance();
+          currentText += '{';
+          continue;
+        }
+
+        let exprText = '';
+        let braceCount = 1;
+
+        while (this.peek() && braceCount > 0) {
+          if (this.peek() === '{') {
+            braceCount++;
+            exprText += this.advance();
+          } else if (this.peek() === '}') {
+            braceCount--;
+            if (braceCount > 0) {
+              exprText += this.advance();
+            } else {
+              this.advance(); // }
+            }
+          } else {
+            exprText += this.advance();
+          }
+        }
+
+        // Parse format specifier: {expr:format}
+        let expr = exprText;
+        let format = null;
+
+        const colonIndex = exprText.lastIndexOf(':');
+        if (colonIndex > 0) {
+          expr = exprText.substring(0, colonIndex).trim();
+          format = exprText.substring(colonIndex + 1).trim();
+        }
+
+        parts.push({ type: 'expr', expr: expr.trim(), format: format });
+      } else if (this.peek() === '}') {
+        this.advance();
+        // Handle escaped braces: }}
+        if (this.peek() === '}') {
+          this.advance();
+          currentText += '}';
+        }
+      } else {
+        currentText += this.advance();
+      }
+    }
+
+    // Save remaining text
+    if (currentText) {
+      parts.push({ type: 'text', value: currentText });
+    }
+
+    if (this.peek() === quote) {
+      this.advance(); // closing quote
+    }
+
+    this.addToken(TokenType.FSTRING, JSON.stringify(parts));
+  }
+
   readIdentifierOrKeyword() {
     let ident = '';
 
@@ -424,6 +545,10 @@ class Lexer {
       // Numbers
       if (this.isDigit(ch)) {
         this.readNumber();
+      }
+      // F-strings (f"..." or f'...')
+      else if ((ch === 'f' || ch === 'F') && (this.peek(1) === '"' || this.peek(1) === "'")) {
+        this.readFString();
       }
       // Strings
       else if (ch === '"' || ch === "'") {

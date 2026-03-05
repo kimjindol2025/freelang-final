@@ -1,7 +1,7 @@
 {
   "name": "freelang",
-  "version": "2.4.0",
-  "description": "FreeLang v2.4.0 - Complete Language Enhancement with 10 Feature Improvements",
+  "version": "2.6.0",
+  "description": "FreeLang v2.6.0 - F-String Interpolation + Advanced Features",
   "main": "index.js",
   "keywords": [
     "freelang",
@@ -39,10 +39,10 @@
   },
   "metadata": {
     "stage": "production",
-    "tests": 48,
-    "unforgiving_rules": 8,
-    "code_lines": 8204,
-    "timestamp": "2026-03-05T00:00:00Z",
+    "tests": 84,
+    "unforgiving_rules": 31,
+    "code_lines": 10500,
+    "timestamp": "2026-03-06T00:00:00Z",
     "features": [
       "return-early-exit",
       "for-in-loop",
@@ -53,7 +53,13 @@
       "result-error-handling",
       "debug-tools",
       "map-utilities",
-      "advanced-functional"
+      "advanced-functional",
+      "f-string-interpolation",
+      "format-specifiers",
+      "exception-handling",
+      "try-catch-finally",
+      "union-types",
+      "error-handling-patterns"
     ]
   }
 }
