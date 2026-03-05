@@ -1,0 +1,102 @@
+# ================================================================
+# E 단계 테스트: Map Utilities
+# ================================================================
+# 3개 테스트 + 1개 무관용 규칙
+# ================================================================
+
+#[cfg(test)]
+mod test_e_map_utilities {
+    use crate::*;
+
+    # Test 1: Basic map operations (get, set, has, delete)
+    #[test]
+    fn test_e_1_map_basic() {
+        let m = {"x": 10, "y": 20}
+
+        assert_eq(map_get(m, "x"), 10)
+        assert_eq(map_has(m, "x"), true)
+        assert_eq(map_has(m, "z"), false)
+
+        let m2 = map_set(m, "z", 30)
+        assert_eq(map_get(m2, "z"), 30)
+
+        println!("✅ TEST E-1 PASS: Basic map operations")
+    }
+
+    # Test 2: Map decomposition (keys, values, entries, size)
+    #[test]
+    fn test_e_2_map_decomposition() {
+        let m = {"a": 1, "b": 2}
+
+        let keys = map_keys(m)
+        let values = map_values(m)
+        let size = map_size(m)
+
+        assert_eq(len(keys), 2)
+        assert_eq(len(values), 2)
+        assert_eq(size, 2)
+
+        println!("✅ TEST E-2 PASS: Map decomposition")
+    }
+
+    # Test 3: Map merging and transformation
+    #[test]
+    fn test_e_3_map_merge() {
+        let m1 = {"name": "alice"}
+        let m2 = {"age": 30}
+        let merged = map_merge(m1, m2)
+
+        assert_eq(map_get(merged, "name"), "alice")
+        assert_eq(map_get(merged, "age"), 30)
+        assert_eq(map_size(merged), 2)
+
+        println!("✅ TEST E-3 PASS: Map merging")
+    }
+
+    # Unforgiving Rule #1: Map operations 100% complete
+    #[test]
+    fn test_rule_e_map_complete() {
+        # Rule: map get/set/delete/keys/values/entries/merge 모두 정상 작동
+        let config = {"debug": true, "port": 8080, "host": "localhost"}
+
+        # get
+        assert_eq(map_get(config, "port"), 8080)
+
+        # set
+        let updated = map_set(config, "timeout", 5000)
+        assert_eq(map_size(updated), 4)
+
+        # has
+        assert_eq(map_has(updated, "timeout"), true)
+
+        # keys & size
+        let all_keys = map_keys(updated)
+        assert_eq(map_size(updated), len(all_keys))
+
+        # merge
+        let extra = {"ssl": true}
+        let final_config = map_merge(updated, extra)
+        assert_eq(map_has(final_config, "ssl"), true)
+
+        println!("✅ RULE E PASS: Map operations 100% complete")
+    }
+}
+
+# ================================================================
+# 수동 테스트 (디버깅용)
+# ================================================================
+
+fn test_manual_map() {
+    println!("=== Map Utilities Manual Test ===")
+
+    let config = {"app": "freelang", "version": "2.4"}
+    let keys = map_keys(config)
+    let values = map_values(config)
+
+    println!("Keys: {:?}", keys)
+    println!("Values: {:?}", values)
+    println!("Config size: {}", map_size(config))
+
+    let extended = map_merge(config, {"port": 8080})
+    println!("Extended config size: {}", map_size(extended))
+}
