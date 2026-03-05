@@ -1,0 +1,104 @@
+# ================================================================
+# A-1 단계 테스트: Return 조기 종료
+# ================================================================
+# 3개 테스트 + 1개 무관용 규칙
+# ================================================================
+
+#[cfg(test)]
+mod test_return_early_exit {
+    use crate::*;
+
+    # Test 1: 함수 중간에서 return으로 조기 탈출
+    #[test]
+    fn test_a1_return_simple() {
+        # 함수 정의: 첫 번째 조건에서 return
+        fn early_exit(): i32 {
+            let x = 10
+            if x > 5 {
+                return 42
+            }
+            return 99  # 실행되면 안 됨
+        }
+
+        let result = early_exit()
+        assert_eq!(result, 42)
+        println!("✅ TEST A1 PASS: Return simple early exit")
+    }
+
+    # Test 2: 조건문 내에서 return
+    #[test]
+    fn test_a2_return_in_condition() {
+        fn conditional_return(n: i32): i32 {
+            if n < 10 {
+                return 0
+            } else if n < 20 {
+                return 1
+            } else {
+                return 2
+            }
+            return 99  # 절대 실행 안 됨
+        }
+
+        assert_eq!(conditional_return(5), 0)
+        assert_eq!(conditional_return(15), 1)
+        assert_eq!(conditional_return(25), 2)
+        println!("✅ TEST A2 PASS: Return in condition")
+    }
+
+    # Test 3: 루프 내에서 return
+    #[test]
+    fn test_a3_return_in_loop() {
+        fn find_value(target: i32): i32 {
+            let i = 0
+            while i < 100 {
+                if i == target {
+                    return i * 2  # 발견 시 즉시 반환
+                }
+                i = i + 1
+            }
+            return -1  # 찾지 못함
+        }
+
+        assert_eq!(find_value(10), 20)
+        assert_eq!(find_value(50), 100)
+        assert_eq!(find_value(200), -1)
+        println!("✅ TEST A3 PASS: Return in loop")
+    }
+
+    # Unforgiving Rule #1: Return이 함수를 100% 조기 탈출
+    #[test]
+    fn test_rule_1_return_complete_exit() {
+        # Rule: return 후 코드가 실행되지 않음 (100%)
+        fn execution_test(): i32 {
+            let counter = 0
+            counter = counter + 1  # 카운터 = 1
+            return 42
+            counter = counter + 1  # 이 줄은 NEVER 실행됨
+        }
+
+        let result = execution_test()
+        # result가 42여야 하고, counter 증가가 일어나지 않음
+        assert_eq!(result, 42)
+        println!("✅ RULE 1 PASS: Return 100% complete exit")
+    }
+}
+
+# ================================================================
+# 수동 테스트 (디버깅용)
+# ================================================================
+
+fn test_manual_return() {
+    # 테스트용 함수
+    fn multiply_if_positive(n: i32): i32 {
+        if n <= 0 {
+            return 0  # 음수면 0 반환
+        }
+        return n * 2  # 양수면 2배 반환
+    }
+
+    let r1 = multiply_if_positive(5)
+    let r2 = multiply_if_positive(-3)
+
+    println!("Test multiply_if_positive(5) = {}", r1)      # 10
+    println!("Test multiply_if_positive(-3) = {}", r2)    # 0
+}

@@ -109,61 +109,100 @@ fn evalUnaryOp(operand: any, op: string): any {
 }
 
 # ================================================================
+# Part 2.5: Return 신호 처리 (조기 종료)
+# ================================================================
+
+# Return 신호 생성
+fn createReturnSignal(value: any): map {
+  return {
+    "__return": true,
+    "value": value
+  }
+}
+
+# Return 신호 확인
+fn isReturnSignal(value: any): bool {
+  if value is map {
+    return value["__return"] == true
+  }
+  return false
+}
+
+# Return 신호에서 값 추출
+fn extractReturnValue(signal: map): any {
+  return signal["value"]
+}
+
+# ================================================================
 # Part 3: 제어 흐름
 # ================================================================
 
-# If 문
+# If 문 (return 신호 전파)
 fn evalIf(condition: any, thenBranch: map, elseBranch: map, env: map): any {
   if condition {
+    # then 브랜치 result가 return 신호일 수 있음 → 그대로 전파
     return evalNode(thenBranch, env)
   } else if elseBranch != null {
+    # else 브랜치 result가 return 신호일 수 있음 → 그대로 전파
     return evalNode(elseBranch, env)
   } else {
     return null
   }
 }
 
-# While 루프
+# While 루프 (return 신호 전파)
 fn evalWhile(condition_node: map, body: map, env: map): any {
   let result = null
-  
+
   while true {
     let cond_value = evalNode(condition_node, env)
     if not cond_value {
       break
     }
     result = evalNode(body, env)
+    # Return 신호 감지 → 즉시 루프 탈출
+    if isReturnSignal(result) {
+      return result
+    }
   }
-  
+
   return result
 }
 
-# For 루프
+# For 루프 (return 신호 전파)
 fn evalFor(variable: string, start_node: map, end_node: map, body: map, env: map): any {
   let start = evalNode(start_node, env)
   let end = evalNode(end_node, env)
   let result = null
-  
+
   let i = start
   while i < end {
     setVariable(variable, i, env)
     result = evalNode(body, env)
+    # Return 신호 감지 → 즉시 루프 탈출
+    if isReturnSignal(result) {
+      return result
+    }
     i = i + 1
   }
-  
+
   return result
 }
 
-# 블록
+# 블록 (return 신호 전파)
 fn evalBlock(statements: [map], env: map): any {
   let result = null
   let i = 0
-  
+
   while i < len(statements) {
     result = evalNode(statements[i], env)
+    # Return 신호 감지 → 즉시 루프 탈출
+    if isReturnSignal(result) {
+      return result
+    }
     i = i + 1
   }
-  
+
   return result
 }
 
@@ -203,7 +242,7 @@ fn callBuiltin(name: string, args: [any]): any {
   }
 }
 
-# 함수 호출 평가
+# 함수 호출 평가 (return 신호 처리)
 fn evalFunctionCall(name: string, arg_nodes: [map], env: map): any {
   # 내장 함수
   if isBuiltinFunction(name) {
@@ -215,15 +254,15 @@ fn evalFunctionCall(name: string, arg_nodes: [map], env: map): any {
     }
     return callBuiltin(name, args)
   }
-  
+
   # 사용자 정의 함수
   let funcs = env["functions"]
   let func = funcs[name]
-  
+
   if func == null {
     return null  # 함수 정의 안 됨
   }
-  
+
   # 인자 평가
   let args = []
   let i = 0
@@ -231,14 +270,14 @@ fn evalFunctionCall(name: string, arg_nodes: [map], env: map): any {
     args[i] = evalNode(arg_nodes[i], env)
     i = i + 1
   }
-  
+
   # 새 환경 생성
   let callEnv = {
     "variables": {},
     "functions": funcs,
     "parent": env
   }
-  
+
   # 매개변수 바인딩
   let params = func["params"]
   i = 0
@@ -246,9 +285,16 @@ fn evalFunctionCall(name: string, arg_nodes: [map], env: map): any {
     setVariable(params[i], args[i], callEnv)
     i = i + 1
   }
-  
+
   # 함수 본문 실행
-  return evalNode(func["body"], callEnv)
+  let result = evalNode(func["body"], callEnv)
+
+  # Return 신호 처리: 신호를 풀고 실제 값만 반환
+  if isReturnSignal(result) {
+    return extractReturnValue(result)
+  }
+
+  return result
 }
 
 # ================================================================
@@ -345,10 +391,10 @@ fn evalNode(node: map, env: map): any {
     return null
   }
   
-  # 반환
+  # 반환 (return 신호 생성)
   else if nodeType == "return" {
-    # TODO: 예외로 처리할 수도 있음
-    return evalNode(node["value"], env)
+    let returnValue = evalNode(node["value"], env)
+    return createReturnSignal(returnValue)
   }
   
   else {
