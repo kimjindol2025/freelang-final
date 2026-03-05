@@ -400,8 +400,9 @@ export class IRGenerator {
             out.push({ op: Op.ARR_LEN });
           } else {
             // Generic property access (for objects/maps)
-            // Implement as a helper function call (future: map member access)
-            throw new Error(`Property access not yet supported: ${propName}`);
+            // Treat as map lookup: push property name, then OBJ_GET
+            out.push({ op: Op.PUSH, arg: propName });
+            out.push({ op: Op.OBJ_GET });
           }
         }
         break;

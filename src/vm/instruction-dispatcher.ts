@@ -129,6 +129,11 @@ export class InstructionDispatcher {
     this.handlers.set(Op.CHAR_CODE, this.handleCharCode);
     this.handlers.set(Op.CHAR_FROM, this.handleCharFrom);
 
+    // Object/Map
+    this.handlers.set(Op.OBJ_NEW, this.handleObjNew);
+    this.handlers.set(Op.OBJ_SET, this.handleObjSet);
+    this.handlers.set(Op.OBJ_GET, this.handleObjGet);
+
     // Lambda
     this.handlers.set(Op.LAMBDA_NEW, this.handleLambdaNew);
     this.handlers.set(Op.LAMBDA_CAPTURE, this.handleLambdaCapture);
@@ -622,6 +627,39 @@ export class InstructionDispatcher {
   // ──────────────────────────────────────────────────────────────
   // Debug Handler
   // ──────────────────────────────────────────────────────────────
+
+  private handleObjNew = (ctx: DispatcherContext, inst: Inst): void => {
+    // Create a new empty object (map)
+    const obj = {};
+    ctx.vars.set(inst.arg as string, obj);
+    ctx.pc++;
+  };
+
+  private handleObjSet = (ctx: DispatcherContext, inst: Inst): void => {
+    // obj.key = value: stack: [value, key] → store in obj
+    ctx.need(2);
+    const key = ctx.stack.pop() as string;
+    const val = ctx.stack.pop();
+    const obj = ctx.vars.get(inst.arg as string);
+    if (typeof obj !== 'object' || obj === null) {
+      ctx.fail(Op.OBJ_SET, 5, `not_object:${inst.arg}`);
+    }
+    (obj as any)[key] = val;
+    ctx.pc++;
+  };
+
+  private handleObjGet = (ctx: DispatcherContext, inst: Inst): void => {
+    // obj.key: stack: [obj, key] → [value]
+    ctx.need(2);
+    const key = ctx.stack.pop() as string;
+    const obj = ctx.stack.pop();
+    if (typeof obj !== 'object' || obj === null) {
+      ctx.fail(Op.OBJ_GET, 5, `not_object:${typeof obj}`);
+    }
+    ctx.guardStack();
+    ctx.stack.push((obj as any)[key]);
+    ctx.pc++;
+  };
 
   private handleDump = (ctx: DispatcherContext): void => {
     console.log('[DUMP]', ctx.stack);
