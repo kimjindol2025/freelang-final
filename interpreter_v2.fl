@@ -46,12 +46,36 @@ fn setVariable(name: string, value: any, env: map): any {
   return value
 }
 
-# 함수 정의
+# 함수 정의 (async 지원)
 fn defineFunction(name: string, params: [string], body: map, env: map): any {
   let funcs = env["functions"]
   funcs[name] = {
     "params": params,
-    "body": body
+    "body": body,
+    "async": false  # 기본값: 일반 함수
+  }
+  return null
+}
+
+# Async 함수 정의 (R5: async fn은 Promise를 반환)
+fn defineAsyncFunction(name: string, params: [string], body: map, env: map): any {
+  let funcs = env["functions"]
+  funcs[name] = {
+    "params": params,
+    "body": body,
+    "async": true  # async 플래그 설정
+  }
+  return null
+}
+
+# Generic 함수 정의 (R7: 제네릭 함수는 any와 하위호환)
+fn defineGenericFunction(name: string, typeParams: [string], params: [string], body: map, env: map): any {
+  let funcs = env["functions"]
+  funcs[name] = {
+    "params": params,
+    "body": body,
+    "typeParams": typeParams,  # 타입 파라미터 저장 (런타임에는 any로 처리)
+    "async": false
   }
   return null
 }
@@ -148,6 +172,45 @@ fn extractReturnValue(signal: map): any {
 }
 
 # ================================================================
+# Part 2.6: Break/Continue 신호 처리 (루프 제어)
+# ================================================================
+
+# Break 신호 생성 (R1: break가 while 루프를 즉시 탈출)
+fn createBreakSignal(): map {
+  return {
+    "__break": true
+  }
+}
+
+# Continue 신호 생성 (R2: continue가 다음 반복으로 건너뜀)
+fn createContinueSignal(): map {
+  return {
+    "__continue": true
+  }
+}
+
+# Break 신호 확인
+fn isBreakSignal(value: any): bool {
+  if value is map {
+    return value["__break"] == true
+  }
+  return false
+}
+
+# Continue 신호 확인
+fn isContinueSignal(value: any): bool {
+  if value is map {
+    return value["__continue"] == true
+  }
+  return false
+}
+
+# 루프 제어 신호 확인 (break 또는 continue)
+fn isLoopControlSignal(value: any): bool {
+  return isBreakSignal(value) or isContinueSignal(value)
+}
+
+# ================================================================
 # Part 3: 제어 흐름
 # ================================================================
 
@@ -164,7 +227,7 @@ fn evalIf(condition: any, thenBranch: map, elseBranch: map, env: map): any {
   }
 }
 
-# While 루프 (return 신호 전파)
+# While 루프 (return/break/continue 신호 처리)
 fn evalWhile(condition_node: map, body: map, env: map): any {
   let result = null
 
@@ -174,16 +237,27 @@ fn evalWhile(condition_node: map, body: map, env: map): any {
       break
     }
     result = evalNode(body, env)
-    # Return 신호 감지 → 즉시 루프 탈출
+
+    # Return 신호 감지 → 즉시 루프 탈출 및 전파
     if isReturnSignal(result) {
       return result
+    }
+
+    # Break 신호 감지 → 루프 탈출 (R1 rule 준수)
+    if isBreakSignal(result) {
+      break
+    }
+
+    # Continue 신호 감지 → 다음 반복 (R2 rule 준수)
+    if isContinueSignal(result) {
+      continue
     }
   }
 
   return result
 }
 
-# For 루프 (return 신호 전파)
+# For 루프 (return/break/continue 신호 처리)
 fn evalFor(variable: string, start_node: map, end_node: map, body: map, env: map): any {
   let start = evalNode(start_node, env)
   let end = evalNode(end_node, env)
@@ -193,17 +267,30 @@ fn evalFor(variable: string, start_node: map, end_node: map, body: map, env: map
   while i < end {
     setVariable(variable, i, env)
     result = evalNode(body, env)
-    # Return 신호 감지 → 즉시 루프 탈출
+
+    # Return 신호 감지 → 즉시 루프 탈출 및 전파
     if isReturnSignal(result) {
       return result
     }
+
+    # Break 신호 감지 → 루프 탈출 (R1 rule 준수)
+    if isBreakSignal(result) {
+      break
+    }
+
+    # Continue 신호 감지 → 다음 반복 (R2 rule 준수)
+    if isContinueSignal(result) {
+      i = i + 1
+      continue
+    }
+
     i = i + 1
   }
 
   return result
 }
 
-# For-in 루프 (return 신호 전파)
+# For-in 루프 (return/break/continue 신호 처리)
 fn evalForIn(variable: string, iterable_node: map, body: map, env: map): any {
   let iterable = evalNode(iterable_node, env)
   let result = null
@@ -214,10 +301,23 @@ fn evalForIn(variable: string, iterable_node: map, body: map, env: map): any {
     while i < len(iterable) {
       setVariable(variable, iterable[i], env)
       result = evalNode(body, env)
-      # Return 신호 감지 → 즉시 루프 탈출
+
+      # Return 신호 감지 → 즉시 루프 탈출 및 전파
       if isReturnSignal(result) {
         return result
       }
+
+      # Break 신호 감지 → 루프 탈출
+      if isBreakSignal(result) {
+        break
+      }
+
+      # Continue 신호 감지 → 다음 반복
+      if isContinueSignal(result) {
+        i = i + 1
+        continue
+      }
+
       i = i + 1
     }
   }
@@ -230,9 +330,20 @@ fn evalForIn(variable: string, iterable_node: map, body: map, env: map): any {
     while i < len(keys) {
       setVariable(variable, iterable[keys[i]], env)
       result = evalNode(body, env)
+
       if isReturnSignal(result) {
         return result
       }
+
+      if isBreakSignal(result) {
+        break
+      }
+
+      if isContinueSignal(result) {
+        i = i + 1
+        continue
+      }
+
       i = i + 1
     }
   }
@@ -255,6 +366,163 @@ fn evalBlock(statements: [map], env: map): any {
   }
 
   return result
+}
+
+# ================================================================
+# Part 3.5: Match 패턴 매칭 (R3, R4 규칙)
+# ================================================================
+
+# Match 문 실행 (R3: 패턴을 순서대로 검사, R4: _ 와일드카드)
+fn evalMatch(expr_value: any, arms: [map], env: map): any {
+  let result = null
+  let i = 0
+
+  # 모든 arm을 순서대로 검사 (R3 rule 준수)
+  while i < len(arms) {
+    let arm = arms[i]
+    let pattern = arm["pattern"]
+    let arm_body = arm["body"]
+
+    # 패턴 매칭 (와일드카드 _ 처리)
+    let matched = false
+
+    if pattern == "_" {
+      # 와일드카드: 항상 매칭 (R4 rule 준수)
+      matched = true
+    } else if pattern is string {
+      # 숫자/문자열 리터럴 비교
+      matched = (expr_value == pattern)
+    } else if pattern is i32 {
+      # 숫자 리터럴 비교
+      matched = (expr_value == pattern)
+    } else {
+      # 기타 타입 비교
+      matched = (expr_value == pattern)
+    }
+
+    # 패턴이 매칭되면 arm 실행 및 반환
+    if matched {
+      result = evalNode(arm_body, env)
+      # Return 신호는 전파
+      if isReturnSignal(result) {
+        return result
+      }
+      # 첫 매칭 arm 이후는 탈출 (순차 실행)
+      break
+    }
+
+    i = i + 1
+  }
+
+  return result
+}
+
+# ================================================================
+# Part 3.7: Async/Await 지원 (R5, R6 규칙)
+# ================================================================
+
+# Promise 상태 정의
+# Status: "pending" | "fulfilled" | "rejected"
+
+# Promise 생성 (resolved)
+fn createPromise(value: any): map {
+  return {
+    "__promise": true,
+    "status": "fulfilled",
+    "value": value,
+    "reason": null
+  }
+}
+
+# Promise Pending 생성
+fn createPendingPromise(): map {
+  return {
+    "__promise": true,
+    "status": "pending",
+    "value": null,
+    "reason": null
+  }
+}
+
+# Promise 확인
+fn isPromise(value: any): bool {
+  if value is map {
+    return value["__promise"] == true
+  }
+  return false
+}
+
+# Promise 값 추출 (await 처리)
+# R6: await는 Promise 결과를 동기처럼 사용
+fn awaitPromise(promise: any): any {
+  if isPromise(promise) {
+    if promise["status"] == "fulfilled" {
+      return promise["value"]
+    } else if promise["status"] == "rejected" {
+      # 에러 처리 (간단한 경우)
+      return null
+    } else {
+      # pending: 실제 구현에서는 event loop 필요
+      # 여기서는 즉시 반환 (non-blocking)
+      return promise["value"]
+    }
+  }
+  # Promise가 아닌 경우 그냥 반환
+  return promise
+}
+
+# Async 함수 래핑
+# R5: async fn은 Promise를 반환
+fn wrapAsyncFunction(func_def: map): map {
+  return {
+    "__async": true,
+    "original": func_def
+  }
+}
+
+# Async 함수 호출
+fn callAsyncFunction(name: string, arg_nodes: [map], env: map): any {
+  # 사용자 정의 함수
+  let funcs = env["functions"]
+  let func = funcs[name]
+
+  if func == null {
+    return null  # 함수 정의 안 됨
+  }
+
+  # 인자 평가
+  let args = []
+  let i = 0
+  while i < len(arg_nodes) {
+    args[i] = evalNode(arg_nodes[i], env)
+    i = i + 1
+  }
+
+  # 새 환경 생성
+  let callEnv = {
+    "variables": {},
+    "functions": funcs,
+    "parent": env
+  }
+
+  # 매개변수 바인딩
+  let params = func["params"]
+  i = 0
+  while i < len(params) {
+    setVariable(params[i], args[i], callEnv)
+    i = i + 1
+  }
+
+  # 함수 본문 실행
+  let result = evalNode(func["body"], callEnv)
+
+  # Return 신호 처리: 신호를 풀고 실제 값만 반환
+  if isReturnSignal(result) {
+    result = extractReturnValue(result)
+  }
+
+  # Async 함수는 반드시 Promise를 반환 (R5)
+  return createPromise(result)
 }
 
 # ================================================================
@@ -312,6 +580,11 @@ fn evalFunctionCall(name: string, arg_nodes: [map], env: map): any {
 
   if func == null {
     return null  # 함수 정의 안 됨
+  }
+
+  # Async 함수 확인 (R5)
+  if func["async"] == true {
+    return callAsyncFunction(name, arg_nodes, env)
   }
 
   # 인자 평가
@@ -476,11 +749,23 @@ fn evalNode(node: map, env: map): any {
     return null
   }
 
-  # 함수 정의
+  # 함수 정의 (일반 + async + generic)
   else if nodeType == "functionDef" {
     let params = node["params"]
     let body = node["body"]
-    defineFunction(node["name"], params, body, env)
+    let isAsync = node["async"] == true
+    let typeParams = node["typeParams"]  # Generic 타입 파라미터 (R7)
+
+    if typeParams != null and len(typeParams) > 0 {
+      # Generic 함수 (R7: 런타임에서 any로 처리, 타입 안전성은 선언 수준)
+      defineGenericFunction(node["name"], typeParams, params, body, env)
+    } else if isAsync {
+      # Async 함수 (R5: Promise 반환)
+      defineAsyncFunction(node["name"], params, body, env)
+    } else {
+      # 일반 함수
+      defineFunction(node["name"], params, body, env)
+    }
     return null
   }
 
@@ -497,7 +782,35 @@ fn evalNode(node: map, env: map): any {
     let returnValue = evalNode(node["value"], env)
     return createReturnSignal(returnValue)
   }
-  
+
+  # Break 문 (R1: break가 while 루프를 즉시 탈출)
+  else if nodeType == "break" {
+    return createBreakSignal()
+  }
+
+  # Continue 문 (R2: continue가 다음 반복으로 건너뜀)
+  else if nodeType == "continue" {
+    return createContinueSignal()
+  }
+
+  # Match 문 (R3, R4: 패턴 매칭)
+  else if nodeType == "match" {
+    let expr_value = evalNode(node["expression"], env)
+    let arms = node["arms"]
+    return evalMatch(expr_value, arms, env)
+  }
+
+  # Await 표현식 (R6: await가 Promise 결과를 동기처럼 사용)
+  else if nodeType == "await" {
+    let promise = evalNode(node["expression"], env)
+    return awaitPromise(promise)
+  }
+
+  # Async 함수 호출 (R5: async fn은 Promise를 반환)
+  else if nodeType == "asyncFunctionCall" {
+    return callAsyncFunction(node["name"], node["args"], env)
+  }
+
   else {
     return null
   }
