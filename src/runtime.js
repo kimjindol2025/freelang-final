@@ -1008,6 +1008,138 @@ function max_array(arr) {
 }
 
 // ============================================================================
+// Object/Map Functions
+// ============================================================================
+
+/**
+ * keys(obj: map): [string]
+ * Returns array of object keys
+ */
+function keys(obj) {
+  if (obj === null || obj === undefined) return [];
+  if (Array.isArray(obj)) return obj.map((_, i) => String(i));
+  return Object.keys(obj);
+}
+
+/**
+ * values(obj: map): [any]
+ * Returns array of object values
+ */
+function values(obj) {
+  if (obj === null || obj === undefined) return [];
+  if (Array.isArray(obj)) return obj;
+  return Object.values(obj);
+}
+
+/**
+ * entries(obj: map): [[string, any]]
+ * Returns array of [key, value] pairs
+ */
+function entries(obj) {
+  if (obj === null || obj === undefined) return [];
+  if (Array.isArray(obj)) {
+    return obj.map((val, idx) => [String(idx), val]);
+  }
+  return Object.entries(obj);
+}
+
+/**
+ * has(obj: map, key: string): bool
+ * Checks if object has key
+ */
+function has(obj, key) {
+  if (obj === null || obj === undefined) return false;
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+/**
+ * get(obj: map, key: string): any
+ * Gets value for key, returns null if not found
+ */
+function get(obj, key) {
+  if (obj === null || obj === undefined) return null;
+  return obj[key] || null;
+}
+
+/**
+ * set(obj: map, key: string, value: any): map
+ * Sets value for key and returns modified object
+ */
+function set(obj, key, value) {
+  if (obj === null || obj === undefined) obj = {};
+  obj[key] = value;
+  return obj;
+}
+
+/**
+ * delete(obj: map, key: string): map
+ * Deletes key from object and returns modified object
+ */
+function delete_key(obj, key) {
+  if (obj !== null && obj !== undefined) {
+    delete obj[key];
+  }
+  return obj;
+}
+
+/**
+ * merge(obj1: map, obj2: map): map
+ * Merges two objects (obj2 values override obj1)
+ */
+function merge(obj1, obj2) {
+  const result = obj1 && typeof obj1 === 'object' ? { ...obj1 } : {};
+  if (obj2 && typeof obj2 === 'object') {
+    Object.assign(result, obj2);
+  }
+  return result;
+}
+
+/**
+ * pick(obj: map, keys: [string]): map
+ * Returns new object with only specified keys
+ */
+function pick(obj, keys_list) {
+  if (obj === null || obj === undefined) return {};
+  if (!Array.isArray(keys_list)) return {};
+  const result = {};
+  for (const key of keys_list) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      result[key] = obj[key];
+    }
+  }
+  return result;
+}
+
+/**
+ * omit(obj: map, keys: [string]): map
+ * Returns new object without specified keys
+ */
+function omit(obj, keys_list) {
+  if (obj === null || obj === undefined) return {};
+  if (!Array.isArray(keys_list)) return obj;
+  const result = { ...obj };
+  for (const key of keys_list) {
+    delete result[key];
+  }
+  return result;
+}
+
+/**
+ * fromEntries(entries: [[string, any]]): map
+ * Creates object from array of [key, value] pairs
+ */
+function fromEntries(entries_arr) {
+  if (!Array.isArray(entries_arr)) return {};
+  const result = {};
+  for (const entry of entries_arr) {
+    if (Array.isArray(entry) && entry.length >= 2) {
+      result[entry[0]] = entry[1];
+    }
+  }
+  return result;
+}
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 
@@ -1154,6 +1286,19 @@ module.exports = {
   avg,
   min_array,
   max_array,
+
+  // Object/Map Functions
+  keys,
+  values,
+  entries,
+  has,
+  get,
+  set,
+  delete: delete_key,
+  merge,
+  pick,
+  omit,
+  fromEntries,
 
   // Utilities
   typeof: typeof_,
