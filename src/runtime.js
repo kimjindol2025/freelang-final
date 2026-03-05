@@ -714,6 +714,300 @@ function random() {
 }
 
 // ============================================================================
+// Array Functions
+// ============================================================================
+
+/**
+ * push(arr: [any], item: any): [any]
+ * Adds item to end of array and returns array
+ */
+function push(arr, item) {
+  if (!Array.isArray(arr)) arr = [];
+  arr.push(item);
+  return arr;
+}
+
+/**
+ * pop(arr: [any]): any
+ * Removes and returns last element
+ */
+function pop(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return null;
+  return arr.pop();
+}
+
+/**
+ * shift(arr: [any]): any
+ * Removes and returns first element
+ */
+function shift(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return null;
+  return arr.shift();
+}
+
+/**
+ * unshift(arr: [any], item: any): [any]
+ * Adds item to beginning and returns array
+ */
+function unshift(arr, item) {
+  if (!Array.isArray(arr)) arr = [];
+  arr.unshift(item);
+  return arr;
+}
+
+/**
+ * slice(arr: [any], start: i32, end?: i32): [any]
+ * Returns a shallow copy of a portion of array
+ */
+function slice(arr, start, end) {
+  if (!Array.isArray(arr)) return [];
+  if (end === undefined) {
+    return arr.slice(start);
+  }
+  return arr.slice(start, end);
+}
+
+/**
+ * reverse(arr: [any]): [any]
+ * Reverses array in place and returns it
+ */
+function reverse_array(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.reverse();
+}
+
+/**
+ * indexOf(arr: [any], item: any): i32
+ * Returns index of item or -1 if not found
+ */
+function indexOf_array(arr, item) {
+  if (!Array.isArray(arr)) return -1;
+  return arr.indexOf(item);
+}
+
+/**
+ * lastIndexOf(arr: [any], item: any): i32
+ * Returns last index of item or -1
+ */
+function lastIndexOf_array(arr, item) {
+  if (!Array.isArray(arr)) return -1;
+  return arr.lastIndexOf(item);
+}
+
+/**
+ * includes(arr: [any], item: any): bool
+ * Checks if array contains item
+ */
+function includes_array(arr, item) {
+  if (!Array.isArray(arr)) return false;
+  return arr.includes(item);
+}
+
+/**
+ * sort(arr: [any], compareFn?: fn): [any]
+ * Sorts array in place. If no function, sorts numerically
+ */
+function sort(arr, compareFn) {
+  if (!Array.isArray(arr)) return [];
+
+  if (compareFn && typeof compareFn === 'function') {
+    return arr.sort((a, b) => {
+      const result = compareFn(a, b);
+      return result === true ? 1 : (result === false ? -1 : 0);
+    });
+  } else {
+    return arr.sort((a, b) => {
+      if (typeof a === 'number' && typeof b === 'number') {
+        return a - b;
+      }
+      return String(a).localeCompare(String(b));
+    });
+  }
+}
+
+/**
+ * map(arr: [any], fn: function): [any]
+ * Returns new array with results of calling fn on each element
+ */
+function map(arr, fn) {
+  if (!Array.isArray(arr)) return [];
+  if (typeof fn !== 'function') return arr;
+  return arr.map(fn);
+}
+
+/**
+ * filter(arr: [any], fn: function): [any]
+ * Returns new array with elements for which fn returns true
+ */
+function filter(arr, fn) {
+  if (!Array.isArray(arr)) return [];
+  if (typeof fn !== 'function') return arr;
+  return arr.filter(fn);
+}
+
+/**
+ * reduce(arr: [any], fn: function, init: any): any
+ * Reduces array to single value by applying fn
+ */
+function reduce(arr, fn, init) {
+  if (!Array.isArray(arr)) return init;
+  if (typeof fn !== 'function') return init;
+  return arr.reduce(fn, init);
+}
+
+/**
+ * forEach(arr: [any], fn: function): null
+ * Executes fn for each element
+ */
+function forEach(arr, fn) {
+  if (!Array.isArray(arr)) return null;
+  if (typeof fn !== 'function') return null;
+  arr.forEach(fn);
+  return null;
+}
+
+/**
+ * find(arr: [any], fn: function): any
+ * Returns first element for which fn returns true
+ */
+function find(arr, fn) {
+  if (!Array.isArray(arr)) return null;
+  if (typeof fn !== 'function') return null;
+  return arr.find(fn) || null;
+}
+
+/**
+ * findIndex(arr: [any], fn: function): i32
+ * Returns index of first element for which fn returns true
+ */
+function findIndex(arr, fn) {
+  if (!Array.isArray(arr)) return -1;
+  if (typeof fn !== 'function') return -1;
+  return arr.findIndex(fn);
+}
+
+/**
+ * some(arr: [any], fn: function): bool
+ * Returns true if any element satisfies fn
+ */
+function some(arr, fn) {
+  if (!Array.isArray(arr)) return false;
+  if (typeof fn !== 'function') return false;
+  return arr.some(fn);
+}
+
+/**
+ * every(arr: [any], fn: function): bool
+ * Returns true if all elements satisfy fn
+ */
+function every(arr, fn) {
+  if (!Array.isArray(arr)) return true;
+  if (typeof fn !== 'function') return false;
+  return arr.every(fn);
+}
+
+/**
+ * concat(arr1: [any], arr2: [any]): [any]
+ * Concatenates two arrays
+ */
+function concat(arr1, arr2) {
+  if (!Array.isArray(arr1)) arr1 = [];
+  if (!Array.isArray(arr2)) arr2 = [];
+  return arr1.concat(arr2);
+}
+
+/**
+ * flatten(arr: [[any]]): [any]
+ * Flattens one level of nested arrays
+ */
+function flatten(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.flat();
+}
+
+/**
+ * unique(arr: [any]): [any]
+ * Returns array with duplicate values removed
+ */
+function unique(arr) {
+  if (!Array.isArray(arr)) return [];
+  return [...new Set(arr)];
+}
+
+/**
+ * compact(arr: [any]): [any]
+ * Returns array with null/undefined values removed
+ */
+function compact(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.filter(item => item !== null && item !== undefined);
+}
+
+/**
+ * chunk(arr: [any], size: i32): [[any]]
+ * Breaks array into chunks of given size
+ */
+function chunk(arr, size) {
+  if (!Array.isArray(arr) || size <= 0) return [];
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
+/**
+ * zip(arr1: [any], arr2: [any]): [[any]]
+ * Combines two arrays element-wise
+ */
+function zip(arr1, arr2) {
+  if (!Array.isArray(arr1)) arr1 = [];
+  if (!Array.isArray(arr2)) arr2 = [];
+  const result = [];
+  const len = Math.min(arr1.length, arr2.length);
+  for (let i = 0; i < len; i++) {
+    result.push([arr1[i], arr2[i]]);
+  }
+  return result;
+}
+
+/**
+ * sum(arr: [number]): number
+ * Returns sum of array elements
+ */
+function sum(arr) {
+  if (!Array.isArray(arr)) return 0;
+  return arr.reduce((acc, val) => acc + Number(val), 0);
+}
+
+/**
+ * avg(arr: [number]): f64
+ * Returns average of array elements
+ */
+function avg(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return 0;
+  return sum(arr) / arr.length;
+}
+
+/**
+ * min_array(arr: [number]): number
+ * Returns minimum value in array
+ */
+function min_array(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return null;
+  return Math.min(...arr.map(Number));
+}
+
+/**
+ * max_array(arr: [number]): number
+ * Returns maximum value in array
+ */
+function max_array(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return null;
+  return Math.max(...arr.map(Number));
+}
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 
@@ -830,6 +1124,36 @@ module.exports = {
   log,
   log10,
   random,
+
+  // Array Functions
+  push,
+  pop,
+  shift,
+  unshift,
+  slice,
+  reverse_array,
+  indexOf_array,
+  lastIndexOf_array,
+  includes_array,
+  sort,
+  map,
+  filter,
+  reduce,
+  forEach,
+  find,
+  findIndex,
+  some,
+  every,
+  concat,
+  flatten,
+  unique,
+  compact,
+  chunk,
+  zip,
+  sum,
+  avg,
+  min_array,
+  max_array,
 
   // Utilities
   typeof: typeof_,
