@@ -73,6 +73,22 @@ fn createArrayAssignment(array: {}, index: {}, value: {}) {
   return { "type": "arrayAssignment", "array": array, "index": index, "value": value }
 }
 
+fn createMemberAssignment(object: {}, property: string, value: {}) {
+  return { "type": "memberAssignment", "object": object, "property": property, "value": value }
+}
+
+fn createForInStatement(variable: string, iterable: {}, body: []) {
+  return { "type": "forInStatement", "variable": variable, "iterable": iterable, "body": body }
+}
+
+fn createDictLiteral(pairs: []) {
+  return { "type": "dictLiteral", "pairs": pairs }
+}
+
+fn createMemberAccess(object: {}, property: string) {
+  return { "type": "memberAccess", "object": object, "property": property }
+}
+
 # ================================================================
 # Parser 상태 관리
 # ================================================================
@@ -161,6 +177,10 @@ fn parseStatement(state: {}) {
   # while 루프
   else if token["type"] == "keyword" and token["value"] == "while" {
     return parseWhileStatement(state)
+  }
+  # for-in 루프
+  else if token["type"] == "keyword" and token["value"] == "for" {
+    return parseForInStatement(state)
   }
   # return 문
   else if token["type"] == "keyword" and token["value"] == "return" {
@@ -299,6 +319,43 @@ fn parseWhileStatement(state: {}) {
   return { "_state": state, "result": whileStmt }
 }
 
+# for-in 루프
+fn parseForInStatement(state: {}) {
+  # for 키워드 건너뛰기
+  state = advance(state)
+
+  # 루프 변수
+  varToken = currentToken(state)
+  if varToken["type"] != "identifier" {
+    print("Expected identifier after 'for'")
+    return { "_state": state, "result": null }
+  }
+  varName = varToken["value"]
+  state = advance(state)
+
+  # in 키워드
+  if currentToken(state)["type"] != "keyword" or currentToken(state)["value"] != "in" {
+    print("Expected 'in' in for-in loop")
+    return { "_state": state, "result": null }
+  }
+  state = advance(state)
+
+  # 반복 가능한 식 (배열 또는 range)
+  iterable = parseExpression(state)
+  state = iterable["_state"]
+
+  # 루프 본문
+  body = []
+  if currentToken(state)["type"] == "lbrace" {
+    blockStmt = parseBlockStatement(state)
+    state = blockStmt["_state"]
+    body = blockStmt["result"]["statements"]
+  }
+
+  forInStmt = createForInStatement(varName, iterable, body)
+  return { "_state": state, "result": forInStmt }
+}
+
 # return 문
 fn parseReturnStatement(state: {}) {
   # return 키워드 건너뛰기
@@ -364,7 +421,7 @@ fn parseAssignment(state: {}) {
   if currentToken(state)["type"] == "equals" {
     state = advance(state)
 
-    # 좌변이 identifier 또는 arrayAccess
+    # 좌변이 identifier, arrayAccess, 또는 memberAccess
     if expr["type"] == "identifier" {
       value = parseAssignment(state)
       state = value["_state"]
@@ -377,6 +434,13 @@ fn parseAssignment(state: {}) {
       state = value["_state"]
 
       assignment = createArrayAssignment(expr["array"], expr["index"], value)
+      return { "_state": state, "result": assignment }
+    }
+    else if expr["type"] == "memberAccess" {
+      value = parseAssignment(state)
+      state = value["_state"]
+
+      assignment = createMemberAssignment(expr["object"], expr["property"], value)
       return { "_state": state, "result": assignment }
     }
   }
@@ -522,7 +586,7 @@ fn parseUnary(state: {}) {
   return parseCall(state)
 }
 
-# 함수 호출 (())
+# 함수 호출 (()) + 멤버 접근 (.)
 fn parseCall(state: {}) {
   expr = parsePrimary(state)
   state = expr["_state"]
@@ -557,6 +621,20 @@ fn parseCall(state: {}) {
       }
 
       expr = createArrayAccess(expr, index)
+    }
+    else if currentToken(state)["type"] == "dot" {
+      # 멤버 접근 (.)
+      state = advance(state)
+      propToken = currentToken(state)
+
+      if propToken["type"] == "identifier" {
+        propName = propToken["value"]
+        state = advance(state)
+        expr = createMemberAccess(expr, propName)
+      } else {
+        print("Expected property name after '.'")
+        break
+      }
     }
     else {
       break
@@ -607,6 +685,56 @@ fn parsePrimary(state: {}) {
 
     state = advance(state)  # rbracket
     return { "_state": state, "result": createArrayLiteral(elements) }
+  }
+  # 딕셔너리 리터럴 ({})
+  else if token["type"] == "lbrace" {
+    state = advance(state)
+    pairs = []
+
+    while currentToken(state)["type"] != "rbrace" and currentToken(state)["type"] != "eof" {
+      # 키 (문자열 또는 식별자)
+      keyToken = currentToken(state)
+      let key = null
+
+      if keyToken["type"] == "string" {
+        key = keyToken["value"]
+        state = advance(state)
+      } else if keyToken["type"] == "identifier" {
+        key = keyToken["value"]
+        state = advance(state)
+      } else {
+        print("Expected key in dictionary literal")
+        break
+      }
+
+      # 콜론
+      if currentToken(state)["type"] != "colon" {
+        print("Expected ':' after dictionary key")
+        break
+      }
+      state = advance(state)
+
+      # 값
+      value = parseExpression(state)
+      state = value["_state"]
+
+      # 키-값 쌍 추가
+      pairs = pairs + [{ "key": key, "value": value }]
+
+      # 쉼표 또는 종료
+      if currentToken(state)["type"] == "comma" {
+        state = advance(state)
+      }
+      else if currentToken(state)["type"] == "rbrace" {
+        break
+      }
+    }
+
+    if currentToken(state)["type"] == "rbrace" {
+      state = advance(state)
+    }
+
+    return { "_state": state, "result": createDictLiteral(pairs) }
   }
   # 괄호 표현식
   else if token["type"] == "lparen" {

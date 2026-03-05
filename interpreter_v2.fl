@@ -189,6 +189,43 @@ fn evalFor(variable: string, start_node: map, end_node: map, body: map, env: map
   return result
 }
 
+# For-in 루프 (return 신호 전파)
+fn evalForIn(variable: string, iterable_node: map, body: map, env: map): any {
+  let iterable = evalNode(iterable_node, env)
+  let result = null
+
+  # 배열 순회
+  if iterable is [any] {
+    let i = 0
+    while i < len(iterable) {
+      setVariable(variable, iterable[i], env)
+      result = evalNode(body, env)
+      # Return 신호 감지 → 즉시 루프 탈출
+      if isReturnSignal(result) {
+        return result
+      }
+      i = i + 1
+    }
+  }
+  # 맵(딕셔너리) 순회
+  else if iterable is map {
+    # 맵의 경우, keys를 추출하여 순회
+    # 주의: FreeLang에서 map iteration이 제한적이므로, 여기서는 value만 순회
+    let i = 0
+    let keys = []  # TODO: mapKeys 함수 사용 필요
+    while i < len(keys) {
+      setVariable(variable, iterable[keys[i]], env)
+      result = evalNode(body, env)
+      if isReturnSignal(result) {
+        return result
+      }
+      i = i + 1
+    }
+  }
+
+  return result
+}
+
 # 블록 (return 신호 전파)
 fn evalBlock(statements: [map], env: map): any {
   let result = null
@@ -358,6 +395,11 @@ fn evalNode(node: map, env: map): any {
   else if nodeType == "for" {
     return evalFor(node["variable"], node["start"], node["end"], node["body"], env)
   }
+
+  # For-in 루프
+  else if nodeType == "forInStatement" {
+    return evalForIn(node["variable"], node["iterable"], node["body"], env)
+  }
   
   # 블록
   else if nodeType == "block" {
@@ -375,6 +417,21 @@ fn evalNode(node: map, env: map): any {
     }
     return result
   }
+
+  # 딕셔너리 리터럴
+  else if nodeType == "dictLiteral" {
+    let result: map = {}
+    let pairs = node["pairs"]
+    let i = 0
+    while i < len(pairs) {
+      let pair = pairs[i]
+      let key = pair["key"]
+      let value = evalNode(pair["value"], env)
+      result[key] = value
+      i = i + 1
+    }
+    return result
+  }
   
   # 배열 접근
   else if nodeType == "arrayAccess" {
@@ -382,7 +439,29 @@ fn evalNode(node: map, env: map): any {
     let index = evalNode(node["index"], env)
     return array[index]
   }
-  
+
+  # 멤버 접근
+  else if nodeType == "memberAccess" {
+    let object = evalNode(node["object"], env)
+    let property = node["property"]
+    if object is map {
+      return object[property]
+    }
+    return null
+  }
+
+  # 멤버 할당 (obj.prop = value)
+  else if nodeType == "memberAssignment" {
+    let object = evalNode(node["object"], env)
+    let value = evalNode(node["value"], env)
+    let property = node["property"]
+    if object is map {
+      object[property] = value
+      return value
+    }
+    return null
+  }
+
   # 함수 정의
   else if nodeType == "functionDef" {
     let params = node["params"]

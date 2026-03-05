@@ -1,0 +1,102 @@
+# ================================================================
+# A-2 단계 테스트: Parser 확장 (for-in + dict + member access)
+# ================================================================
+# 3개 테스트 + 1개 무관용 규칙
+# ================================================================
+
+#[cfg(test)]
+mod test_a2_parser_extensions {
+    use crate::*;
+
+    # Test 1: For-in 루프 - 배열 반복
+    #[test]
+    fn test_a2_1_for_in_array() {
+        # for item in arr { ... }
+        let arr = [10, 20, 30]
+        let sum = 0
+        for item in arr {
+            sum = sum + item
+        }
+        assert_eq!(sum, 60)
+        println!("✅ TEST A2-1 PASS: For-in array iteration")
+    }
+
+    # Test 2: 딕셔너리 리터럴 생성 및 접근
+    #[test]
+    fn test_a2_2_dict_literal() {
+        # let obj = {"name": "alice", "age": 30}
+        let person = {
+            "name": "alice",
+            "age": 30,
+            "city": "seoul"
+        }
+
+        assert_eq!(person["name"], "alice")
+        assert_eq!(person["age"], 30)
+        assert_eq!(person["city"], "seoul")
+        println!("✅ TEST A2-2 PASS: Dictionary literal")
+    }
+
+    # Test 3: 멤버 접근 (. 연산자)
+    #[test]
+    fn test_a2_3_member_access() {
+        # obj.name 형식으로 접근
+        let obj = {"x": 100, "y": 200}
+
+        # 멤버 접근 읽기
+        let x_val = obj.x
+        let y_val = obj.y
+
+        assert_eq!(x_val, 100)
+        assert_eq!(y_val, 200)
+        println!("✅ TEST A2-3 PASS: Member access (.)")
+    }
+
+    # Unforgiving Rule #1: Dict 리터럴 100% 완전 동작
+    #[test]
+    fn test_rule_a2_dict_complete() {
+        # Rule: dict {"k": v} 생성, 접근, 수정 100% 동작
+        let d = {"status": "active", "count": 0}
+
+        # 읽기
+        assert_eq!(d["status"], "active")
+        assert_eq!(d["count"], 0)
+
+        # 수정 (멤버 할당)
+        d.status = "inactive"
+        d.count = 5
+
+        assert_eq!(d["status"], "inactive")
+        assert_eq!(d["count"], 5)
+
+        println!("✅ RULE A2 PASS: Dict literal 100% complete")
+    }
+}
+
+# ================================================================
+# 수동 테스트 (디버깅용)
+# ================================================================
+
+fn test_manual_for_in() {
+    let numbers = [1, 2, 3, 4, 5]
+    let sum = 0
+    for n in numbers {
+        sum = sum + n
+    }
+    println!("Sum of [1..5] = {}", sum)  # 15
+}
+
+fn test_manual_dict() {
+    let config = {
+        "debug": true,
+        "port": 8080,
+        "host": "localhost"
+    }
+
+    println!("Debug: {}", config["debug"])
+    println!("Port: {}", config["port"])
+
+    # 멤버 접근
+    let p = config.port
+    println!("Port (via .): {}", p)
+}
