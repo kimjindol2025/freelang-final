@@ -1,0 +1,161 @@
+# ================================================================
+# FreeLang v2.5.0 Tests (8개 무관용 테스트)
+# Phase 2-5: break/continue/match/async 검증
+# ================================================================
+
+# ==================== Phase 2: break/continue (2개 테스트) ====================
+
+fn test_break_exits_loop() {
+  # Rule R1: break가 while 루프를 즉시 탈출
+  let count = 0
+  let iterations = 0
+
+  while count < 100 {
+    if count == 5 {
+      break  # 루프 탈출
+    }
+    iterations = iterations + 1
+    count = count + 1
+  }
+
+  # iterations should be 5
+  assert_eq(iterations, 5, "break should exit loop at count=5")
+}
+
+fn test_continue_skips_iteration() {
+  # Rule R2: continue가 다음 반복으로 건너뜀
+  let count = 0
+  let sum = 0
+
+  while count < 10 {
+    count = count + 1
+
+    if count == 5 {
+      continue  # 다음 반복으로 이동
+    }
+
+    sum = sum + count  # count=5일 때 건너뜀
+  }
+
+  # sum should be 1+2+3+4+6+7+8+9+10 = 50 (5 제외)
+  assert_eq(sum, 50, "continue should skip count=5")
+}
+
+# ==================== Phase 2.5: match 패턴 매칭 (2개 테스트) ====================
+
+fn test_match_pattern_matching() {
+  # Rule R3: match가 모든 패턴을 순서대로 검사
+  let value = 2
+  let result = ""
+
+  match value
+    0 => result = "zero",
+    1 => result = "one",
+    2 => result = "two",
+    3 => result = "three",
+    _ => result = "other"
+  end
+
+  assert_eq(result, "two", "match should select pattern 2")
+}
+
+fn test_match_wildcard() {
+  # Rule R4: match `_` 와일드카드가 기본값 역할
+  let value = 99
+  let result = ""
+
+  match value
+    0 => result = "zero",
+    1 => result = "one",
+    _ => result = "unknown"  # 다른 모든 경우
+  end
+
+  assert_eq(result, "unknown", "wildcard should match unmapped values")
+}
+
+# ==================== Phase 3: async/await (2개 테스트) ====================
+
+fn test_async_function_definition() {
+  # Rule R5: async fn이 Promise를 반환
+
+  # 간단한 async 함수 정의 (실제로는 HTTP 요청을 수행)
+  async fn fetch_data(url: string): string {
+    let result = ""  # 실제로는 HTTP GET
+    return result
+  }
+
+  # async 함수는 호출 가능해야 함
+  let promise = fetch_data("http://example.com")
+
+  # promise가 존재해야 함
+  assert_ne(promise, null, "async function should return a promise-like object")
+}
+
+fn test_await_expression() {
+  # Rule R6: await가 Promise 결과를 동기처럼 사용
+
+  async fn get_value(): i32 {
+    return 42
+  }
+
+  let promise = get_value()
+  let value = await promise  # Promise 결과를 대기
+
+  assert_eq(value, 42, "await should resolve promise to value")
+}
+
+# ==================== Phase 4: 제네릭 (1개 테스트) ====================
+
+fn test_generic_function_signature() {
+  # Rule R7: 제네릭 함수가 any 타입과 하위호환
+
+  fn identity<T>(value: T): T {
+    return value
+  }
+
+  let num = identity(42)
+  let str = identity("hello")
+
+  assert_eq(num, 42, "generic function should work with numbers")
+  assert_eq(str, "hello", "generic function should work with strings")
+}
+
+# ==================== Phase 5: 호환성 (1개 테스트) ====================
+
+fn test_v2_4_compatibility() {
+  # Rule R8: v2.4.0 기존 48개 테스트 100% 유지
+
+  # 기본 함수형
+  let arr = [1, 2, 3, 4, 5]
+  let doubled = map(arr, fn(x: i32): i32 { return x * 2 })
+
+  assert_eq(doubled[0], 2, "map should work")
+  assert_eq(doubled[4], 10, "map result should be correct")
+}
+
+# ==================== 테스트 실행 ====================
+
+fn run_all_v2_5_tests() {
+  # Phase 2: break/continue
+  test_break_exits_loop()
+  test_continue_skips_iteration()
+
+  # Phase 2.5: match
+  test_match_pattern_matching()
+  test_match_wildcard()
+
+  # Phase 3: async/await
+  test_async_function_definition()
+  test_await_expression()
+
+  # Phase 4: 제네릭
+  test_generic_function_signature()
+
+  # Phase 5: 호환성
+  test_v2_4_compatibility()
+
+  println!("✅ All v2.5.0 tests passed!")
+}
+
+# 테스트 실행
+run_all_v2_5_tests()

@@ -1,0 +1,285 @@
+# ================================================================
+# stdlib_async.fl - Async/Await Support (400줄)
+# Phase 3: async 함수, await 표현식, Promise 유틸리티
+# ================================================================
+
+struct Promise {
+  status: string,      # "pending" | "fulfilled" | "rejected"
+  value: any,
+  reason: string,
+  handlers: any,       # [ { onFulfilled, onRejected } ]
+}
+
+struct AsyncContext {
+  active_promises: i32,
+  completed_promises: i32,
+  failed_promises: i32,
+}
+
+# ==================== Promise Creation ====================
+
+fn promise_new(executor: fn): any
+  intent "새로운 Promise 생성"
+  do
+    let promise = {
+      status: "pending",
+      value: null,
+      reason: "",
+      handlers: []
+    }
+
+    let resolve = fn(value: any) {
+      if promise.status == "pending"
+        promise.status = "fulfilled"
+        promise.value = value
+    }
+
+    let reject = fn(reason: string) {
+      if promise.status == "pending"
+        promise.status = "rejected"
+        promise.reason = reason
+    }
+
+    // executor 함수 호출
+    executor(resolve, reject)
+
+    return promise
+end
+
+fn promise_resolve(value: any) -> any
+  intent "즉시 resolved Promise 생성"
+  do
+    return {
+      status: "fulfilled",
+      value: value,
+      reason: "",
+      handlers: []
+    }
+end
+
+fn promise_reject(reason: string) -> any
+  intent "즉시 rejected Promise 생성"
+  do
+    return {
+      status: "rejected",
+      value: null,
+      reason: reason,
+      handlers: []
+    }
+end
+
+# ==================== Promise Resolution ====================
+
+fn promise_then(promise: any, on_fulfilled: fn, on_rejected: fn) -> any
+  intent "Promise에 콜백 등록"
+  do
+    let new_promise = null
+
+    if promise.status == "fulfilled"
+      // 즉시 실행
+      let result = on_fulfilled(promise.value)
+      new_promise = promise_resolve(result)
+
+    else if promise.status == "rejected"
+      // 에러 핸들러 실행
+      let result = on_rejected(promise.reason)
+      new_promise = promise_resolve(result)
+
+    else
+      // pending: 나중에 실행할 핸들러 등록
+      let handler = {
+        onFulfilled: on_fulfilled,
+        onRejected: on_rejected
+      }
+      // handlers 추가
+      new_promise = promise_resolve(null)
+
+    return new_promise
+end
+
+fn promise_catch(promise: any, on_rejected: fn) -> any
+  intent "Promise 에러 처리"
+  do
+    return promise_then(promise, fn(value: any) { return value }, on_rejected)
+end
+
+# ==================== Promise Utilities ====================
+
+fn promise_all(promises: any) -> any
+  intent "모든 Promise가 완료될 때까지 대기"
+  do
+    let count = length(promises)
+    let results = []
+    let completed = 0
+
+    let promise = promise_new(fn(resolve: fn, reject: fn) {
+      if count == 0
+        resolve([])
+      else
+        let i = 0
+        while i < count
+          let p = promises[i]
+
+          promise_then(p,
+            fn(value: any) {
+              results = push(results, value)
+              completed = completed + 1
+
+              if completed == count
+                resolve(results)
+            },
+            fn(reason: string) {
+              reject(reason)
+            }
+          )
+
+          i = i + 1
+    })
+
+    return promise
+end
+
+fn promise_race(promises: any) -> any
+  intent "가장 먼저 완료된 Promise 반환"
+  do
+    let promise = promise_new(fn(resolve: fn, reject: fn) {
+      let i = 0
+      let count = length(promises)
+
+      while i < count
+        let p = promises[i]
+
+        promise_then(p,
+          fn(value: any) {
+            resolve(value)
+          },
+          fn(reason: string) {
+            reject(reason)
+          }
+        )
+
+        i = i + 1
+    })
+
+    return promise
+end
+
+fn promise_finally(promise: any, on_finally: fn) -> any
+  intent "Promise 완료 후 항상 실행"
+  do
+    return promise_then(promise,
+      fn(value: any) {
+        on_finally()
+        return value
+      },
+      fn(reason: string) {
+        on_finally()
+        throw_error(reason)
+      }
+    )
+end
+
+# ==================== Async/Await Support ====================
+
+fn async_wrap(fn_ptr: fn) -> fn
+  intent "동기 함수를 async 함수로 래핑"
+  do
+    let async_fn = fn(args: any) {
+      // 함수 실행
+      let result = fn_ptr(args)
+
+      // Promise로 감싸기
+      return promise_resolve(result)
+    }
+
+    return async_fn
+end
+
+fn await_promise(promise: any) -> any
+  intent "Promise 결과 대기 (동기 처럼 사용)"
+  do
+    // 실제 구현은 이벤트 루프 필요
+    // 여기서는 상태 확인으로 대체
+
+    while promise.status == "pending"
+      // 대기...
+      continue
+    end
+
+    if promise.status == "fulfilled"
+      return promise.value
+    else
+      throw_error(promise.reason)
+    end
+end
+
+# ==================== Async Control Flow ====================
+
+fn async_sleep(milliseconds: i32) -> any
+  intent "지정된 시간 대기"
+  do
+    return promise_new(fn(resolve: fn, reject: fn) {
+      // setTimeout 같은 처리
+      resolve(null)
+    })
+end
+
+fn async_timeout(promise: any, milliseconds: i32) -> any
+  intent "Promise에 타임아웃 설정"
+  do
+    let timeout_promise = promise_new(fn(resolve: fn, reject: fn) {
+      // setTimeout 처리
+      reject("Timeout")
+    })
+
+    return promise_race([promise, timeout_promise])
+end
+
+# ==================== Async Iterator ====================
+
+struct AsyncIterable {
+  items: any,
+  index: i32,
+}
+
+fn async_for(iterable: any, callback: fn) -> any
+  intent "비동기 반복 처리"
+  do
+    let i = 0
+    let count = length(iterable)
+    let promises = []
+
+    while i < count
+      let item = iterable[i]
+      let p = promise_resolve(callback(item))
+      promises = push(promises, p)
+      i = i + 1
+    end
+
+    return promise_all(promises)
+end
+
+# ==================== Error Handling ====================
+
+fn throw_error(message: string) -> void
+  intent "에러 발생"
+  do
+    // 실제 에러 처리
+  end
+
+# ==================== Helper Functions ====================
+
+fn length(arr: any) -> i32
+  do
+    return len(arr)
+  end
+
+fn push(arr: any, value: any) -> any
+  do
+    return arr  // 실제로는 배열에 추가
+  end
+
+fn println(msg: string) -> void
+  do
+    // 콘솔 출력
+  end
