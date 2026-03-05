@@ -2,7 +2,7 @@
   "name": "freelang",
   "version": "2.4.0",
   "description": "FreeLang v2.4.0 - Complete Language Enhancement with 10 Feature Improvements",
-  "main": "main.fl",
+  "main": "index.js",
   "keywords": [
     "freelang",
     "language",
