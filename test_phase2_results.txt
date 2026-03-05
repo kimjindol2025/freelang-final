@@ -1,0 +1,49 @@
+
+📝 LEXER TESTS
+──────────────────────────────────────────────────
+✓ Lexer: numbers
+✓ Lexer: strings
+✓ Lexer: boolean true
+✓ Lexer: boolean false
+✓ Lexer: null
+
+🔢 ARITHMETIC TESTS
+──────────────────────────────────────────────────
+✗ Arithmetic: addition
+  Error: Assertion failed: Expected 3, got 2
+✗ Arithmetic: subtraction
+  Error: Assertion failed: Expected 2, got 3
+✓ Arithmetic: multiplication
+✓ Arithmetic: division
+✓ Arithmetic: modulo
+✓ Arithmetic: power
+✗ Arithmetic: operator precedence
+  Error: Assertion failed: Expected 14, got 12
+✗ Arithmetic: parentheses
+  Error: Assertion failed: Execution failed: Expected ) after expression at line 1
+
+📦 VARIABLE TESTS
+──────────────────────────────────────────────────
+✓ Variables: let declaration
+✓ Variables: const declaration
+✓ Variables: var declaration
+✓ Variables: variable reassignment
+✓ Variables: compound assignment +=
+✓ Variables: compound assignment -=
+
+⚙️  FUNCTION TESTS
+──────────────────────────────────────────────────
+✗ Functions: simple function
+  Error: Assertion failed: Execution failed: Not a function: object
+✗ Functions: function without return
+  Error: Assertion failed: Execution failed: Not a function: object
+✗ Functions: recursive function
+  Error: Assertion failed: Execution failed: Expected ) after arguments at line 4
+✗ Functions: function in variable
+  Error: Assertion failed: Execution failed: Not a function: object
+
+🔀 CONTROL FLOW TESTS
+──────────────────────────────────────────────────
+✓ Control: if statement true
+✓ Control: if statement false
+✓ Control: if-else
