@@ -1,0 +1,239 @@
+/**
+ * Phase 1 Week 7-8: LLVM IR Emitter
+ *
+ * IR → LLVM IR 코드 생성
+ * 작성: 2026-03-06
+ */
+
+// ============================================
+// LLVM Code Generator
+// ============================================
+
+struct LLVMEmitter {
+  ir_program: IRProgram,
+  llvm_code: Array<string>,
+  var_types: Map<string, string>,
+}
+
+/**
+ * new_llvm_emitter(ir: IRProgram): LLVMEmitter
+ */
+fn new_llvm_emitter(ir: IRProgram): LLVMEmitter {
+  var emitter: LLVMEmitter
+  emitter.ir_program = ir
+  emitter.llvm_code = []
+  emitter.var_types = map_new()
+  return emitter
+}
+
+// ============================================
+// LLVM Code Emission
+// ============================================
+
+/**
+ * emit_llvm(emitter: LLVMEmitter, line: string): void
+ */
+fn emit_llvm(emitter: LLVMEmitter, line: string): void {
+  emitter.llvm_code.push(line)
+}
+
+/**
+ * emit_llvm_header(emitter: LLVMEmitter): void
+ */
+fn emit_llvm_header(emitter: LLVMEmitter): void {
+  emit_llvm(emitter, "; ModuleID = 'freelang'")
+  emit_llvm(emitter, "target datalayout = \"e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128\"")
+  emit_llvm(emitter, "target triple = \"x86_64-unknown-linux-gnu\"")
+  emit_llvm(emitter, "")
+}
+
+/**
+ * emit_llvm_function_header(emitter: LLVMEmitter, name: string, return_type: string): void
+ */
+fn emit_llvm_function_header(
+  emitter: LLVMEmitter,
+  name: string,
+  return_type: string
+): void {
+  let ret_type = "i32"
+  if return_type == "string" { ret_type = "i8*" }
+  if return_type == "void" { ret_type = "void" }
+
+  emit_llvm(emitter, "define " + ret_type + " @" + name + "() {")
+  emit_llvm(emitter, "entry:")
+}
+
+/**
+ * emit_llvm_instruction(emitter: LLVMEmitter, instr: IRInstruction): void
+ */
+fn emit_llvm_instruction(
+  emitter: LLVMEmitter,
+  instr: IRInstruction
+): void {
+  let opname = opcode_to_string(instr.opcode)
+
+  if instr.opcode == 0 {  // ADD
+    let op1 = instr.operands[0]
+    let op2 = instr.operands[1]
+    emit_llvm(emitter, "  %" + instr.result + " = add i32 " + op1 + ", " + op2)
+  }
+
+  if instr.opcode == 1 {  // SUB
+    let op1 = instr.operands[0]
+    let op2 = instr.operands[1]
+    emit_llvm(emitter, "  %" + instr.result + " = sub i32 " + op1 + ", " + op2)
+  }
+
+  if instr.opcode == 2 {  // MUL
+    let op1 = instr.operands[0]
+    let op2 = instr.operands[1]
+    emit_llvm(emitter, "  %" + instr.result + " = mul i32 " + op1 + ", " + op2)
+  }
+
+  if instr.opcode == 3 {  // DIV
+    let op1 = instr.operands[0]
+    let op2 = instr.operands[1]
+    emit_llvm(emitter, "  %" + instr.result + " = sdiv i32 " + op1 + ", " + op2)
+  }
+
+  if instr.opcode == 12 {  // ALLOCA
+    emit_llvm(emitter, "  %" + instr.result + " = alloca i32")
+  }
+
+  if instr.opcode == 10 {  // LOAD
+    let array_var = instr.operands[0]
+    let index = instr.operands[1]
+    emit_llvm(emitter, "  %" + instr.result + " = load i32, i32* %" + array_var)
+  }
+
+  if instr.opcode == 11 {  // STORE
+    let value = instr.operands[0]
+    let ptr = instr.result
+    emit_llvm(emitter, "  store i32 " + value + ", i32* %" + ptr)
+  }
+
+  if instr.opcode == 23 {  // RET
+    if instr.operands.length() > 0 {
+      let ret_val = instr.operands[0]
+      emit_llvm(emitter, "  ret i32 " + ret_val)
+    } else {
+      emit_llvm(emitter, "  ret void")
+    }
+  }
+
+  if instr.opcode == 22 {  // LABEL
+    emit_llvm(emitter, instr.label + ":")
+  }
+
+  if instr.opcode == 20 {  // BR
+    emit_llvm(emitter, "  br label %" + instr.label)
+  }
+
+  if instr.opcode == 21 {  // BRZ
+    let cond = instr.operands[0]
+    emit_llvm(emitter, "  br i1 %" + cond + ", label %then, label %" + instr.label)
+  }
+
+  if instr.opcode == 30 {  // CALL
+    let func_name = instr.operands[0]
+    emit_llvm(emitter, "  %" + instr.result + " = call i32 @" + func_name + "()")
+  }
+}
+
+/**
+ * emit_llvm_function_footer(emitter: LLVMEmitter): void
+ */
+fn emit_llvm_function_footer(emitter: LLVMEmitter): void {
+  emit_llvm(emitter, "}")
+  emit_llvm(emitter, "")
+}
+
+// ============================================
+// IR to LLVM 변환
+// ============================================
+
+/**
+ * generate_llvm(emitter: LLVMEmitter): string
+ */
+fn generate_llvm(emitter: LLVMEmitter): string {
+  emit_llvm_header(emitter)
+
+  // 각 블록별로 LLVM 코드 생성
+  let i = 0
+  while i < emitter.ir_program.blocks.length() {
+    let block = emitter.ir_program.blocks[i]
+
+    // 첫 블록이면 함수 헤더
+    if i == 0 {
+      emit_llvm_function_header(emitter, "main", "void")
+    }
+
+    // 블록 내 명령어 변환
+    let j = 0
+    while j < block.instructions.length() {
+      emit_llvm_instruction(emitter, block.instructions[j])
+      j = j + 1
+    }
+
+    i = i + 1
+  }
+
+  emit_llvm_function_footer(emitter)
+
+  // LLVM 코드를 문자열로 합침
+  let result = ""
+  let k = 0
+  while k < emitter.llvm_code.length() {
+    result = result + emitter.llvm_code[k] + "\n"
+    k = k + 1
+  }
+
+  return result
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_llvm_emitter(): void {
+  println("")
+  println("🧪 Testing LLVM Emitter...")
+  println("")
+
+  // 간단한 IR 프로그램 생성
+  var prog = new_ir_program()
+  let block_name = create_ir_block(prog)
+  let block = new_ir_basic_block(block_name)
+
+  // t0 = 5 + 3
+  var ops1: Array<string> = []
+  ops1.push("5")
+  ops1.push("3")
+  let instr1 = new_ir_instruction(0, "t0", ops1)  // ADD
+  add_instruction(block, instr1)
+
+  // return t0
+  var ops2: Array<string> = []
+  ops2.push("t0")
+  let instr2 = new_ir_instruction(23, "", ops2)   // RET
+  add_instruction(block, instr2)
+
+  prog.blocks.push(block)
+
+  // LLVM 변환
+  var emitter = new_llvm_emitter(prog)
+  let llvm_code = generate_llvm(emitter)
+
+  println("✓ IR → LLVM conversion completed")
+  println("")
+  println("Generated LLVM IR:")
+  println("═══════════════════════════════════════")
+  println(llvm_code)
+  println("═══════════════════════════════════════")
+  println("")
+  println("✅ LLVM emitter tests completed")
+}
+
+fn main(): void {
+  test_llvm_emitter()
+}
