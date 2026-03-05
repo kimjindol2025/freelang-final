@@ -442,6 +442,278 @@ function chdir(dirpath) {
 }
 
 // ============================================================================
+// String Functions (Additional)
+// ============================================================================
+
+/**
+ * upper(s: string): string
+ * Converts string to uppercase
+ */
+function upper(s) {
+  return String(s).toUpperCase();
+}
+
+/**
+ * lower(s: string): string
+ * Converts string to lowercase
+ */
+function lower(s) {
+  return String(s).toLowerCase();
+}
+
+/**
+ * capitalize(s: string): string
+ * Capitalizes first character, rest lowercase
+ */
+function capitalize(s) {
+  const str = String(s);
+  if (str.length === 0) return str;
+  return str[0].toUpperCase() + str.slice(1).toLowerCase();
+}
+
+/**
+ * reverse(s: string): string
+ * Reverses a string
+ */
+function reverse(s) {
+  return String(s).split('').reverse().join('');
+}
+
+/**
+ * charAt(s: string, index: i32): string
+ * Gets character at index
+ */
+function charAt(s, index) {
+  const str = String(s);
+  if (index < 0 || index >= str.length) return '';
+  return str[index];
+}
+
+/**
+ * indexOf(s: string, search: string): i32
+ * Finds first occurrence of substring
+ */
+function indexOf(s, search) {
+  const str = String(s);
+  const search_str = String(search);
+  const idx = str.indexOf(search_str);
+  return idx;
+}
+
+/**
+ * lastIndexOf(s: string, search: string): i32
+ * Finds last occurrence of substring
+ */
+function lastIndexOf(s, search) {
+  const str = String(s);
+  const search_str = String(search);
+  const idx = str.lastIndexOf(search_str);
+  return idx;
+}
+
+/**
+ * includes(s: string, search: string): bool
+ * Checks if string contains substring
+ */
+function includes(s, search) {
+  return String(s).includes(String(search));
+}
+
+/**
+ * startsWith(s: string, prefix: string): bool
+ * Checks if string starts with prefix
+ */
+function startsWith(s, prefix) {
+  return String(s).startsWith(String(prefix));
+}
+
+/**
+ * endsWith(s: string, suffix: string): bool
+ * Checks if string ends with suffix
+ */
+function endsWith(s, suffix) {
+  return String(s).endsWith(String(suffix));
+}
+
+/**
+ * trim(s: string): string
+ * Removes whitespace from both ends
+ */
+function trim(s) {
+  return String(s).trim();
+}
+
+/**
+ * split(s: string, sep: string): [string]
+ * Splits string by separator
+ */
+function split(s, sep) {
+  const str = String(s);
+  const sep_str = String(sep);
+  if (sep_str.length === 0) {
+    return str.split('');
+  }
+  return str.split(sep_str);
+}
+
+/**
+ * join(arr: [string], sep: string): string
+ * Joins array elements with separator
+ */
+function join(arr, sep) {
+  if (!Array.isArray(arr)) arr = [arr];
+  return arr.map(String).join(String(sep));
+}
+
+/**
+ * replace(s: string, search: string, replacement: string): string
+ * Replaces first occurrence
+ */
+function replace(s, search, replacement) {
+  const str = String(s);
+  const search_str = String(search);
+  const repl_str = String(replacement);
+  const idx = str.indexOf(search_str);
+  if (idx === -1) return str;
+  return str.slice(0, idx) + repl_str + str.slice(idx + search_str.length);
+}
+
+/**
+ * replaceAll(s: string, search: string, replacement: string): string
+ * Replaces all occurrences
+ */
+function replaceAll(s, search, replacement) {
+  const str = String(s);
+  const search_str = String(search);
+  const repl_str = String(replacement);
+  return str.split(search_str).join(repl_str);
+}
+
+// ============================================================================
+// Math Functions (Additional)
+// ============================================================================
+
+/**
+ * floor(x: f64): i32
+ * Rounds down to nearest integer
+ */
+function floor(x) {
+  return Math.floor(Number(x));
+}
+
+/**
+ * ceil(x: f64): i32
+ * Rounds up to nearest integer
+ */
+function ceil(x) {
+  return Math.ceil(Number(x));
+}
+
+/**
+ * round(x: f64): i32
+ * Rounds to nearest integer
+ */
+function round(x) {
+  return Math.round(Number(x));
+}
+
+/**
+ * sqrt(x: f64): f64
+ * Square root
+ */
+function sqrt(x) {
+  return Math.sqrt(Number(x));
+}
+
+/**
+ * pow(x: f64, y: f64): f64
+ * Power function
+ */
+function pow(x, y) {
+  return Math.pow(Number(x), Number(y));
+}
+
+/**
+ * abs(x: f64): f64
+ * Absolute value
+ */
+function abs(x) {
+  return Math.abs(Number(x));
+}
+
+/**
+ * min(a: f64, b: f64): f64
+ * Minimum of two numbers
+ */
+function min(a, b) {
+  return Math.min(Number(a), Number(b));
+}
+
+/**
+ * max(a: f64, b: f64): f64
+ * Maximum of two numbers
+ */
+function max(a, b) {
+  return Math.max(Number(a), Number(b));
+}
+
+/**
+ * sin(x: f64): f64
+ * Sine function (radians)
+ */
+function sin(x) {
+  return Math.sin(Number(x));
+}
+
+/**
+ * cos(x: f64): f64
+ * Cosine function (radians)
+ */
+function cos(x) {
+  return Math.cos(Number(x));
+}
+
+/**
+ * tan(x: f64): f64
+ * Tangent function (radians)
+ */
+function tan(x) {
+  return Math.tan(Number(x));
+}
+
+/**
+ * exp(x: f64): f64
+ * Exponential function (e^x)
+ */
+function exp(x) {
+  return Math.exp(Number(x));
+}
+
+/**
+ * log(x: f64): f64
+ * Natural logarithm
+ */
+function log(x) {
+  return Math.log(Number(x));
+}
+
+/**
+ * log10(x: f64): f64
+ * Base-10 logarithm
+ */
+function log10(x) {
+  return Math.log10(Number(x));
+}
+
+/**
+ * random(): f64
+ * Random number between 0 and 1
+ */
+function random() {
+  return Math.random();
+}
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 
@@ -524,6 +796,40 @@ module.exports = {
   path_resolve,
   cwd,
   chdir,
+
+  // String Functions
+  upper,
+  lower,
+  capitalize,
+  reverse,
+  charAt,
+  indexOf,
+  lastIndexOf,
+  includes,
+  startsWith,
+  endsWith,
+  trim,
+  split,
+  join,
+  replace,
+  replaceAll,
+
+  // Math Functions
+  floor,
+  ceil,
+  round,
+  sqrt,
+  pow,
+  abs,
+  min,
+  max,
+  sin,
+  cos,
+  tan,
+  exp,
+  log,
+  log10,
+  random,
 
   // Utilities
   typeof: typeof_,
