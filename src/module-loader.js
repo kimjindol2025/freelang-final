@@ -33,7 +33,10 @@ class ModuleLoader {
       'crypto',
       'http',
       'date',
-      'encoding'
+      'encoding',
+      'json',
+      'regex',
+      'sql'
     ];
 
     for (const moduleName of standardModules) {

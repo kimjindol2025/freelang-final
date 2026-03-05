@@ -1,0 +1,3 @@
+println("=== FreeLang Hello World ===");
+println("Hello, FreeLang!");
+println("Version: 2.5.0");

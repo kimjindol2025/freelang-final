@@ -1,0 +1,15 @@
+println("=== Advanced Modules ===");
+
+let json = require('json');
+let jsonStr = '{"name":"Alice","age":30}';
+let obj = json.parse(jsonStr);
+println("[json] name: " + obj.name);
+
+let regex = require('regex');
+println("[regex] email check: " + regex.isEmail('user@example.com'));
+
+let sql = require('sql');
+let where = sql.buildWhere({"status": 'active'});
+println("[sql] where: " + where);
+
+println("SUCCESS");

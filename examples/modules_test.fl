@@ -1,0 +1,31 @@
+println("=== Module System Test ===");
+
+let fs = require('fs');
+println("[fs]");
+println("Dir exists: " + fs.existsSync('/tmp'));
+
+let os = require('os');
+println("[os]");
+println("Platform: " + os.platform());
+
+let path = require('path');
+println("[path]");
+let filePath = "/foo/bar/baz.txt";
+println("Basename: " + path.basename(filePath));
+
+let crypto = require('crypto');
+println("[crypto]");
+let hash = crypto.sha256("hello");
+println("SHA256: OK");
+
+let encoding = require('encoding');
+println("[encoding]");
+let encoded = encoding.base64Encode("FreeLang");
+println("Base64: " + encoded);
+
+let date = require('date');
+println("[date]");
+let today = date.today();
+println("Today: " + date.toDateString(today));
+
+println("SUCCESS");
