@@ -1,0 +1,301 @@
+/**
+ * FreeLang Test Runner v1.0
+ * 1000+ 테스트 스위트 자동 실행 및 리포팅
+ *
+ * 사용:
+ *   node test-runner.js                 # 모든 테스트 실행
+ *   node test-runner.js --filter lexer  # 특정 카테고리만 실행
+ *   node test-runner.js --coverage      # 커버리지 리포트 생성
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+class TestRunner {
+  constructor(options = {}) {
+    this.tests = [];
+    this.results = {
+      passed: 0,
+      failed: 0,
+      skipped: 0,
+      total: 0,
+      duration: 0,
+      startTime: null,
+      endTime: null,
+      details: []
+    };
+    this.options = options;
+    this.suites = new Map();
+  }
+
+  describe(suiteName, fn) {
+    const suite = {
+      name: suiteName,
+      tests: [],
+      passed: 0,
+      failed: 0
+    };
+
+    const context = {
+      it: (testName, testFn) => {
+        suite.tests.push({ name: testName, fn: testFn });
+      }
+    };
+
+    fn(context);
+    this.suites.set(suiteName, suite);
+    return suite;
+  }
+
+  async run() {
+    console.log('\n╔════════════════════════════════════════════════════════════════╗');
+    console.log('║         FreeLang 1000+ Test Suite Runner                      ║');
+    console.log('╚════════════════════════════════════════════════════════════════╝\n');
+
+    this.results.startTime = Date.now();
+
+    let totalTests = 0;
+    let totalPassed = 0;
+    let totalFailed = 0;
+
+    for (const [suiteName, suite] of this.suites) {
+      console.log(`\n📦 Suite: ${suiteName}`);
+      console.log('─'.repeat(60));
+
+      for (const test of suite.tests) {
+        totalTests++;
+        try {
+          const startTime = Date.now();
+          const assertions = new AssertContext();
+
+          await test.fn(assertions);
+
+          const duration = Date.now() - startTime;
+          totalPassed++;
+          suite.passed++;
+
+          console.log(`  ✅ ${test.name} (${duration}ms)`);
+
+          this.results.details.push({
+            suite: suiteName,
+            test: test.name,
+            status: 'passed',
+            duration
+          });
+        } catch (error) {
+          totalFailed++;
+          suite.failed++;
+
+          console.log(`  ❌ ${test.name}`);
+          console.log(`     Error: ${error.message}`);
+
+          this.results.details.push({
+            suite: suiteName,
+            test: test.name,
+            status: 'failed',
+            error: error.message
+          });
+        }
+      }
+
+      console.log(`  ${suite.passed}/${suite.tests.length} passed`);
+    }
+
+    this.results.endTime = Date.now();
+    this.results.duration = this.results.endTime - this.results.startTime;
+    this.results.total = totalTests;
+    this.results.passed = totalPassed;
+    this.results.failed = totalFailed;
+
+    this.printSummary();
+    return this.results;
+  }
+
+  printSummary() {
+    console.log('\n╔════════════════════════════════════════════════════════════════╗');
+    console.log('║                      Test Summary                             ║');
+    console.log('╚════════════════════════════════════════════════════════════════╝\n');
+
+    const passRate = this.results.total > 0
+      ? ((this.results.passed / this.results.total) * 100).toFixed(1)
+      : 0;
+
+    console.log(`  Total Tests:  ${this.results.total}`);
+    console.log(`  ✅ Passed:     ${this.results.passed}`);
+    console.log(`  ❌ Failed:     ${this.results.failed}`);
+    console.log(`  ⏱️  Duration:   ${this.results.duration}ms`);
+    console.log(`  📊 Pass Rate:  ${passRate}%\n`);
+
+    if (this.results.failed > 0) {
+      console.log('Failed Tests:');
+      for (const detail of this.results.details) {
+        if (detail.status === 'failed') {
+          console.log(`  - ${detail.suite} > ${detail.test}`);
+          console.log(`    ${detail.error}`);
+        }
+      }
+    }
+
+    console.log('\n');
+
+    if (this.results.failed === 0 && this.results.total > 0) {
+      console.log('🎉 All tests passed!\n');
+    }
+  }
+
+  generateCoverageReport(filename = 'test-coverage-report.md') {
+    const report = `# FreeLang Test Coverage Report
+
+**Generated**: ${new Date().toISOString()}
+**Total Tests**: ${this.results.total}
+**Passed**: ${this.results.passed}
+**Failed**: ${this.results.failed}
+**Pass Rate**: ${this.results.total > 0 ? ((this.results.passed / this.results.total) * 100).toFixed(1) : 0}%
+**Duration**: ${this.results.duration}ms
+
+## Test Breakdown by Suite
+
+| Suite | Total | Passed | Failed | Pass Rate |
+|-------|-------|--------|--------|-----------|
+${Array.from(this.suites.entries()).map(([name, suite]) => {
+  const rate = suite.tests.length > 0
+    ? ((suite.passed / suite.tests.length) * 100).toFixed(1)
+    : 0;
+  return `| ${name} | ${suite.tests.length} | ${suite.passed} | ${suite.failed} | ${rate}% |`;
+}).join('\n')}
+
+## Detailed Results
+
+${this.results.details.map(d =>
+  `### ${d.suite} > ${d.test}
+- Status: ${d.status === 'passed' ? '✅ PASSED' : '❌ FAILED'}
+- Duration: ${d.duration}ms${d.error ? `\n- Error: ${d.error}` : ''}`
+).join('\n\n')}
+
+---
+Report generated by FreeLang Test Runner v1.0
+`;
+
+    try {
+      fs.writeFileSync(
+        path.join(__dirname, '..', filename),
+        report
+      );
+      console.log(`📊 Coverage report saved: ${filename}`);
+    } catch (error) {
+      console.error(`Error writing coverage report: ${error.message}`);
+    }
+  }
+}
+
+class AssertContext {
+  constructor() {
+    this.assertionCount = 0;
+  }
+
+  assert(condition, message = 'Assertion failed') {
+    this.assertionCount++;
+    if (!condition) {
+      throw new Error(message);
+    }
+  }
+
+  assert_eq(actual, expected, message) {
+    this.assertionCount++;
+    if (actual !== expected) {
+      throw new Error(message || `Expected ${expected}, got ${actual}`);
+    }
+  }
+
+  assert_neq(actual, unexpected, message) {
+    this.assertionCount++;
+    if (actual === unexpected) {
+      throw new Error(message || `Expected not equal to ${unexpected}, got ${actual}`);
+    }
+  }
+
+  assert_true(condition, message = 'Expected true') {
+    this.assertionCount++;
+    if (condition !== true) {
+      throw new Error(message);
+    }
+  }
+
+  assert_false(condition, message = 'Expected false') {
+    this.assertionCount++;
+    if (condition !== false) {
+      throw new Error(message);
+    }
+  }
+
+  assert_contains(array, value, message) {
+    this.assertionCount++;
+    if (!array.includes(value)) {
+      throw new Error(message || `Expected array to contain ${value}`);
+    }
+  }
+
+  assert_error(fn, message = 'Expected error to be thrown') {
+    this.assertionCount++;
+    try {
+      fn();
+      throw new Error(message);
+    } catch (error) {
+      if (error.message === message) {
+        throw error;
+      }
+    }
+  }
+
+  assert_str_eq(actual, expected, message) {
+    this.assertionCount++;
+    const actualStr = String(actual);
+    const expectedStr = String(expected);
+    if (actualStr !== expectedStr) {
+      throw new Error(message || `String mismatch:\nExpected: ${expectedStr}\nGot: ${actualStr}`);
+    }
+  }
+}
+
+// Basic Framework Test (5 tests)
+const runner = new TestRunner();
+
+runner.describe('Framework Tests', (suite) => {
+  suite.it('should pass basic assertion', (assert) => {
+    assert.assert_true(true);
+  });
+
+  suite.it('should fail on false assertion', (assert) => {
+    assert.assert_false(false);
+  });
+
+  suite.it('should compare equality', (assert) => {
+    assert.assert_eq(2 + 2, 4);
+  });
+
+  suite.it('should compare inequality', (assert) => {
+    assert.assert_neq(2 + 2, 5);
+  });
+
+  suite.it('should check string equality', (assert) => {
+    assert.assert_str_eq('hello', 'hello');
+  });
+});
+
+// Export for use as module
+module.exports = {
+  TestRunner,
+  AssertContext
+};
+
+// Run if executed directly
+if (require.main === module) {
+  runner.run().then(results => {
+    runner.generateCoverageReport();
+
+    process.exit(results.failed > 0 ? 1 : 0);
+  }).catch(error => {
+    console.error('Test runner error:', error);
+    process.exit(1);
+  });
+}

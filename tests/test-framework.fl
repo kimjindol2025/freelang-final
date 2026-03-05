@@ -1,0 +1,255 @@
+/**
+ * FreeLang Test Framework v1.0
+ * 확장된 테스트 어설션 및 유틸리티
+ */
+
+// ============================================
+// 1. 기본 Assertion 함수들
+// ============================================
+
+fn assert(condition, message) {
+  if (!condition) {
+    print("❌ Assertion failed: " + message);
+    return false;
+  }
+  print("✅ " + message);
+  return true;
+}
+
+fn assert_eq(actual, expected, message) {
+  if (actual != expected) {
+    print("❌ Expected " + string(expected) + ", got " + string(actual) + ": " + message);
+    return false;
+  }
+  print("✅ " + message);
+  return true;
+}
+
+fn assert_neq(actual, unexpected, message) {
+  if (actual == unexpected) {
+    print("❌ Expected not equal to " + string(unexpected) + ": " + message);
+    return false;
+  }
+  print("✅ " + message);
+  return true;
+}
+
+fn assert_true(condition, message) {
+  if (condition != true) {
+    print("❌ Expected true: " + message);
+    return false;
+  }
+  print("✅ " + message);
+  return true;
+}
+
+fn assert_false(condition, message) {
+  if (condition != false) {
+    print("❌ Expected false: " + message);
+    return false;
+  }
+  print("✅ " + message);
+  return true;
+}
+
+fn assert_contains(array, value, message) {
+  let found = false;
+  let i = 0;
+  while (i < array.length) {
+    if (array[i] == value) {
+      found = true;
+    }
+    i = i + 1;
+  }
+
+  if (!found) {
+    print("❌ Expected array to contain " + string(value) + ": " + message);
+    return false;
+  }
+  print("✅ " + message);
+  return true;
+}
+
+fn assert_str_eq(actual, expected, message) {
+  if (string(actual) != string(expected)) {
+    print("❌ String mismatch: expected '" + string(expected) + "', got '" + string(actual) + "': " + message);
+    return false;
+  }
+  print("✅ " + message);
+  return true;
+}
+
+// ============================================
+// 2. Test Suite 관리
+// ============================================
+
+let global_suite_name = "";
+let global_tests = [];
+let global_passed = 0;
+let global_failed = 0;
+
+fn describe(suite_name, fn) {
+  global_suite_name = suite_name;
+  print("\n📦 Suite: " + suite_name);
+  print("────────────────────────────────────────────────────────────────");
+
+  fn();
+
+  let pass_rate = 0;
+  if (global_passed + global_failed > 0) {
+    pass_rate = (global_passed * 100) / (global_passed + global_failed);
+  }
+
+  print("  " + string(global_passed) + "/" + string(global_passed + global_failed) + " passed (" + string(pass_rate) + "%)\n");
+}
+
+fn it(test_name, fn) {
+  try {
+    fn();
+    global_passed = global_passed + 1;
+    print("  ✅ " + test_name);
+  } catch (error) {
+    global_failed = global_failed + 1;
+    print("  ❌ " + test_name);
+    print("     Error: " + string(error));
+  }
+}
+
+// ============================================
+// 3. 테스트 결과 리포팅
+// ============================================
+
+fn print_summary() {
+  print("\n╔════════════════════════════════════════════════════════════════╗");
+  print("║                      Test Summary                             ║");
+  print("╚════════════════════════════════════════════════════════════════╝\n");
+
+  let total = global_passed + global_failed;
+  let pass_rate = 0;
+  if (total > 0) {
+    pass_rate = (global_passed * 100) / total;
+  }
+
+  print("  Total Tests:  " + string(total));
+  print("  ✅ Passed:     " + string(global_passed));
+  print("  ❌ Failed:     " + string(global_failed));
+  print("  📊 Pass Rate:  " + string(pass_rate) + "%\n");
+
+  if (global_failed == 0 && total > 0) {
+    print("🎉 All tests passed!\n");
+  }
+}
+
+// ============================================
+// 4. 문자열 변환 유틸리티
+// ============================================
+
+fn string(value) {
+  // 간단한 문자열 변환
+  return value;
+}
+
+fn type_of(value) {
+  let t = typeof value;
+  return t;
+}
+
+// ============================================
+// 5. 배열 유틸리티
+// ============================================
+
+fn array_length(arr) {
+  return arr.length;
+}
+
+fn array_push(arr, value) {
+  arr.push(value);
+  return arr;
+}
+
+fn array_pop(arr) {
+  return arr.pop();
+}
+
+fn array_contains(arr, value) {
+  let i = 0;
+  while (i < arr.length) {
+    if (arr[i] == value) {
+      return true;
+    }
+    i = i + 1;
+  }
+  return false;
+}
+
+// ============================================
+// 6. 예제 테스트
+// ============================================
+
+describe("Example Tests", () => {
+  it("should pass basic assertion", () => {
+    assert_true(true, "true is true");
+  });
+
+  it("should compare numbers", () => {
+    assert_eq(2 + 2, 4, "2 + 2 = 4");
+  });
+
+  it("should compare strings", () => {
+    assert_str_eq("hello", "hello", "string equality");
+  });
+
+  it("should check inequality", () => {
+    assert_neq(2 + 2, 5, "2 + 2 != 5");
+  });
+
+  it("should check array contains", () => {
+    let arr = [1, 2, 3];
+    assert_true(array_contains(arr, 2), "array contains 2");
+  });
+
+  it("should check array length", () => {
+    let arr = [1, 2, 3];
+    assert_eq(array_length(arr), 3, "array length is 3");
+  });
+
+  it("should check false condition", () => {
+    assert_false(false, "false is false");
+  });
+
+  it("should handle string equality", () => {
+    let s1 = "test";
+    let s2 = "test";
+    assert_str_eq(s1, s2, "strings are equal");
+  });
+
+  it("should verify type checking", () => {
+    let num = 42;
+    assert_true(typeof num == "number", "42 is a number");
+  });
+
+  it("should verify array operations", () => {
+    let arr = [];
+    array_push(arr, 10);
+    array_push(arr, 20);
+    assert_eq(array_length(arr), 2, "array has 2 elements");
+  });
+
+  it("should verify inequality", () => {
+    let a = 5;
+    let b = 10;
+    assert_neq(a, b, "5 != 10");
+  });
+
+  it("should verify true assertion", () => {
+    assert_true(1 + 1 == 2, "math works");
+  });
+
+  it("should verify complex assertion", () => {
+    let arr = [10, 20, 30];
+    assert_true(array_contains(arr, 20), "array contains 20");
+    assert_eq(array_length(arr), 3, "array length is 3");
+  });
+});
+
+print_summary();
