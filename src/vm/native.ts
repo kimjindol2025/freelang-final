@@ -3,6 +3,8 @@
  * StdLib와 VM 연동을 위한 기본 함수
  */
 
+import * as httpModule from './http-module';
+
 /**
  * VM 네이티브 API 객체
  */
@@ -20,29 +22,29 @@ export const vmNative = {
     },
   },
 
-  // ====== Network API ======
+  // ====== Network API (Phase J: HTTP Support) ======
   net: {
-    httpGet: async (url: string) => {
-      // 간단한 HTTP GET (실제로는 axios/node-fetch 권장)
-      return {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-        body: '{"message":"OK"}',
-      };
-    },
-    httpPost: async (url: string, body: string) => {
-      return {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-        body: '{"message":"OK"}',
-      };
-    },
+    /**
+     * fetch(url, options): Promise<Response>
+     * Phase J 완전 구현된 HTTP 클라이언트
+     */
+    fetch: httpModule.fetch,
+
+    /**
+     * HTTP GET 요청 (헬퍼)
+     */
+    httpGet: httpModule.get,
+
+    /**
+     * HTTP POST 요청 (헬퍼)
+     */
+    httpPost: httpModule.post,
+
+    /**
+     * HTTP POST 헤더 포함 (호환성)
+     */
     httpPostWithHeaders: async (url: string, body: string, headers: any) => {
-      return {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-        body: '{"message":"OK"}',
-      };
+      return httpModule.post(url, body, headers);
     },
     connect: (host: string, port: number) => {
       return { host, port, connected: true };
