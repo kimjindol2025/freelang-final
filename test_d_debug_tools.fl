@@ -1,0 +1,89 @@
+# ================================================================
+# D 단계 테스트: Debug Tools
+# ================================================================
+# 3개 테스트 + 1개 무관용 규칙
+# ================================================================
+
+#[cfg(test)]
+mod test_d_debug_tools {
+    use crate::*;
+
+    # Test 1: Assert 함수들
+    #[test]
+    fn test_d_1_assert_functions() {
+        assert_eq(5, 5, "equal numbers")
+        assert_eq("test", "test", "equal strings")
+        assert_ne(5, 3, "unequal numbers")
+        assert_true(5 > 3, "5 is greater than 3")
+        assert_false(3 > 5, "3 is not greater than 5")
+
+        println!("✅ TEST D-1 PASS: Assert functions")
+    }
+
+    # Test 2: Trace 함수
+    #[test]
+    fn test_d_2_trace_functions() {
+        let value = trace("traced value", 42)
+        assert_eq(value, 42, "trace returns value")
+
+        let arr = [10, 20, 30]
+        let traced_arr = trace("array", arr)
+        assert_eq(len(traced_arr), 3, "trace preserves array")
+
+        println!("✅ TEST D-2 PASS: Trace functions")
+    }
+
+    # Test 3: Type inspection
+    #[test]
+    fn test_d_3_type_inspection() {
+        let int_type = debug_type(42)
+        let float_type = debug_type(3.14)
+        let str_type = debug_type("hello")
+        let arr_type = debug_type([1, 2, 3])
+        let bool_type = debug_type(true)
+        let null_type = debug_type(null)
+
+        assert_eq(int_type, "i32", "integer type")
+        assert_eq(float_type, "f64", "float type")
+        assert_eq(str_type, "string", "string type")
+        assert_eq(arr_type, "array", "array type")
+        assert_eq(bool_type, "bool", "bool type")
+        assert_eq(null_type, "null", "null type")
+
+        println!("✅ TEST D-3 PASS: Type inspection")
+    }
+
+    # Unforgiving Rule #1: Assert messages 100% 출력
+    #[test]
+    fn test_rule_d_assert_messages() {
+        # Rule: assert_eq/ne/true/false 실패 시 메시지 포함 에러 출력
+        assert_eq(10, 10, "validation message 1")
+        assert_ne(5, 5, "validation message 2 (should fail)")
+        assert_true(1 == 1, "validation message 3")
+        assert_false(false, "validation message 4")
+
+        println!("✅ RULE D PASS: Assert messages 100% output")
+    }
+}
+
+# ================================================================
+# 수동 테스트 (디버깅용)
+# ================================================================
+
+fn test_manual_debug() {
+    println!("=== Debug Tools Manual Test ===")
+
+    # Assert 테스트
+    assert_eq(2 + 2, 4, "basic arithmetic")
+    assert_ne(3, 5, "inequality")
+
+    # Trace 테스트
+    let x = 10
+    let y = trace("x value", x)
+
+    # Type 테스트
+    print_debug("integer", 42)
+    print_debug("string", "hello")
+    print_debug("array", [1, 2, 3])
+    print_debug("bool", true)
+}
