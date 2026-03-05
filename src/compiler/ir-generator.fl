@@ -1,0 +1,335 @@
+/**
+ * Phase 1 Week 5-6: IR Generator
+ *
+ * AST → 중간 표현(IR) 변환
+ * 작성: 2026-03-06
+ */
+
+// ============================================
+// IR Generator 구조
+// ============================================
+
+struct IRGenerator {
+  program: IRProgram,
+  current_block: string,
+  block_map: Map<string, IRBasicBlock>,
+  has_error: bool,
+}
+
+/**
+ * new_ir_generator(): IRGenerator
+ */
+fn new_ir_generator(): IRGenerator {
+  var gen: IRGenerator
+  gen.program = new_ir_program()
+  gen.current_block = create_ir_block(gen.program)
+  gen.block_map = map_new()
+  gen.has_error = false
+  return gen
+}
+
+// ============================================
+// Block 관리
+// ============================================
+
+/**
+ * get_current_block(gen: IRGenerator): IRBasicBlock
+ */
+fn get_current_block(gen: IRGenerator): IRBasicBlock {
+  var empty_block: IRBasicBlock
+  empty_block.name = ""
+  empty_block.instructions = []
+
+  if !map_has(gen.block_map, gen.current_block) {
+    return empty_block
+  }
+
+  return map_get(gen.block_map, gen.current_block)
+}
+
+/**
+ * switch_block(gen: IRGenerator, block_name: string): void
+ */
+fn switch_block(gen: IRGenerator, block_name: string): void {
+  gen.current_block = block_name
+
+  if !map_has(gen.block_map, block_name) {
+    let new_block = new_ir_basic_block(block_name)
+    map_set(gen.block_map, block_name, new_block)
+  }
+}
+
+/**
+ * create_new_block(gen: IRGenerator): string
+ */
+fn create_new_block(gen: IRGenerator): string {
+  let block_name = create_ir_block(gen.program)
+  let new_block = new_ir_basic_block(block_name)
+  map_set(gen.block_map, block_name, new_block)
+  return block_name
+}
+
+/**
+ * emit_instruction(gen: IRGenerator, opcode: i32, result: string, operands: Array<string>): void
+ */
+fn emit_instruction(
+  gen: IRGenerator,
+  opcode: i32,
+  result: string,
+  operands: Array<string>
+): void {
+  let instr = new_ir_instruction(opcode, result, operands)
+
+  if !map_has(gen.block_map, gen.current_block) {
+    let block = new_ir_basic_block(gen.current_block)
+    map_set(gen.block_map, gen.current_block, block)
+  }
+
+  let block = map_get(gen.block_map, gen.current_block)
+  add_instruction(block, instr)
+}
+
+// ============================================
+// Statement 생성
+// ============================================
+
+/**
+ * generate_let_statement(gen: IRGenerator, var_name: string, initial_value: string): void
+ * let x = 5 → ALLOCA + STORE
+ */
+fn generate_let_statement(
+  gen: IRGenerator,
+  var_name: string,
+  initial_value: string
+): void {
+  // ALLOCA: 스택에 공간 할당
+  var alloca_ops: Array<string> = []
+  alloca_ops.push("4")  // i32 = 4 bytes
+  emit_instruction(gen, 12, var_name, alloca_ops)
+
+  // STORE: 값 저장
+  var store_ops: Array<string> = []
+  store_ops.push(initial_value)
+  emit_instruction(gen, 11, var_name, store_ops)
+}
+
+/**
+ * generate_return_statement(gen: IRGenerator, return_value: string): void
+ * return x → RET
+ */
+fn generate_return_statement(
+  gen: IRGenerator,
+  return_value: string
+): void {
+  var ret_ops: Array<string> = []
+  ret_ops.push(return_value)
+  emit_instruction(gen, 23, "", ret_ops)
+}
+
+/**
+ * generate_if_statement(gen: IRGenerator, cond_var: string, then_block: string, else_block: string): void
+ * if cond { ... } else { ... }
+ */
+fn generate_if_statement(
+  gen: IRGenerator,
+  cond_var: string,
+  then_block: string,
+  else_block: string
+): void {
+  // BRZ: 조건이 0이면 else로 분기
+  var brz_ops: Array<string> = []
+  brz_ops.push(cond_var)
+
+  var brz_instr = new_ir_instruction(21, "", brz_ops)
+  brz_instr.label = else_block
+
+  // 현재 블록에 직접 추가
+  if map_has(gen.block_map, gen.current_block) {
+    let block = map_get(gen.block_map, gen.current_block)
+    block.instructions.push(brz_instr)
+  }
+
+  // 다음 블록을 then_block으로 설정
+  switch_block(gen, then_block)
+}
+
+/**
+ * generate_while_loop(gen: IRGenerator, cond_var: string, body_block: string, exit_block: string): void
+ */
+fn generate_while_loop(
+  gen: IRGenerator,
+  cond_var: string,
+  body_block: string,
+  exit_block: string
+): void {
+  // LABEL: loop_start
+  var label_instr = new_ir_instruction(22, "", [])
+  label_instr.label = gen.current_block
+
+  if map_has(gen.block_map, gen.current_block) {
+    let block = map_get(gen.block_map, gen.current_block)
+    block.instructions.push(label_instr)
+  }
+
+  // BRZ: 조건 false면 exit_block으로
+  var brz_ops: Array<string> = []
+  brz_ops.push(cond_var)
+
+  var brz_instr = new_ir_instruction(21, "", brz_ops)
+  brz_instr.label = exit_block
+
+  if map_has(gen.block_map, gen.current_block) {
+    let block = map_get(gen.block_map, gen.current_block)
+    block.instructions.push(brz_instr)
+  }
+
+  switch_block(gen, body_block)
+}
+
+// ============================================
+// Expression 생성
+// ============================================
+
+/**
+ * generate_binary_op(gen: IRGenerator, left: string, op: string, right: string): string
+ * x + y → t0 = ADD x, y (반환: "t0")
+ */
+fn generate_binary_op(
+  gen: IRGenerator,
+  left: string,
+  op: string,
+  right: string
+): string {
+  let result = create_temp_var(gen.program)
+
+  let opcode = 0
+  if op == "+" { opcode = 0 }
+  if op == "-" { opcode = 1 }
+  if op == "*" { opcode = 2 }
+  if op == "/" { opcode = 3 }
+  if op == "%" { opcode = 4 }
+
+  var ops: Array<string> = []
+  ops.push(left)
+  ops.push(right)
+  emit_instruction(gen, opcode, result, ops)
+
+  return result
+}
+
+/**
+ * generate_function_call(gen: IRGenerator, func_name: string, args: Array<string>): string
+ * foo(x, y) → t0 = CALL foo, x, y
+ */
+fn generate_function_call(
+  gen: IRGenerator,
+  func_name: string,
+  args: Array<string>
+): string {
+  let result = create_temp_var(gen.program)
+
+  var ops: Array<string> = []
+  ops.push(func_name)
+
+  let i = 0
+  while i < args.length() {
+    ops.push(args[i])
+    i = i + 1
+  }
+
+  emit_instruction(gen, 30, result, ops)
+  return result
+}
+
+/**
+ * generate_array_access(gen: IRGenerator, array_var: string, index: string): string
+ * arr[i] → t0 = LOAD arr, i
+ */
+fn generate_array_access(
+  gen: IRGenerator,
+  array_var: string,
+  index: string
+): string {
+  let result = create_temp_var(gen.program)
+
+  var ops: Array<string> = []
+  ops.push(array_var)
+  ops.push(index)
+  emit_instruction(gen, 10, result, ops)
+
+  return result
+}
+
+/**
+ * generate_array_assignment(gen: IRGenerator, array_var: string, index: string, value: string): void
+ * arr[i] = x → STORE arr[i], x
+ */
+fn generate_array_assignment(
+  gen: IRGenerator,
+  array_var: string,
+  index: string,
+  value: string
+): void {
+  var ops: Array<string> = []
+  ops.push(array_var)
+  ops.push(index)
+  ops.push(value)
+  emit_instruction(gen, 11, array_var, ops)
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_ir_generator(): void {
+  println("")
+  println("🧪 Testing IR Generator...")
+  println("")
+
+  var gen = new_ir_generator()
+
+  // Test 1: Let statement
+  generate_let_statement(gen, "x", "5")
+  println("✓ Let statement IR generated: let x = 5")
+
+  // Test 2: Binary operation
+  let add_result = generate_binary_op(gen, "x", "+", "3")
+  println("✓ Binary operation IR: x + 3 → " + add_result)
+
+  // Test 3: Function call
+  var args: Array<string> = []
+  args.push("x")
+  args.push("3")
+  let call_result = generate_function_call(gen, "add", args)
+  println("✓ Function call IR: add(x, 3) → " + call_result)
+
+  // Test 4: Return statement
+  generate_return_statement(gen, call_result)
+  println("✓ Return statement IR generated")
+
+  // Test 5: Array access
+  let array_elem = generate_array_access(gen, "arr", "0")
+  println("✓ Array access IR: arr[0] → " + array_elem)
+
+  // Test 6: If statement
+  let then_block = create_new_block(gen)
+  let else_block = create_new_block(gen)
+  generate_if_statement(gen, "x", then_block, else_block)
+  println("✓ If statement IR generated")
+
+  // Test 7: While loop
+  gen.current_block = create_new_block(gen)
+  let body_block = create_new_block(gen)
+  let exit_block = create_new_block(gen)
+  generate_while_loop(gen, "cond", body_block, exit_block)
+  println("✓ While loop IR generated")
+
+  // Test 8: Print IR
+  print_ir_program(gen.program)
+
+  println("✅ IR generator tests completed")
+}
+
+fn main(): void {
+  test_ir_generator()
+}

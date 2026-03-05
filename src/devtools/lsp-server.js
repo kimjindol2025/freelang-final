@@ -11,7 +11,7 @@
 
 const net = require('net');
 const { Lexer, TokenType } = require('../lexer');
-const Parser = require('../parser');
+const { Parser } = require('../parser');
 
 // ==================== LSP Server ====================
 
@@ -170,13 +170,16 @@ class LSPServer {
       const parser = new Parser(tokens);
       const ast = parser.parse();
 
-      this.documents.set(uri, { code, ast, tokens });
-      this.extractSymbols(uri, ast);
+      const doc = { code, ast, tokens };
+      this.documents.set(uri, doc);
+      this.extractSymbols(uri, doc);
     } catch (error) {
-      // 파싱 실패: 토큰 정보만 유지
+      // 파싱 실패: 토큰 정보만 유지, 정규표현식으로 심볼 추출
       const lexer = new Lexer(code);
       const tokens = lexer.tokenize();
-      this.documents.set(uri, { code, ast: null, tokens });
+      const doc = { code, ast: null, tokens };
+      this.documents.set(uri, doc);
+      this.extractSymbols(uri, doc);
     }
   }
 
@@ -192,14 +195,19 @@ class LSPServer {
     // 현재 단어 추출
     const lines = doc.code.split('\n');
     const currentLine = lines[line] || '';
-    const wordStart = this.getWordStartPos(currentLine, character);
+
+    // prefix 계산: 커서 앞 단어 전체
+    let wordStart = character;
+    while (wordStart > 0 && /[\w_]/.test(currentLine[wordStart - 1])) {
+      wordStart--;
+    }
     const prefix = currentLine.substring(wordStart, character).toLowerCase();
 
     const completions = [];
 
     // 1. 키워드 제안
     for (const keyword of this.keywords) {
-      if (keyword.startsWith(prefix)) {
+      if (keyword.toLowerCase().startsWith(prefix)) {
         completions.push({
           label: keyword,
           kind: 14, // Keyword
@@ -211,7 +219,7 @@ class LSPServer {
 
     // 2. 내장 함수 제안
     for (const [name, info] of Object.entries(this.builtinFunctions)) {
-      if (name.startsWith(prefix)) {
+      if (name.toLowerCase().startsWith(prefix)) {
         completions.push({
           label: name,
           kind: 3, // Function
@@ -225,7 +233,7 @@ class LSPServer {
     // 3. 정의된 변수/함수 제안
     const symbols = this.symbols.get(uri) || [];
     for (const sym of symbols) {
-      if (sym.name.startsWith(prefix)) {
+      if (sym.name.toLowerCase().startsWith(prefix)) {
         completions.push({
           label: sym.name,
           kind: sym.kind === 'function' ? 12 : 13,
@@ -371,42 +379,56 @@ class LSPServer {
     const code = doc.code;
     const lines = code.split('\n');
 
-    // 간단한 정규표현식 기반 검사
+    // 변수 선언 정보 추출
     const varRegex = /\b(let|const|var)\s+(\w+)/g;
-    const usageRegex = /\b(\w+)\b/g;
-
-    const variables = new Map();
+    const variables = new Map(); // name -> {line, character, used: false}
     let match;
 
-    // 변수 선언 수집
     while ((match = varRegex.exec(code)) !== null) {
       const varName = match[2];
       const pos = this.getLineCharacter(code, match.index);
-      variables.set(varName, { ...pos, used: false });
+      // 같은 이름이 재정의되면 새로운 항목으로
+      if (!variables.has(varName)) {
+        variables.set(varName, []);
+      }
+      variables.get(varName).push({ ...pos, used: false });
     }
 
-    // 사용 확인
-    usageRegex.lastIndex = 0;
-    while ((match = usageRegex.exec(code)) !== null) {
-      const varName = match[1];
-      if (variables.has(varName)) {
-        const variable = variables.get(varName);
-        variable.used = true;
+    // 각 변수별로 사용 여부 확인
+    for (const [varName] of variables) {
+      // varName이 포함된 모든 위치 찾기
+      const varUsageRegex = new RegExp(`\\b${varName}\\b`, 'g');
+      let usageMatch;
+
+      // 선언 위치는 건너뛰고, 사용 위치만 확인
+      while ((usageMatch = varUsageRegex.exec(code)) !== null) {
+        const isDeclaration = code.substring(
+          Math.max(0, usageMatch.index - 20),
+          usageMatch.index
+        ).match(/\b(let|const|var)\s+$/);
+
+        if (!isDeclaration) {
+          // 선언이 아닌 사용 -> 모든 인스턴스를 used로 표시
+          const varDecls = variables.get(varName);
+          varDecls.forEach(decl => { decl.used = true; });
+        }
       }
     }
 
     // 미사용 변수 경고
-    for (const [name, info] of variables) {
-      if (!info.used) {
-        diagnostics.push({
-          range: {
-            start: { line: info.line, character: info.character },
-            end: { line: info.line, character: info.character + name.length }
-          },
-          severity: 2, // Warning
-          message: `Variable '${name}' is defined but never used`,
-          source: 'freelang'
-        });
+    for (const [name, decls] of variables) {
+      for (const info of decls) {
+        if (!info.used) {
+          diagnostics.push({
+            range: {
+              start: { line: info.line, character: info.character },
+              end: { line: info.line, character: info.character + name.length }
+            },
+            severity: 2, // Warning
+            message: `Variable '${name}' is defined but never used`,
+            source: 'freelang'
+          });
+        }
       }
     }
 
@@ -441,62 +463,53 @@ class LSPServer {
   // ==================== 유틸리티 메서드 ====================
 
   /**
-   * 심볼 추출 (변수, 함수 정의)
+   * 심볼 추출 (변수, 함수 정의) - 정규표현식 기반
    */
-  extractSymbols(uri, ast) {
+  extractSymbols(uri, doc) {
     const symbols = [];
+    const code = doc.code;
+    const lines = code.split('\n');
 
-    if (!ast) return;
+    // 함수 정의 추출
+    const fnRegex = /fn\s+(\w+)\s*\(/g;
+    let match;
 
-    const extract = (node, depth = 0) => {
-      if (!node) return;
-
-      if (node.type === 'function') {
-        symbols.push({
-          name: node.name,
-          kind: 'function',
-          line: node.line || 0,
-          character: node.character || 0,
-          params: node.params ? node.params.map(p => p.name || p) : []
-        });
-      } else if (node.type === 'variable' || node.type === 'let' || node.type === 'const') {
-        symbols.push({
-          name: node.name,
-          kind: 'variable',
-          line: node.line || 0,
-          character: node.character || 0
-        });
-      }
-
-      // 재귀적으로 처리
-      if (node.body) {
-        if (Array.isArray(node.body)) {
-          node.body.forEach(b => extract(b, depth + 1));
-        } else {
-          extract(node.body, depth + 1);
-        }
-      }
-      if (node.params && Array.isArray(node.params)) {
-        node.params.forEach(p => {
-          if (p.name) {
-            symbols.push({
-              name: p.name,
-              kind: 'parameter',
-              line: node.line || 0,
-              character: node.character || 0
-            });
-          }
-        });
-      }
-    };
-
-    if (Array.isArray(ast)) {
-      ast.forEach(node => extract(node));
-    } else {
-      extract(ast);
+    while ((match = fnRegex.exec(code)) !== null) {
+      const name = match[1];
+      const pos = this.getLineCharacter(code, match.index);
+      symbols.push({
+        name,
+        kind: 'function',
+        line: pos.line,
+        character: pos.character + 3, // "fn " 이후
+        params: []
+      });
     }
 
-    this.symbols.set(uri, symbols);
+    // 변수 정의 추출 (let, const, var)
+    const varRegex = /\b(let|const|var)\s+(\w+)/g;
+
+    while ((match = varRegex.exec(code)) !== null) {
+      const name = match[2];
+      const pos = this.getLineCharacter(code, match.index);
+      symbols.push({
+        name,
+        kind: 'variable',
+        line: pos.line,
+        character: pos.character + match[1].length + 1
+      });
+    }
+
+    // 중복 제거
+    const seen = new Set();
+    const unique = symbols.filter(s => {
+      const key = `${s.name}:${s.line}:${s.character}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    this.symbols.set(uri, unique);
   }
 
   /**

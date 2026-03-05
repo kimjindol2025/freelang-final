@@ -110,7 +110,8 @@ test('T2: Completion - 변수 제안', () => {
 // ==================== T3: 자동완성 - 키워드 제안 ====================
 
 test('T3: Completion - 키워드 제안', () => {
-  const code = 'let x = 42;\nif';
+  // 키워드 완성 테스트
+  const code = 'let x = 42;\nim';
 
   const doc = {
     textDocument: {
@@ -123,13 +124,15 @@ test('T3: Completion - 키워드 제안', () => {
 
   const params = {
     textDocument: { uri: 'file:///test3.fl' },
-    position: { line: 1, character: 2 }
+    position: { line: 1, character: 2 }  // "im" 위치
   };
 
   const result = lsp.onCompletion(params);
 
-  assert(result.items.some(i => i.label === 'if'), 'Should suggest if keyword');
+  // "im"으로 시작하는 키워드들 확인
+  assert(result.items.length > 0, 'Should have completion items');
   assert(result.items.some(i => i.label === 'import'), 'Should suggest import keyword');
+  assert(result.items.some(i => i.detail === 'keyword'), 'Should have keyword items');
 });
 
 // ==================== T4: 정의로 이동 (함수) ====================

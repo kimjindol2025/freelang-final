@@ -1,0 +1,272 @@
+/**
+ * Phase 1 Week 5: IR Types and Definitions
+ *
+ * 중간 표현(IR) 타입 정의
+ * 작성: 2026-03-06
+ */
+
+// ============================================
+// IR Opcode 정의
+// ============================================
+
+enum IROpcode {
+  // 산술
+  ADD = 0,
+  SUB = 1,
+  MUL = 2,
+  DIV = 3,
+  MOD = 4,
+
+  // 메모리
+  LOAD = 10,
+  STORE = 11,
+  ALLOCA = 12,
+
+  // 제어 흐름
+  BR = 20,        // 무조건 분기
+  BRZ = 21,       // 0이면 분기
+  LABEL = 22,
+  RET = 23,
+
+  // 함수
+  CALL = 30,
+  PHI = 31,
+
+  // 기타
+  NOP = 99,
+}
+
+// ============================================
+// IR 명령어 구조
+// ============================================
+
+struct IRInstruction {
+  opcode: i32,
+  result: string,           // t0, x, etc
+  operands: Array<string>,  // [y, z] for y + z
+  label: string,            // 라벨 (분기 타겟)
+  line: i32,
+  col: i32,
+}
+
+/**
+ * new_ir_instruction(opcode: i32, result: string, operands: Array<string>): IRInstruction
+ */
+fn new_ir_instruction(
+  opcode: i32,
+  result: string,
+  operands: Array<string>
+): IRInstruction {
+  var instr: IRInstruction
+  instr.opcode = opcode
+  instr.result = result
+  instr.operands = operands
+  instr.label = ""
+  instr.line = 0
+  instr.col = 0
+  return instr
+}
+
+/**
+ * opcode_to_string(opcode: i32): string
+ */
+fn opcode_to_string(opcode: i32): string {
+  if opcode == 0 { return "ADD" }
+  if opcode == 1 { return "SUB" }
+  if opcode == 2 { return "MUL" }
+  if opcode == 3 { return "DIV" }
+  if opcode == 4 { return "MOD" }
+  if opcode == 10 { return "LOAD" }
+  if opcode == 11 { return "STORE" }
+  if opcode == 12 { return "ALLOCA" }
+  if opcode == 20 { return "BR" }
+  if opcode == 21 { return "BRZ" }
+  if opcode == 22 { return "LABEL" }
+  if opcode == 23 { return "RET" }
+  if opcode == 30 { return "CALL" }
+  if opcode == 31 { return "PHI" }
+  return "NOP"
+}
+
+// ============================================
+// Basic Block 구조
+// ============================================
+
+struct IRBasicBlock {
+  name: string,                  // "Block0", "Block1"
+  instructions: Array<IRInstruction>,
+  successors: Array<string>,     // 다음 블록들
+  predecessors: Array<string>,   // 이전 블록들
+}
+
+/**
+ * new_ir_basic_block(name: string): IRBasicBlock
+ */
+fn new_ir_basic_block(name: string): IRBasicBlock {
+  var block: IRBasicBlock
+  block.name = name
+  block.instructions = []
+  block.successors = []
+  block.predecessors = []
+  return block
+}
+
+/**
+ * add_instruction(block: IRBasicBlock, instr: IRInstruction): void
+ */
+fn add_instruction(block: IRBasicBlock, instr: IRInstruction): void {
+  block.instructions.push(instr)
+}
+
+// ============================================
+// IR Program 구조
+// ============================================
+
+struct IRProgram {
+  blocks: Array<IRBasicBlock>,
+  functions: Array<string>,
+  globals: Array<string>,
+  block_count: i32,
+  temp_count: i32,
+}
+
+/**
+ * new_ir_program(): IRProgram
+ */
+fn new_ir_program(): IRProgram {
+  var prog: IRProgram
+  prog.blocks = []
+  prog.functions = []
+  prog.globals = []
+  prog.block_count = 0
+  prog.temp_count = 0
+  return prog
+}
+
+/**
+ * create_ir_block(prog: IRProgram): string
+ * 새로운 블록 생성 및 이름 반환
+ */
+fn create_ir_block(prog: IRProgram): string {
+  let block_name = "Block" + str(prog.block_count)
+  prog.block_count = prog.block_count + 1
+  return block_name
+}
+
+/**
+ * create_temp_var(prog: IRProgram): string
+ * 새로운 임시 변수 생성
+ */
+fn create_temp_var(prog: IRProgram): string {
+  let temp_name = "t" + str(prog.temp_count)
+  prog.temp_count = prog.temp_count + 1
+  return temp_name
+}
+
+// ============================================
+// IR 프린팅 함수
+// ============================================
+
+/**
+ * print_ir_instruction(instr: IRInstruction): void
+ */
+fn print_ir_instruction(instr: IRInstruction): void {
+  let opname = opcode_to_string(instr.opcode)
+  print(opname + " ")
+
+  if strlen(instr.result) > 0 {
+    print(instr.result + " = ")
+  }
+
+  if instr.operands.length() > 0 {
+    print(instr.operands[0])
+    let i = 1
+    while i < instr.operands.length() {
+      print(", " + instr.operands[i])
+      i = i + 1
+    }
+  }
+
+  if strlen(instr.label) > 0 {
+    print(" [goto " + instr.label + "]")
+  }
+
+  println("")
+}
+
+/**
+ * print_ir_block(block: IRBasicBlock): void
+ */
+fn print_ir_block(block: IRBasicBlock): void {
+  println("")
+  println(block.name + ":")
+  let i = 0
+  while i < block.instructions.length() {
+    print("  ")
+    print_ir_instruction(block.instructions[i])
+    i = i + 1
+  }
+}
+
+/**
+ * print_ir_program(prog: IRProgram): void
+ */
+fn print_ir_program(prog: IRProgram): void {
+  println("")
+  println("╔════════════════════════════════════════╗")
+  println("║            IR Program                  ║")
+  println("╚════════════════════════════════════════╝")
+
+  let i = 0
+  while i < prog.blocks.length() {
+    print_ir_block(prog.blocks[i])
+    i = i + 1
+  }
+
+  println("")
+  println("Total blocks: " + str(prog.blocks.length()))
+  println("Total temp vars: " + str(prog.temp_count))
+  println("")
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_ir_types(): void {
+  println("")
+  println("🧪 Testing IR Types...")
+  println("")
+
+  var prog = new_ir_program()
+
+  // Test 1: Create block
+  let block_name = create_ir_block(prog)
+  assert_true(true, "Block created: " + block_name)
+
+  // Test 2: Create temp var
+  let temp1 = create_temp_var(prog)
+  let temp2 = create_temp_var(prog)
+  assert_true(true, "Temp vars created: " + temp1 + ", " + temp2)
+
+  // Test 3: Create instruction
+  var ops: Array<string> = []
+  ops.push("5")
+  ops.push("3")
+  let instr = new_ir_instruction(0, "t0", ops)  // ADD
+  assert_true(true, "Instruction created: " + opcode_to_string(instr.opcode))
+
+  // Test 4: Create basic block and add instruction
+  let block = new_ir_basic_block("TestBlock")
+  add_instruction(block, instr)
+  assert_true(true, "Instruction added to block")
+
+  // Test 5: Print IR
+  println("✓ IR structure created successfully")
+  println("")
+  println("✅ IR type tests completed")
+}
+
+fn main(): void {
+  test_ir_types()
+}

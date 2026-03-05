@@ -1,0 +1,198 @@
+/**
+ * Phase 1 Week 3: Type System
+ *
+ * 타입 정의 및 타입 검사 시스템
+ * 작성: 2026-03-06
+ */
+
+// ============================================
+// 기본 타입 정의
+// ============================================
+
+enum PrimitiveType {
+  I32 = 0,
+  I64 = 1,
+  F64 = 2,
+  STRING = 3,
+  BOOL = 4,
+  VOID = 5,
+}
+
+struct Type {
+  kind: i32,                  // PrimitiveType
+  is_array: bool,
+  element_type: Type,
+  is_function: bool,
+  param_types: Array<Type>,
+  return_type: Type,
+  is_generic: bool,
+  generic_param: string,      // "T", "U", etc
+}
+
+// ============================================
+// 타입 기본 함수
+// ============================================
+
+/**
+ * type_to_string(t: Type): string
+ * 타입을 문자열로 변환
+ */
+fn type_to_string(t: Type): string {
+  if t.kind == 0 { return "i32" }
+  if t.kind == 1 { return "i64" }
+  if t.kind == 2 { return "f64" }
+  if t.kind == 3 { return "string" }
+  if t.kind == 4 { return "bool" }
+  if t.kind == 5 { return "void" }
+  return "unknown"
+}
+
+/**
+ * type_equal(t1: Type, t2: Type): bool
+ * 두 타입이 같은지 확인
+ */
+fn type_equal(t1: Type, t2: Type): bool {
+  if t1.kind != t2.kind { return false }
+  if t1.is_array != t2.is_array { return false }
+  if t1.is_array && !type_equal(t1.element_type, t2.element_type) { return false }
+  if t1.is_function != t2.is_function { return false }
+  return true
+}
+
+/**
+ * type_is_numeric(t: Type): bool
+ * 숫자 타입인지 확인
+ */
+fn type_is_numeric(t: Type): bool {
+  return t.kind == 0 || t.kind == 1 || t.kind == 2
+}
+
+/**
+ * type_is_primitive(t: Type): bool
+ * 기본 타입인지 확인
+ */
+fn type_is_primitive(t: Type): bool {
+  return !t.is_array && !t.is_function
+}
+
+// ============================================
+// 타입 생성 헬퍼
+// ============================================
+
+fn type_i32(): Type {
+  var t: Type
+  t.kind = 0
+  t.is_array = false
+  t.is_function = false
+  return t
+}
+
+fn type_i64(): Type {
+  var t: Type
+  t.kind = 1
+  t.is_array = false
+  t.is_function = false
+  return t
+}
+
+fn type_f64(): Type {
+  var t: Type
+  t.kind = 2
+  t.is_array = false
+  t.is_function = false
+  return t
+}
+
+fn type_string(): Type {
+  var t: Type
+  t.kind = 3
+  t.is_array = false
+  t.is_function = false
+  return t
+}
+
+fn type_bool(): Type {
+  var t: Type
+  t.kind = 4
+  t.is_array = false
+  t.is_function = false
+  return t
+}
+
+fn type_void(): Type {
+  var t: Type
+  t.kind = 5
+  t.is_array = false
+  t.is_function = false
+  return t
+}
+
+fn type_array(element: Type): Type {
+  var t: Type
+  t.kind = 0  // Array of i32 as default
+  t.is_array = true
+  t.element_type = element
+  t.is_function = false
+  return t
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_type_system(): void {
+  println("")
+  println("🧪 Testing Type System...")
+  println("")
+
+  // Test 1: Type to string
+  let t_i32 = type_i32()
+  println("✓ Type i32: " + type_to_string(t_i32))
+
+  let t_string = type_string()
+  println("✓ Type string: " + type_to_string(t_string))
+
+  // Test 2: Type equality
+  let t_i32_2 = type_i32()
+  if type_equal(t_i32, t_i32_2) {
+    println("✓ Type equality: i32 == i32")
+  } else {
+    println("✗ Type equality failed")
+  }
+
+  // Test 3: Type inequality
+  if !type_equal(t_i32, t_string) {
+    println("✓ Type inequality: i32 != string")
+  } else {
+    println("✗ Type inequality failed")
+  }
+
+  // Test 4: Numeric type check
+  if type_is_numeric(t_i32) {
+    println("✓ Numeric check: i32 is numeric")
+  }
+
+  if !type_is_numeric(t_string) {
+    println("✓ Numeric check: string is not numeric")
+  }
+
+  // Test 5: Array type
+  let t_array_i32 = type_array(type_i32())
+  println("✓ Array type created")
+
+  // Test 6: Primitive check
+  if type_is_primitive(t_i32) {
+    println("✓ Primitive check: i32 is primitive")
+  }
+
+  if !type_is_primitive(t_array_i32) {
+    println("✓ Primitive check: array is not primitive")
+  }
+
+  println("")
+  println("✅ Type system tests completed")
+}
+
+fn main(): void {
+  test_type_system()
+}

@@ -1,0 +1,200 @@
+/**
+ * FreeLang Todo CLI Application
+ *
+ * A command-line todo list manager with add, remove, list, and complete operations.
+ * Uses SQLite for persistence.
+ *
+ * Usage:
+ *   fl run todo-cli.fl add "Buy groceries"
+ *   fl run todo-cli.fl list
+ *   fl run todo-cli.fl done 1
+ *   fl run todo-cli.fl remove 1
+ *   fl run todo-cli.fl clear
+ */
+
+use @freelang/db as db;
+
+// Initialize database
+let database = db.connect("sqlite:///todos.db");
+
+// Create todos table
+database.exec(
+  "CREATE TABLE IF NOT EXISTS todos (" +
+  "  id INTEGER PRIMARY KEY AUTO_INCREMENT," +
+  "  title TEXT NOT NULL," +
+  "  completed BOOLEAN DEFAULT 0," +
+  "  created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+  "  completed_at DATETIME" +
+  ")"
+);
+
+// Main function
+async fn main() {
+  let args = process.argv.slice(2);
+
+  if (len(args) == 0) {
+    show_usage();
+    return;
+  }
+
+  let command = args[0];
+
+  match command {
+    "add" => await add_todo(join(slice(args, 1), " ")),
+    "list" => await list_todos(),
+    "done" => await complete_todo(num(args[1])),
+    "remove" => await remove_todo(num(args[1])),
+    "clear" => await clear_todos(),
+    "help" => show_usage(),
+    _ => {
+      println("Unknown command: " + command);
+      show_usage();
+    }
+  }
+}
+
+// Add a new todo
+async fn add_todo(title) {
+  if (title == null || len(title) == 0) {
+    println("Error: Todo title is required");
+    return;
+  }
+
+  let result = database.insert(
+    "INSERT INTO todos (title) VALUES (?)",
+    [title]
+  );
+
+  println("Added todo #" + str(result.insertId) + ": " + title);
+}
+
+// List all todos
+async fn list_todos() {
+  let todos = database.query(
+    "SELECT id, title, completed FROM todos ORDER BY id DESC"
+  );
+
+  if (len(todos) == 0) {
+    println("No todos yet!");
+    return;
+  }
+
+  println("");
+  println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  println("  ID │ Status │ Todo");
+  println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+  for todo in todos {
+    let status = todo.completed == 1 ? "✓" : " ";
+    let id_str = str(todo.id);
+    while (len(id_str) < 2) {
+      id_str = " " + id_str;
+    }
+
+    println("  " + id_str + " │   " + status + "   │ " + todo.title);
+  }
+
+  println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  println("");
+
+  // Show statistics
+  let total = len(todos);
+  let completed = len(filter(todos, fn(t) { return t.completed == 1; }));
+  let remaining = total - completed;
+
+  println("Total: " + str(total) + " │ Completed: " + str(completed) + " │ Remaining: " + str(remaining));
+}
+
+// Mark todo as completed
+async fn complete_todo(id) {
+  if (id == null || id == 0) {
+    println("Error: Todo ID is required");
+    return;
+  }
+
+  let todo = database.queryOne(
+    "SELECT * FROM todos WHERE id = ?",
+    [id]
+  );
+
+  if (todo == null) {
+    println("Error: Todo #" + str(id) + " not found");
+    return;
+  }
+
+  if (todo.completed == 1) {
+    println("Todo #" + str(id) + " is already completed");
+    return;
+  }
+
+  database.update(
+    "UPDATE todos SET completed = 1, completed_at = CURRENT_TIMESTAMP WHERE id = ?",
+    [id]
+  );
+
+  println("✓ Completed: " + todo.title);
+}
+
+// Remove a todo
+async fn remove_todo(id) {
+  if (id == null || id == 0) {
+    println("Error: Todo ID is required");
+    return;
+  }
+
+  let todo = database.queryOne(
+    "SELECT * FROM todos WHERE id = ?",
+    [id]
+  );
+
+  if (todo == null) {
+    println("Error: Todo #" + str(id) + " not found");
+    return;
+  }
+
+  database.delete(
+    "DELETE FROM todos WHERE id = ?",
+    [id]
+  );
+
+  println("✗ Removed: " + todo.title);
+}
+
+// Clear all completed todos
+async fn clear_todos() {
+  let completed = database.query(
+    "SELECT id FROM todos WHERE completed = 1"
+  );
+
+  if (len(completed) == 0) {
+    println("No completed todos to clear");
+    return;
+  }
+
+  database.delete("DELETE FROM todos WHERE completed = 1");
+
+  println("Cleared " + str(len(completed)) + " completed todo(s)");
+}
+
+// Show usage
+fn show_usage() {
+  println("");
+  println("FreeLang Todo CLI - Usage:");
+  println("");
+  println("  add <title>      Add a new todo");
+  println("  list             List all todos");
+  println("  done <id>        Mark todo as completed");
+  println("  remove <id>      Delete a todo");
+  println("  clear            Clear all completed todos");
+  println("  help             Show this help message");
+  println("");
+  println("Examples:");
+  println("  fl run todo-cli.fl add Buy groceries");
+  println("  fl run todo-cli.fl list");
+  println("  fl run todo-cli.fl done 1");
+  println("  fl run todo-cli.fl remove 1");
+  println("");
+}
+
+// Run main function
+main();

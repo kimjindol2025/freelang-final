@@ -1,0 +1,230 @@
+/**
+ * FreeLang Blog API Example
+ *
+ * A simple REST API for a blog system with Create, Read, Update, Delete (CRUD) operations.
+ * Uses PostgreSQL for data storage.
+ *
+ * Features:
+ * - Create new posts
+ * - Retrieve all posts or specific post
+ * - Update post content
+ * - Delete posts
+ * - Authentication middleware
+ * - Error handling
+ */
+
+use @freelang/web as web;
+use @freelang/db as db;
+use @freelang/auth as auth;
+
+// Initialize web application
+let app = web.createApp();
+
+// Database connection
+let database = db.connect("postgresql://user:password@localhost:5432/blog_db");
+
+// Create posts table
+database.exec(
+  "CREATE TABLE IF NOT EXISTS posts (" +
+  "  id SERIAL PRIMARY KEY," +
+  "  title VARCHAR(255) NOT NULL," +
+  "  content TEXT NOT NULL," +
+  "  author_id INTEGER NOT NULL," +
+  "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+  "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+  "  FOREIGN KEY (author_id) REFERENCES users(id)" +
+  ")"
+);
+
+// Authentication middleware
+fn authenticate(req, res, next) {
+  let token = req.header("Authorization");
+
+  if (token == null || len(token) == 0) {
+    res.status(401).json({ error: "Missing authentication token" });
+    return;
+  }
+
+  // Verify JWT token
+  let user = auth.verifyToken(token);
+  if (user == null) {
+    res.status(401).json({ error: "Invalid token" });
+    return;
+  }
+
+  req.user = user;
+  next();
+}
+
+// Error handler middleware
+fn error_handler(req, res, next) {
+  try {
+    next();
+  } catch (error) {
+    println("Error: " + error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+app.use(error_handler);
+
+// GET /api/posts - Retrieve all posts
+app.get("/api/posts", fn(req, res) {
+  let limit = req.query.limit || "10";
+  let offset = req.query.offset || "0";
+
+  let posts = database.query(
+    "SELECT p.id, p.title, p.content, p.author_id, p.created_at " +
+    "FROM posts p " +
+    "ORDER BY p.created_at DESC " +
+    "LIMIT ? OFFSET ?",
+    [num(limit), num(offset)]
+  );
+
+  res.json({
+    posts: posts,
+    total: database.queryOne(
+      "SELECT COUNT(*) as count FROM posts"
+    ).count
+  });
+});
+
+// GET /api/posts/:id - Retrieve specific post
+app.get("/api/posts/:id", fn(req, res) {
+  let post_id = req.params.id;
+
+  let post = database.queryOne(
+    "SELECT * FROM posts WHERE id = ?",
+    [num(post_id)]
+  );
+
+  if (post == null) {
+    res.status(404).json({ error: "Post not found" });
+    return;
+  }
+
+  res.json(post);
+});
+
+// POST /api/posts - Create new post
+app.post("/api/posts", authenticate, fn(req, res) {
+  let title = req.body.title;
+  let content = req.body.content;
+  let author_id = req.user.id;
+
+  // Validation
+  if (title == null || len(title) == 0) {
+    res.status(400).json({ error: "Title is required" });
+    return;
+  }
+
+  if (content == null || len(content) == 0) {
+    res.status(400).json({ error: "Content is required" });
+    return;
+  }
+
+  if (len(title) > 255) {
+    res.status(400).json({ error: "Title is too long" });
+    return;
+  }
+
+  // Insert post
+  let result = database.insert(
+    "INSERT INTO posts (title, content, author_id) VALUES (?, ?, ?)",
+    [title, content, author_id]
+  );
+
+  res.status(201).json({
+    id: result.insertId,
+    title: title,
+    content: content,
+    author_id: author_id
+  });
+});
+
+// PUT /api/posts/:id - Update post
+app.put("/api/posts/:id", authenticate, fn(req, res) {
+  let post_id = req.params.id;
+  let title = req.body.title;
+  let content = req.body.content;
+  let user_id = req.user.id;
+
+  // Check if post exists
+  let post = database.queryOne(
+    "SELECT * FROM posts WHERE id = ?",
+    [num(post_id)]
+  );
+
+  if (post == null) {
+    res.status(404).json({ error: "Post not found" });
+    return;
+  }
+
+  // Check authorization
+  if (post.author_id != user_id) {
+    res.status(403).json({ error: "Not authorized to update this post" });
+    return;
+  }
+
+  // Update post
+  database.update(
+    "UPDATE posts SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP " +
+    "WHERE id = ?",
+    [title, content, num(post_id)]
+  );
+
+  res.json({
+    id: num(post_id),
+    title: title,
+    content: content,
+    author_id: post.author_id,
+    updated_at: now()
+  });
+});
+
+// DELETE /api/posts/:id - Delete post
+app.delete("/api/posts/:id", authenticate, fn(req, res) {
+  let post_id = req.params.id;
+  let user_id = req.user.id;
+
+  // Check if post exists
+  let post = database.queryOne(
+    "SELECT * FROM posts WHERE id = ?",
+    [num(post_id)]
+  );
+
+  if (post == null) {
+    res.status(404).json({ error: "Post not found" });
+    return;
+  }
+
+  // Check authorization
+  if (post.author_id != user_id) {
+    res.status(403).json({ error: "Not authorized to delete this post" });
+    return;
+  }
+
+  // Delete post
+  database.delete(
+    "DELETE FROM posts WHERE id = ?",
+    [num(post_id)]
+  );
+
+  res.json({ message: "Post deleted successfully" });
+});
+
+// Health check endpoint
+app.get("/health", fn(req, res) {
+  res.json({ status: "ok", timestamp: now() });
+});
+
+// Start server
+app.listen(3000, fn() {
+  println("Blog API server running on http://localhost:3000");
+  println("Available endpoints:");
+  println("  GET    /api/posts              - List all posts");
+  println("  GET    /api/posts/:id          - Get specific post");
+  println("  POST   /api/posts              - Create new post (authenticated)");
+  println("  PUT    /api/posts/:id          - Update post (authenticated)");
+  println("  DELETE /api/posts/:id          - Delete post (authenticated)");
+});

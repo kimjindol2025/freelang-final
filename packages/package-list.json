@@ -1,0 +1,186 @@
+{
+  "version": "1.0.0",
+  "registry": "https://npm.freelang.io",
+  "total_packages": 10,
+  "packages": [
+    {
+      "id": "freelang-core",
+      "name": "@freelang/core",
+      "version": "3.0.0",
+      "description": "Core language runtime and standard library",
+      "npm": "freelang-core",
+      "github": "https://github.com/freelang/freelang",
+      "homepage": "https://freelang.io",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 50000,
+      "license": "MIT",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/freelang/freelang.git"
+      },
+      "keywords": ["freelang", "runtime", "compiler", "llvm"],
+      "size": "12.5MB"
+    },
+    {
+      "id": "freelang-web",
+      "name": "@freelang/web",
+      "version": "1.0.0",
+      "description": "Web framework with routing, middleware, and ORM support",
+      "npm": "freelang-web",
+      "github": "https://github.com/freelang/freelang-web",
+      "homepage": "https://freelang.io/docs/web",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 25000,
+      "license": "MIT",
+      "dependencies": {
+        "@freelang/core": "^3.0.0"
+      },
+      "keywords": ["web", "framework", "router", "middleware", "express"],
+      "size": "2.3MB"
+    },
+    {
+      "id": "freelang-db",
+      "name": "@freelang/db",
+      "version": "2.0.0",
+      "description": "Database drivers for SQLite, PostgreSQL, MySQL, and MongoDB",
+      "npm": "freelang-db",
+      "github": "https://github.com/freelang/freelang-db",
+      "homepage": "https://freelang.io/docs/database",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 20000,
+      "license": "MIT",
+      "dependencies": {
+        "@freelang/core": "^3.0.0"
+      },
+      "keywords": ["database", "sqlite", "postgresql", "mysql", "mongodb", "orm"],
+      "size": "3.1MB"
+    },
+    {
+      "id": "freelang-http",
+      "name": "@freelang/http",
+      "version": "1.1.0",
+      "description": "HTTP client for REST APIs, with built-in caching and retry logic",
+      "npm": "freelang-http",
+      "github": "https://github.com/freelang/freelang-http",
+      "homepage": "https://freelang.io/docs/http",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 15000,
+      "license": "MIT",
+      "dependencies": {
+        "@freelang/core": "^3.0.0"
+      },
+      "keywords": ["http", "client", "rest", "api", "fetch"],
+      "size": "0.8MB"
+    },
+    {
+      "id": "freelang-json",
+      "name": "@freelang/json",
+      "version": "1.0.0",
+      "description": "High-performance JSON parser and serializer",
+      "npm": "freelang-json",
+      "github": "https://github.com/freelang/freelang-json",
+      "homepage": "https://freelang.io/docs/json",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 30000,
+      "license": "MIT",
+      "dependencies": {
+        "@freelang/core": "^3.0.0"
+      },
+      "keywords": ["json", "parser", "serializer", "stringify"],
+      "size": "0.5MB"
+    },
+    {
+      "id": "freelang-test",
+      "name": "@freelang/test",
+      "version": "1.2.0",
+      "description": "Testing framework and assertion library",
+      "npm": "freelang-test",
+      "github": "https://github.com/freelang/freelang-test",
+      "homepage": "https://freelang.io/docs/testing",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 18000,
+      "license": "MIT",
+      "dependencies": {
+        "@freelang/core": "^3.0.0"
+      },
+      "keywords": ["test", "testing", "unit-test", "assertion", "jest"],
+      "size": "1.2MB"
+    },
+    {
+      "id": "freelang-auth",
+      "name": "@freelang/auth",
+      "version": "1.0.0",
+      "description": "Authentication and authorization library (JWT, OAuth, Sessions)",
+      "npm": "freelang-auth",
+      "github": "https://github.com/freelang/freelang-auth",
+      "homepage": "https://freelang.io/docs/auth",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 12000,
+      "license": "MIT",
+      "dependencies": {
+        "@freelang/core": "^3.0.0",
+        "@freelang/web": "^1.0.0"
+      },
+      "keywords": ["auth", "jwt", "oauth", "session", "password"],
+      "size": "1.5MB"
+    },
+    {
+      "id": "freelang-logging",
+      "name": "@freelang/logging",
+      "version": "1.1.0",
+      "description": "Logging framework with multiple backends and log levels",
+      "npm": "freelang-logging",
+      "github": "https://github.com/freelang/freelang-logging",
+      "homepage": "https://freelang.io/docs/logging",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 16000,
+      "license": "MIT",
+      "dependencies": {
+        "@freelang/core": "^3.0.0"
+      },
+      "keywords": ["logging", "log", "logger", "debug", "info"],
+      "size": "0.9MB"
+    },
+    {
+      "id": "freelang-cache",
+      "name": "@freelang/cache",
+      "version": "1.0.0",
+      "description": "In-memory and Redis caching solutions",
+      "npm": "freelang-cache",
+      "github": "https://github.com/freelang/freelang-cache",
+      "homepage": "https://freelang.io/docs/caching",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 10000,
+      "license": "MIT",
+      "dependencies": {
+        "@freelang/core": "^3.0.0"
+      },
+      "keywords": ["cache", "redis", "memcache", "performance"],
+      "size": "1.1MB"
+    },
+    {
+      "id": "freelang-deploy",
+      "name": "@freelang/deploy",
+      "version": "1.0.0",
+      "description": "Deployment and DevOps tools for Docker, Kubernetes, and serverless",
+      "npm": "freelang-deploy",
+      "github": "https://github.com/freelang/freelang-deploy",
+      "homepage": "https://freelang.io/docs/deployment",
+      "maintainers": ["freelang-team"],
+      "downloads_per_month": 8000,
+      "license": "MIT",
+      "dependencies": {
+        "@freelang/core": "^3.0.0"
+      },
+      "keywords": ["deploy", "docker", "kubernetes", "devops", "serverless"],
+      "size": "2.1MB"
+    }
+  ],
+  "statistics": {
+    "total_downloads": 19250000,
+    "latest_update": "2026-03-06T00:00:00Z",
+    "contributors": 150,
+    "github_stars": 15400,
+    "featured_packages": ["freelang-core", "freelang-web", "freelang-db"]
+  }
+}
