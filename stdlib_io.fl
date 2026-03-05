@@ -12,18 +12,18 @@
 # ================================================================
 
 # readFile(path) - 파일 전체 읽기
-fn readFile(path: string): string {
+fn readFile(path) {
   # 주석: 파일의 모든 내용을 문자열로 읽기
   # 예: readFile("hello.txt") -> "hello world"
   # 에러 시 빈 문자열 반환
   # 구현: 내장 함수 read_file() 사용
   let result = read_file(path)
-  if result == null {
+  if (result == null) {
     return ""
   }
   # result는 {ok: bool, value?: string, error?: string} 형태
   # 값 추출: MemberExpression으로 result.ok와 result.value 접근
-  if result.ok {
+  if (result.ok) {
     return result.value
   }
   return ""
@@ -51,13 +51,13 @@ fn readJSON(path: string): any {
 # ================================================================
 
 # writeFile(path, content) - 파일에 쓰기 (덮어쓰기)
-fn writeFile(path: string, content: string): bool {
+fn writeFile(path, content) {
   # 주석: 파일에 내용을 쓰기 (기존 내용 덮어쓰기)
   # 예: writeFile("output.txt", "hello") -> true
   # 성공 시 true, 실패 시 false 반환
   # 구현: 내장 함수 write_file() 사용
   let result = write_file(path, content)
-  if result == null {
+  if (result == null) {
     return false
   }
   # result는 {ok: bool, error?: string} 형태
@@ -66,13 +66,13 @@ fn writeFile(path: string, content: string): bool {
 }
 
 # appendFile(path, content) - 파일에 추가 쓰기
-fn appendFile(path: string, content: string): bool {
+fn appendFile(path, content) {
   # 주석: 파일의 끝에 내용을 추가
   # 예: appendFile("log.txt", "new line\n") -> true
   # 파일이 없으면 생성
   # 구현: 내장 함수 append_file() 사용
   let result = append_file(path, content)
-  if result == null {
+  if (result == null) {
     return false
   }
   # result는 {ok: bool, error?: string} 형태
@@ -357,12 +357,12 @@ fn joinPath(base: string, relative: string): string {
 }
 
 # dirname(path) - 디렉토리 경로
-fn dirname(path: string): string {
+fn dirname(path) {
   # 주석: 경로에서 디렉토리 부분만 추출
   # 예: dirname("/home/user/file.txt") -> "/home/user"
   # 구현: lastIndexOf로 마지막 "/" 찾고 그 이전 부분 반환
   let idx = lastIndexOf(path, "/")
-  if idx <= 0 {
+  if (idx <= 0) {
     # "/" 없으면 현재 디렉토리 "."
     return "."
   }
@@ -371,12 +371,12 @@ fn dirname(path: string): string {
 }
 
 # basename(path) - 파일명만 추출
-fn basename(path: string): string {
+fn basename(path) {
   # 주석: 경로에서 파일명만 추출
   # 예: basename("/home/user/file.txt") -> "file.txt"
   # 구현: lastIndexOf로 마지막 "/" 찾고 그 이후 부분 반환
   let idx = lastIndexOf(path, "/")
-  if idx < 0 {
+  if (idx < 0) {
     # "/" 없으면 전체 문자열이 파일명
     return path
   }
@@ -385,13 +385,13 @@ fn basename(path: string): string {
 }
 
 # extension(path) - 확장자 추출
-fn extension(path: string): string {
+fn extension(path) {
   # 주석: 파일 확장자 추출
   # 예: extension("file.txt") -> "txt"
   # 예: extension("archive.tar.gz") -> "gz"
   # 구현: lastIndexOf로 마지막 "." 찾고 그 이후 부분 반환
   let idx = lastIndexOf(path, ".")
-  if idx < 0 {
+  if (idx < 0) {
     # "." 없으면 확장자 없음 (빈 문자열)
     return ""
   }
@@ -404,7 +404,7 @@ fn extension(path: string): string {
 # ================================================================
 
 # getEnv(name) - 환경 변수 읽기
-fn getEnv(name: string): string {
+fn getEnv(name) {
   # 주석: 환경 변수 값 읽기
   # 예: getEnv("HOME") -> "/home/user"
   # 예: getEnv("PATH") -> "/usr/bin:..."

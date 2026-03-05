@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+*.log
+*.tmp
+.DS_Store
+.env
+.env.local
+src/compiler-advanced.js
+test_simple_io.js
+test_stdlib_io_v2.js

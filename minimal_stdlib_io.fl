@@ -1,0 +1,151 @@
+# Minimal I/O stdlib for testing
+# (No type hints to avoid parser issues)
+
+# readFile(path) - 파일 전체 읽기
+fn readFile(path) {
+  let result = read_file(path)
+  if (result == null) {
+    return ""
+  }
+  if (result.ok) {
+    return result.value
+  }
+  return ""
+}
+
+# writeFile(path, content) - 파일에 쓰기 (덮어쓰기)
+fn writeFile(path, content) {
+  let result = write_file(path, content)
+  if (result == null) {
+    return false
+  }
+  return result.ok
+}
+
+# appendFile(path, content) - 파일에 추가 쓰기
+fn appendFile(path, content) {
+  let result = append_file(path, content)
+  if (result == null) {
+    return false
+  }
+  return result.ok
+}
+
+# getEnv(name) - 환경 변수 읽기
+fn getEnv(name) {
+  return get_env(name)
+}
+
+# dirname(path) - 디렉토리 경로
+fn dirname(path) {
+  let idx = lastIndexOf(path, "/")
+  if (idx <= 0) {
+    return "."
+  }
+  return substring(path, 0, idx)
+}
+
+# basename(path) - 파일명만 추출
+fn basename(path) {
+  let idx = lastIndexOf(path, "/")
+  if (idx < 0) {
+    return path
+  }
+  return substring(path, idx + 1, len(path))
+}
+
+# extension(path) - 확장자 추출
+fn extension(path) {
+  let idx = lastIndexOf(path, ".")
+  if (idx < 0) {
+    return ""
+  }
+  return substring(path, idx + 1, len(path))
+}
+
+# indexOf(s, search) - 첫 번째 위치 찾기
+fn indexOf(s, search) {
+  let i = 0
+  let s_len = len(s)
+  let search_len = len(search)
+
+  if (search_len == 0) {
+    return 0
+  }
+
+  while (i <= s_len - search_len) {
+    let j = 0
+    let match = true
+    while (j < search_len) {
+      if (s[i + j] != search[j]) {
+        match = false
+        break
+      }
+      j = j + 1
+    }
+    if (match) {
+      return i
+    }
+    i = i + 1
+  }
+
+  return -1
+}
+
+# lastIndexOf(s, search) - 마지막 위치 찾기
+fn lastIndexOf(s, search) {
+  let s_len = len(s)
+  let search_len = len(search)
+
+  if (search_len == 0) {
+    return s_len
+  }
+
+  let i = s_len - search_len
+  while (i >= 0) {
+    let j = 0
+    let match = true
+    while (j < search_len) {
+      if (s[i + j] != search[j]) {
+        match = false
+        break
+      }
+      j = j + 1
+    }
+    if (match) {
+      return i
+    }
+    i = i - 1
+  }
+
+  return -1
+}
+
+# substring(s, start, end) - 부분 문자열
+fn substring(s, start, end) {
+  let s_len = len(s)
+
+  if (start < 0) {
+    start = 0
+  }
+  if (end > s_len) {
+    end = s_len
+  }
+  if (start >= end) {
+    return ""
+  }
+
+  let result = ""
+  let i = start
+  while (i < end) {
+    result = result + s[i]
+    i = i + 1
+  }
+
+  return result
+}
+
+# isEmpty(s) - 빈 문자열 확인
+fn isEmpty(s) {
+  return (len(s) == 0)
+}
