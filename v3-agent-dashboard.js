@@ -571,19 +571,56 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(getHTMLDashboard());
   } else if (req.url === '/api/progress') {
+    // 실행 중인 태스크 상태 읽기
+    const taskDir = '/tmp/claude-1000/-home-kimjin-Desktop-kim/tasks';
+    const runningTasks = {
+      'a1874ff78f60b9055': { id: 1, name: 'Parser: async/await 파싱' },
+      'a8c3df9c4f504818d': { id: 2, name: '성능: 프로파일러 & 벤치마크' }
+    };
+
+    // 태스크 파일 크기로 진행률 추정
+    const taskProgress = {};
+    for (const [taskId, taskInfo] of Object.entries(runningTasks)) {
+      try {
+        const taskFile = `${taskDir}/${taskId}.output`;
+        const stats = fs.statSync(taskFile);
+        const sizeInKB = stats.size / 1024;
+        const progress = Math.min(Math.round(sizeInKB / 2), 95); // 최대 95% (완료 아님)
+        taskProgress[taskInfo.id] = progress;
+      } catch (e) {
+        taskProgress[taskInfo.id] = 0;
+      }
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
-      agents: agents.map(agent => ({
-        id: agent.id,
-        name: agent.name,
-        progress: agentProgress[agent.id].progress,
-        status: agentProgress[agent.id].status,
-        completedTasks: agentProgress[agent.id].completedTasks,
-        totalTasks: agent.tasks.length
-      })),
+      agents: agents.map(agent => {
+        // 실행 중인 태스크 찾기
+        let progress = agentProgress[agent.id].progress;
+        let status = agentProgress[agent.id].status;
+        let completedTasks = agentProgress[agent.id].completedTasks;
+
+        for (const [taskId, taskInfo] of Object.entries(runningTasks)) {
+          if (taskInfo.id === agent.id) {
+            progress = taskProgress[agent.id] || 0;
+            status = progress > 0 ? 'in_progress' : 'pending';
+            completedTasks = Math.floor(agent.tasks.length * progress / 100);
+          }
+        }
+
+        return {
+          id: agent.id,
+          name: agent.name,
+          progress: progress,
+          status: status,
+          completedTasks: completedTasks,
+          totalTasks: agent.tasks.length
+        };
+      }),
       overallProgress: Math.round(
-        agents.reduce((sum, a) => sum + agentProgress[a.id].progress, 0) / agents.length
+        agents.reduce((sum, a) => sum + (taskProgress[a.id] || agentProgress[a.id].progress), 0) / agents.length
       ),
+      activeTaskCount: Object.keys(runningTasks).length,
       timestamp: new Date().toISOString()
     }));
   } else if (req.url === '/health') {

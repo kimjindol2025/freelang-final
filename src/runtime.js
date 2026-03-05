@@ -2678,4 +2678,7 @@ module.exports = {
   typeof: typeof_,
   len,
   to_string,
+
+  // Async/Promise (1 class)
+  Promise: require('./promise'),
 };

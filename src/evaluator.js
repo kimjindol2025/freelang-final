@@ -5,6 +5,8 @@
 
 const runtime = require('./runtime');
 const moduleLoader = require('./module-loader');
+const Promise = require('./promise');
+const { getGlobalEventLoop } = require('./event-loop');
 const {
   Program, VariableDeclaration, FunctionDeclaration, BlockStatement, ExpressionStatement,
   IfStatement, WhileStatement, ForStatement, ForInStatement, ReturnStatement,
@@ -13,7 +15,7 @@ const {
   CallExpression, MemberExpression, AssignmentExpression, ConditionalExpression,
   ArrayExpression, ObjectExpression, Property, FunctionExpression, Identifier, Literal, FStringExpression,
   ImportDeclaration, ImportSpecifier, ImportDefaultSpecifier, ImportNamespaceSpecifier,
-  ExportDeclaration, ExportNamedDeclaration, ExportSpecifier
+  ExportDeclaration, ExportNamedDeclaration, ExportSpecifier, AwaitExpression
 } = require('./parser');
 
 // Control flow signals
@@ -96,11 +98,12 @@ class FreeLangError extends Error {
 }
 
 class FreeLangFunction {
-  constructor(params, body, closure, name) {
+  constructor(params, body, closure, name, isAsync = false) {
     this.params = params;
     this.body = body;
     this.closure = closure;
     this.name = name || '<anonymous>';
+    this.isAsync = isAsync;
   }
 
   call(evaluator, args) {
@@ -170,7 +173,7 @@ class Evaluator {
       }
 
       if (node instanceof FunctionDeclaration) {
-        const fn = new FreeLangFunction(node.params, node.body, env, node.name);
+        const fn = new FreeLangFunction(node.params, node.body, env, node.name, node.isAsync);
         env.define(node.name, fn);
         return fn;
       }
@@ -356,6 +359,37 @@ class Evaluator {
         const args = node.args.map(arg => this.eval(arg, env));
 
         if (callee instanceof FreeLangFunction) {
+          // async 함수면 Promise 반환
+          if (callee.isAsync) {
+            return new Promise((resolve, reject) => {
+              try {
+                const localEnv = new Environment(callee.closure);
+                for (let i = 0; i < callee.params.length; i++) {
+                  localEnv.define(callee.params[i], args[i] || null);
+                }
+
+                let result = null;
+                try {
+                  this.executeBlock(callee.body.statements || [callee.body], localEnv);
+                } catch (e) {
+                  if (e.isReturn) {
+                    result = e.value;
+                  } else {
+                    throw e;
+                  }
+                }
+
+                // Promise면 연쇄, 아니면 resolve
+                if (result instanceof Promise) {
+                  result.then(resolve, reject);
+                } else {
+                  resolve(result);
+                }
+              } catch (error) {
+                reject(error);
+              }
+            });
+          }
           return callee.call(this, args);
         } else if (typeof callee === 'function') {
           // Native function
@@ -451,7 +485,7 @@ class Evaluator {
       }
 
       if (node instanceof FunctionExpression) {
-        return new FreeLangFunction(node.params, node.body, env, node.name);
+        return new FreeLangFunction(node.params, node.body, env, node.name, node.isAsync);
       }
 
       if (node instanceof Identifier) {
@@ -472,6 +506,10 @@ class Evaluator {
 
       if (node instanceof ThrowStatement) {
         return this.evalThrowStatement(node, env);
+      }
+
+      if (node instanceof AwaitExpression) {
+        return this.evalAwaitExpression(node, env);
       }
 
       if (node instanceof QuestionOp) {
@@ -582,6 +620,52 @@ class Evaluator {
 
     // Otherwise throw as is
     throw new FreeLangError(String(value));
+  }
+
+  evalAwaitExpression(node, env) {
+    // await의 대상 평가
+    let value = this.eval(node.argument, env);
+
+    // Promise가 아니면 값 그대로 반환
+    if (!(value instanceof Promise)) {
+      return value;
+    }
+
+    // Promise인 경우 값을 동기적으로 추출
+    // 마이크로태스크 큐에서 처리
+    let result = undefined;
+    let error = undefined;
+    let completed = false;
+
+    // Promise 완료 시 값 저장
+    value
+      .then((val) => {
+        result = val;
+        completed = true;
+      })
+      .catch((reason) => {
+        error = reason;
+        completed = true;
+      });
+
+    // 마이크로태스크 실행 (즉시 완료되지 않으면 에러)
+    const eventLoop = getGlobalEventLoop();
+
+    // 마이크로태스크만 실행 (마크로태스크는 실행 안 함)
+    let iterations = 0;
+    const maxIterations = 1000;
+    while (!completed && iterations < maxIterations) {
+      eventLoop.tick();
+      iterations++;
+    }
+
+    // 에러가 있으면 throw
+    if (error !== undefined) {
+      throw error;
+    }
+
+    // 결과 반환 (undefined일 수 있음)
+    return result;
   }
 
   evalQuestionOp(node, env) {

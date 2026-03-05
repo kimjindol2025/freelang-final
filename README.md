@@ -476,14 +476,268 @@ python3 tests/test_mouse_stack_integrity.py
 | **무결성** | Stack drift = 0 bytes | ✅ 1,000,000회 스위칭 테스트 |
 | **검증** | Anti-Lie 3가지 | ✅ Hash-Chain + Mutation + Diff |
 
+---
+
+## 🔄 Promise 클래스 구현 (Task 2 완료)
+
+### 개요
+
+**Task**: Promise 클래스 실제 구현
+**파일**: `/src/promise.js`
+**상태**: ✅ **완성 및 검증**
+**테스트**: 24/24 테스트 통과
+
+### 구현 내용
+
+```javascript
+// Promise 클래스 (440줄)
+new Promise((resolve, reject) => { ... })
+
+// 인스턴스 메서드 (6개)
+- then(onFulfilled, onRejected)
+- catch(onRejected)
+- finally(onFinally)
+
+// 정적 메서드 (6개)
+- Promise.resolve(value)
+- Promise.reject(reason)
+- Promise.all(promises)
+- Promise.race(promises)
+- Promise.allSettled(promises)
+- Promise.any(promises)
+```
+
+### 주요 기능
+
+#### 1. 상태 관리
+- **pending**: 초기 상태
+- **fulfilled**: resolve 호출 후
+- **rejected**: reject 호출 후
+- **상태 불변성**: 한 번 정해진 상태는 변경 불가
+
+#### 2. 체이닝 (Promise Chain)
+```javascript
+new Promise((resolve) => {
+  resolve(1);
+})
+  .then((v) => v + 1)           // 2
+  .then((v) => v * 2)            // 4
+  .then((v) => console.log(v));  // 4
+```
+
+#### 3. 에러 처리
+```javascript
+new Promise((_, reject) => {
+  reject('error');
+})
+  .catch((e) => {
+    console.log(`처리: ${e}`);
+    return 'recovered';
+  })
+  .then((v) => console.log(v));  // recovered
+```
+
+#### 4. Finally (항상 실행)
+```javascript
+new Promise((resolve) => {
+  resolve(1);
+})
+  .finally(() => {
+    console.log('정리 작업');  // 항상 실행
+  });
+```
+
+#### 5. 병렬 작업 (Promise.all)
+```javascript
+Promise.all([
+  Promise.resolve(1),
+  Promise.resolve(2),
+  Promise.resolve(3)
+]).then((results) => {
+  console.log(results);  // [1, 2, 3]
+});
+```
+
+#### 6. 레이스 (Promise.race)
+```javascript
+Promise.race([
+  fetchWithTimeout(url1),
+  fetchWithTimeout(url2)
+]).then((fastest) => {
+  console.log('가장 빠른 결과:', fastest);
+});
+```
+
+#### 7. 모든 상태 수집 (Promise.allSettled)
+```javascript
+Promise.allSettled([
+  Promise.resolve('success'),
+  Promise.reject('error')
+]).then((results) => {
+  // [
+  //   { status: 'fulfilled', value: 'success' },
+  //   { status: 'rejected', reason: 'error' }
+  // ]
+});
+```
+
+#### 8. 첫 성공값 찾기 (Promise.any)
+```javascript
+Promise.any([
+  Promise.reject('error1'),
+  Promise.resolve('success'),
+  Promise.reject('error3')
+]).then((value) => {
+  console.log(value);  // success
+});
+```
+
+### 테스트 결과
+
+#### Unit 테스트 (24/24 통과)
+```
+✅ 기본 Promise resolve
+✅ Promise reject
+✅ then 체인
+✅ catch 에러 처리
+✅ catch 후 then 복구
+✅ finally 항상 실행 (성공)
+✅ finally 항상 실행 (실패)
+✅ Promise.resolve
+✅ Promise.reject
+✅ Promise.all (성공)
+✅ Promise.all (실패)
+✅ Promise.race (성공)
+✅ Promise.race (실패)
+✅ Promise.allSettled
+✅ Promise.any (성공)
+✅ Promise.any (실패)
+✅ 동기 에러 캡처
+✅ 중첩된 Promise 해결
+✅ then에서 Promise 반환
+✅ finally에서 에러 던지기
+✅ 여러 then 핸들러
+✅ null 값 처리
+✅ undefined 값 처리
+✅ Promise.all 빈 배열
+```
+
+#### 통합 테스트 (10개 시나리오 완료)
+```
+✅ 비동기 작업 체인 (setTimeout 사용)
+✅ 에러 처리 (catch로 복구)
+✅ 병렬 작업 (Promise.all)
+✅ 가장 빠른 완료 (Promise.race)
+✅ Finally 처리 (정리 작업)
+✅ 에러 후 finally (항상 실행)
+✅ Promise.allSettled (성공/실패 혼합)
+✅ Promise.any (첫 성공)
+✅ 중첩된 Promise (자동 해결)
+✅ 정적 메서드 활용
+```
+
+### 설계 원칙
+
+| 원칙 | 구현 |
+|------|------|
+| **JavaScript 호환** | ES6 Promise와 동일한 API |
+| **상태 안전성** | 한 번 정해진 상태는 불변 |
+| **에러 전파** | try-catch 미처리 시 자동 전파 |
+| **메모리 효율** | 완료 후 핸들러 배열 즉시 정리 |
+| **타입 유연성** | Promise/일반값 자동 인식 |
+| **에러 메시지** | 각 단계에서 명확한 에러 제공 |
+
+### Runtime 통합
+
+Promise는 `src/runtime.js`에 등록되어, 모든 FreeLang 프로그램에서 사용 가능:
+
+```javascript
+// runtime.js
+module.exports = {
+  // ... 다른 함수들
+  Promise: require('./promise'),
+};
+```
+
+### 사용 예시
+
+#### 파일 읽기 (비동기 시뮬레이션)
+```javascript
+let p = new Promise((resolve) => {
+  setTimeout(() => {
+    resolve("파일 내용");
+  }, 100);
+});
+
+p.then((content) => {
+  println(content);
+});
+```
+
+#### HTTP 요청 (체인)
+```javascript
+fetchAsync("/api/user")
+  .then((response) => response.json())
+  .then((data) => {
+    println("사용자:", data.name);
+    return data.id;
+  })
+  .catch((error) => {
+    println("에러:", error);
+  })
+  .finally(() => {
+    println("요청 완료");
+  });
+```
+
+#### 병렬 요청
+```javascript
+Promise.all([
+  fetchAsync("/api/users"),
+  fetchAsync("/api/posts"),
+  fetchAsync("/api/comments")
+])
+  .then((results) => {
+    let [users, posts, comments] = results;
+    // 처리...
+  })
+  .catch((error) => {
+    println("하나 이상 실패:", error);
+  });
+```
+
+### 알려진 제한사항
+
+1. **마이크로태스크 큐 없음**
+   - 실제 Promise는 마이크로태스크 큐 사용
+   - 현재 구현: 동기 실행 후 다음 이벤트 루프에서 처리
+
+2. **타임아웃 미지원** (별도 구현 필요)
+   - `setTimeout` / `setInterval`과 함께 사용 가능
+   - 네이티브 `Promise` 동작과 약간 다를 수 있음
+
+3. **메모리 누수 방지 필요**
+   - 매우 큰 Promise 체인은 메모리 영향 가능
+   - 순환 참조 자동 정리
+
+### 다음 단계 (Task 3)
+
+**Task 3**: Event Loop 구현
+- Promise와 함께 작동하는 Event Loop
+- 마이크로태스크 큐 구현
+- 매크로태스크 큐 구현
+- 우선순위 관리
+
 ### 🚀 다음 단계 (진실된 로드맵)
 
 ```
-현재: FreeLang 인터프리터 (Node.js 위에서)
+현재: FreeLang 인터프리터 + Promise 클래스 (Node.js 위에서)
     ↓
-다음: FreeLang 컴파일러 (기계어 생성)
+다음: Event Loop 구현 (Task 3)
     ↓
-미래: FreeLang OS (하드웨어에 직접 부팅)
+이후: AsyncAwait 지원 (Task 4)
+    ↓
+미래: FreeLang 컴파일러 (기계어 생성)
 ```
 
 ---
