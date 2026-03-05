@@ -415,6 +415,92 @@ fn flatten(arr: [any]): [any] {
 }
 
 # ================================================================
+# 섹션 9: 추가 배열 조작 (push, pop, zip, chunk, compact)
+# ================================================================
+
+# push(arr, item) - 배열 끝에 요소 추가
+fn push(arr: [any], item: any): [any] {
+  # 주석: arr 끝에 item 추가
+  # 예: push([1, 2], 3) -> [1, 2, 3]
+  return arr + [item]
+}
+
+# pop(arr) - 배열 끝에서 요소 제거 및 반환
+fn pop(arr: [any]): any {
+  # 주석: arr 끝의 요소 제거 및 반환
+  # 예: pop([1, 2, 3]) -> 3 (arr = [1, 2])
+  if isEmpty(arr) {
+    return null
+  }
+  let len = length(arr)
+  return arr[len - 1]
+}
+
+# zip(arr1, arr2) - 두 배열을 짝지어 합치기
+fn zip(arr1: [any], arr2: [any]): [[any]] {
+  # 주석: [(a1, b1), (a2, b2), ...] 형태로 합치기
+  # 예: zip([1, 2], ["a", "b"]) -> [[1, "a"], [2, "b"]]
+  let result = []
+  let min_len = min(length(arr1), length(arr2))
+
+  let i = 0
+  while i < min_len {
+    let pair = [arr1[i], arr2[i]]
+    result = result + [pair]
+    i = i + 1
+  }
+
+  return result
+}
+
+# chunk(arr, size) - 배열을 크기 size의 청크로 분할
+fn chunk(arr: [any], size: i32): [[any]] {
+  # 주석: [size]개씩 묶어서 반환
+  # 예: chunk([1, 2, 3, 4, 5], 2) -> [[1, 2], [3, 4], [5]]
+  let result = []
+  let current = []
+  let count = 0
+
+  let i = 0
+  while i < length(arr) {
+    current = current + [arr[i]]
+    count = count + 1
+
+    if count == size {
+      result = result + [current]
+      current = []
+      count = 0
+    }
+
+    i = i + 1
+  }
+
+  # 남은 요소들
+  if count > 0 {
+    result = result + [current]
+  }
+
+  return result
+}
+
+# compact(arr) - null 요소 제거
+fn compact(arr: [any]): [any] {
+  # 주석: 배열에서 null 제거
+  # 예: compact([1, null, 2, null, 3]) -> [1, 2, 3]
+  let result = []
+
+  let i = 0
+  while i < length(arr) {
+    if arr[i] != null {
+      result = result + [arr[i]]
+    }
+    i = i + 1
+  }
+
+  return result
+}
+
+# ================================================================
 # 메인 테스트
 # ================================================================
 

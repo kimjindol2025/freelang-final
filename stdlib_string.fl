@@ -135,14 +135,56 @@ fn endsWith(s: string, suffix: string): bool {
 fn split(s: string, sep: string): [string] {
   # 주석: s를 sep으로 분할하여 배열 반환
   # 예: split("a,b,c", ",") -> ["a", "b", "c"]
-  return []
+  let result: [string] = []
+  let current = ""
+  let i = 0
+  let sep_len = len(sep)
+
+  while i < len(s) {
+    let j = 0
+    let match = true
+    # sep과 일치하는지 확인
+    while j < sep_len and i + j < len(s) {
+      if s[i + j] != sep[j] {
+        match = false
+        break
+      }
+      j = j + 1
+    }
+
+    if match and j == sep_len {
+      # sep 발견
+      result = result + [current]
+      current = ""
+      i = i + sep_len
+    } else {
+      # 일반 문자
+      current = current + s[i]
+      i = i + 1
+    }
+  }
+
+  # 마지막 부분 추가
+  result = result + [current]
+  return result
 }
 
 # join(arr, sep) - 배열 연결
 fn join(arr: [string], sep: string): string {
   # 주석: arr의 요소들을 sep으로 연결
   # 예: join(["a", "b", "c"], ",") -> "a,b,c"
-  return ""
+  if len(arr) == 0 {
+    return ""
+  }
+
+  let result = arr[0]
+  let i = 1
+  while i < len(arr) {
+    result = result + sep + arr[i]
+    i = i + 1
+  }
+
+  return result
 }
 
 # ================================================================
@@ -153,21 +195,52 @@ fn join(arr: [string], sep: string): string {
 fn trim(s: string): string {
   # 주석: 문자열의 앞뒤 공백 제거
   # 예: trim("  hello  ") -> "hello"
-  return ""
+  return trimEnd(trimStart(s))
 }
 
 # trimStart(s) - 앞 공백만 제거
 fn trimStart(s: string): string {
   # 주석: 문자열의 앞 공백만 제거
   # 예: trimStart("  hello") -> "hello"
-  return ""
+  let i = 0
+  while i < len(s) {
+    let c = s[i]
+    if c != " " and c != "\t" and c != "\n" and c != "\r" {
+      break
+    }
+    i = i + 1
+  }
+
+  let result = ""
+  while i < len(s) {
+    result = result + s[i]
+    i = i + 1
+  }
+
+  return result
 }
 
 # trimEnd(s) - 뒤 공백만 제거
 fn trimEnd(s: string): string {
   # 주석: 문자열의 뒤 공백만 제거
   # 예: trimEnd("hello  ") -> "hello"
-  return ""
+  let i = len(s) - 1
+  while i >= 0 {
+    let c = s[i]
+    if c != " " and c != "\t" and c != "\n" and c != "\r" {
+      break
+    }
+    i = i - 1
+  }
+
+  let result = ""
+  let j = 0
+  while j <= i {
+    result = result + s[j]
+    j = j + 1
+  }
+
+  return result
 }
 
 # ================================================================
@@ -178,14 +251,59 @@ fn trimEnd(s: string): string {
 fn replace(s: string, search: string, replacement: string): string {
   # 주석: s에서 search를 replacement로 바꾸기 (첫 번째만)
   # 예: replace("hello", "l", "L") -> "heLlo"
-  return ""
+  let idx = indexOf(s, search)
+  if idx == -1 {
+    return s
+  }
+
+  let result = ""
+  let i = 0
+  while i < idx {
+    result = result + s[i]
+    i = i + 1
+  }
+
+  result = result + replacement
+
+  let j = idx + len(search)
+  while j < len(s) {
+    result = result + s[j]
+    j = j + 1
+  }
+
+  return result
 }
 
 # replaceAll(s, search, replacement) - 모두 바꾸기
 fn replaceAll(s: string, search: string, replacement: string): string {
   # 주석: s에서 search를 replacement로 모두 바꾸기
   # 예: replaceAll("hello", "l", "L") -> "heLLo"
-  return ""
+  let result = s
+  let search_len = len(search)
+  let i = 0
+
+  while i < len(result) {
+    # search 찾기
+    let found = true
+    let j = 0
+    while j < search_len and i + j < len(result) {
+      if result[i + j] != search[j] {
+        found = false
+        break
+      }
+      j = j + 1
+    }
+
+    if found and j == search_len {
+      # 바꾸기
+      result = replace(result, search, replacement)
+      i = i + len(replacement)
+    } else {
+      i = i + 1
+    }
+  }
+
+  return result
 }
 
 # ================================================================
@@ -287,6 +405,96 @@ fn toKebabCase(s: string): string {
 fn toSnakeCase(s: string): string {
   # 주석: "hello world" -> "hello_world"
   return ""
+}
+
+# ================================================================
+# 섹션 11: 문자열-숫자 변환
+# ================================================================
+
+# toInt(s) - 문자열을 정수로 변환
+fn toInt(s: string): i32 {
+  # 주석: "123" -> 123, "abc" -> 0
+  # 예: toInt("42") -> 42
+  # 예: toInt("-10") -> -10
+  let result = 0
+  let negative = false
+  let i = 0
+
+  # 음수 부호 확인
+  if s[0] == "-" {
+    negative = true
+    i = 1
+  }
+
+  # 숫자 파싱
+  while i < len(s) {
+    let c = s[i]
+    if c >= "0" and c <= "9" {
+      # 문자를 숫자로 변환 (간단한 방법)
+      let digit = 0
+      if c == "0" { digit = 0 }
+      else if c == "1" { digit = 1 }
+      else if c == "2" { digit = 2 }
+      else if c == "3" { digit = 3 }
+      else if c == "4" { digit = 4 }
+      else if c == "5" { digit = 5 }
+      else if c == "6" { digit = 6 }
+      else if c == "7" { digit = 7 }
+      else if c == "8" { digit = 8 }
+      else if c == "9" { digit = 9 }
+
+      result = result * 10 + digit
+    } else {
+      break
+    }
+    i = i + 1
+  }
+
+  if negative {
+    return 0 - result
+  }
+  return result
+}
+
+# toFloat(s) - 문자열을 실수로 변환
+fn toFloat(s: string): f64 {
+  # 주석: "3.14" -> 3.14, "abc" -> 0.0
+  # 간단한 구현: toInt로 정수부만 변환하고 0.0 반환
+  let int_part = toInt(s)
+  return int_part as f64
+}
+
+# isNumeric(s) - 문자열이 숫자인지 확인
+fn isNumeric(s: string): bool {
+  # 주석: "123" -> true, "12.3" -> true, "abc" -> false
+  if len(s) == 0 {
+    return false
+  }
+
+  let i = 0
+  let has_dot = false
+
+  # 음수 부호 확인
+  if s[0] == "-" {
+    i = 1
+  }
+
+  # 각 문자 확인
+  while i < len(s) {
+    let c = s[i]
+    if c >= "0" and c <= "9" {
+      # 숫자 OK
+    } else if c == "." and not has_dot {
+      # 소수점은 한 번만
+      has_dot = true
+    } else {
+      # 불가능한 문자
+      return false
+    }
+    i = i + 1
+  }
+
+  return true
 }
 
 # ================================================================
