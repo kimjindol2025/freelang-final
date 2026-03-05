@@ -4,6 +4,7 @@
  */
 
 const runtime = require('./runtime');
+const moduleLoader = require('./module-loader');
 const {
   Program, VariableDeclaration, FunctionDeclaration, BlockStatement, ExpressionStatement,
   IfStatement, WhileStatement, ForStatement, ForInStatement, ReturnStatement,
@@ -121,6 +122,11 @@ class Evaluator {
         this.globalEnv.define(name, fn);
       }
     }
+
+    // Inject require() function for module loading
+    this.globalEnv.define('require', (moduleName) => {
+      return moduleLoader.require(moduleName);
+    });
   }
 
   evaluate(ast) {
