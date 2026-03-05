@@ -1,0 +1,478 @@
+/**
+ * Phase 1: Abstract Syntax Tree (AST) 정의
+ *
+ * 목적: 파서가 생성한 AST 노드 타입 정의
+ * 작성: 2026-03-06
+ * Week: 1
+ */
+
+// ============================================
+// AST Node 기본 구조
+// ============================================
+
+enum ASTNodeType {
+  // Literals
+  NUMBER_LITERAL = 0,
+  STRING_LITERAL = 1,
+  BOOLEAN_LITERAL = 2,
+  ARRAY_LITERAL = 3,
+
+  // Expressions
+  IDENTIFIER = 10,
+  BINARY_OP = 11,
+  UNARY_OP = 12,
+  ASSIGNMENT = 13,
+  CALL_EXPRESSION = 14,
+  MEMBER_EXPRESSION = 15,
+  INDEX_EXPRESSION = 16,
+
+  // Statements
+  EXPRESSION_STATEMENT = 20,
+  BLOCK_STATEMENT = 21,
+  IF_STATEMENT = 22,
+  WHILE_STATEMENT = 23,
+  FOR_STATEMENT = 24,
+  FOR_IN_STATEMENT = 25,
+  RETURN_STATEMENT = 26,
+  BREAK_STATEMENT = 27,
+  CONTINUE_STATEMENT = 28,
+  VARIABLE_DECLARATION = 29,
+  FUNCTION_DECLARATION = 30,
+  STRUCT_DECLARATION = 31,
+  ENUM_DECLARATION = 32,
+  TRY_STATEMENT = 33,
+  THROW_STATEMENT = 34,
+
+  // Top-level
+  PROGRAM = 99,
+}
+
+/**
+ * ASTNode: 모든 AST 노드의 베이스 구조
+ */
+struct ASTNode {
+  node_type: i32,          // ASTNodeType
+  line: i32,
+  col: i32,
+}
+
+// ============================================
+// Literals
+// ============================================
+
+struct NumberLiteral {
+  base: ASTNode,
+  value: i64,
+  is_float: bool,
+}
+
+struct StringLiteral {
+  base: ASTNode,
+  value: string,
+}
+
+struct BooleanLiteral {
+  base: ASTNode,
+  value: bool,
+}
+
+struct ArrayLiteral {
+  base: ASTNode,
+  elements: Array<ASTNode>,  // Simplified: store ASTNode pointers
+}
+
+// ============================================
+// Expressions
+// ============================================
+
+struct Identifier {
+  base: ASTNode,
+  name: string,
+}
+
+struct BinaryOp {
+  base: ASTNode,
+  left: ASTNode,           // Expression
+  operator: string,        // "+", "-", "*", "/" etc
+  right: ASTNode,          // Expression
+}
+
+struct UnaryOp {
+  base: ASTNode,
+  operator: string,        // "!", "-" etc
+  argument: ASTNode,       // Expression
+}
+
+struct Assignment {
+  base: ASTNode,
+  target: ASTNode,         // Identifier or MemberExpression
+  value: ASTNode,          // Expression
+}
+
+struct CallExpression {
+  base: ASTNode,
+  callee: ASTNode,         // Identifier or MemberExpression
+  arguments: Array<ASTNode>,
+}
+
+struct MemberExpression {
+  base: ASTNode,
+  object: ASTNode,         // Expression
+  property: ASTNode,       // Identifier
+  computed: bool,          // true for obj[prop], false for obj.prop
+}
+
+struct IndexExpression {
+  base: ASTNode,
+  object: ASTNode,         // Expression (array)
+  index: ASTNode,          // Expression (index)
+}
+
+// ============================================
+// Statements
+// ============================================
+
+struct ExpressionStatement {
+  base: ASTNode,
+  expression: ASTNode,
+}
+
+struct BlockStatement {
+  base: ASTNode,
+  body: Array<ASTNode>,    // Array of statements
+}
+
+struct IfStatement {
+  base: ASTNode,
+  test: ASTNode,           // Expression (condition)
+  consequent: ASTNode,     // BlockStatement
+  alternate: ASTNode,      // BlockStatement or null
+}
+
+struct WhileStatement {
+  base: ASTNode,
+  test: ASTNode,           // Expression
+  body: ASTNode,           // BlockStatement
+}
+
+struct ForStatement {
+  base: ASTNode,
+  init: ASTNode,           // VariableDeclaration or Expression
+  test: ASTNode,           // Expression
+  update: ASTNode,         // Expression
+  body: ASTNode,           // BlockStatement
+}
+
+struct ForInStatement {
+  base: ASTNode,
+  left: ASTNode,           // Identifier (loop variable)
+  right: ASTNode,          // Expression (iterable)
+  body: ASTNode,           // BlockStatement
+}
+
+struct ReturnStatement {
+  base: ASTNode,
+  argument: ASTNode,       // Expression or null
+}
+
+struct BreakStatement {
+  base: ASTNode,
+}
+
+struct ContinueStatement {
+  base: ASTNode,
+}
+
+struct VariableDeclaration {
+  base: ASTNode,
+  kind: string,            // "let", "const", "var"
+  name: string,
+  type_annotation: string, // optional: "i32", "string", etc
+  init: ASTNode,           // Expression or null
+}
+
+/**
+ * FunctionParameter: 함수 매개변수
+ */
+struct FunctionParameter {
+  name: string,
+  type_annotation: string,  // "i32", "string", etc
+}
+
+struct FunctionDeclaration {
+  base: ASTNode,
+  name: string,
+  params: Array<FunctionParameter>,
+  return_type: string,      // "i32", "void", etc
+  body: ASTNode,            // BlockStatement
+  is_async: bool,
+}
+
+struct StructField {
+  name: string,
+  type_annotation: string,
+}
+
+struct StructDeclaration {
+  base: ASTNode,
+  name: string,
+  fields: Array<StructField>,
+}
+
+struct EnumVariant {
+  name: string,
+  value: i32,
+}
+
+struct EnumDeclaration {
+  base: ASTNode,
+  name: string,
+  variants: Array<EnumVariant>,
+}
+
+struct TryStatement {
+  base: ASTNode,
+  block: ASTNode,          // BlockStatement
+  handler: ASTNode,        // CatchClause
+  finalizer: ASTNode,      // BlockStatement or null
+}
+
+struct CatchClause {
+  param: string,           // Exception variable name
+  body: ASTNode,           // BlockStatement
+}
+
+struct ThrowStatement {
+  base: ASTNode,
+  argument: ASTNode,       // Expression
+}
+
+// ============================================
+// Program (최상위)
+// ============================================
+
+struct Program {
+  base: ASTNode,
+  body: Array<ASTNode>,    // Array of statements and declarations
+}
+
+// ============================================
+// AST 노드 생성 헬퍼 함수
+// ============================================
+
+/**
+ * new_number_literal(value: i64, is_float: bool, line: i32, col: i32): NumberLiteral
+ */
+fn new_number_literal(value: i64, is_float: bool, line: i32, col: i32): NumberLiteral {
+  var node: NumberLiteral
+  node.base.node_type = 0  // NUMBER_LITERAL
+  node.base.line = line
+  node.base.col = col
+  node.value = value
+  node.is_float = is_float
+  return node
+}
+
+/**
+ * new_string_literal(value: string, line: i32, col: i32): StringLiteral
+ */
+fn new_string_literal(value: string, line: i32, col: i32): StringLiteral {
+  var node: StringLiteral
+  node.base.node_type = 1  // STRING_LITERAL
+  node.base.line = line
+  node.base.col = col
+  node.value = value
+  return node
+}
+
+/**
+ * new_boolean_literal(value: bool, line: i32, col: i32): BooleanLiteral
+ */
+fn new_boolean_literal(value: bool, line: i32, col: i32): BooleanLiteral {
+  var node: BooleanLiteral
+  node.base.node_type = 2  // BOOLEAN_LITERAL
+  node.base.line = line
+  node.base.col = col
+  node.value = value
+  return node
+}
+
+/**
+ * new_identifier(name: string, line: i32, col: i32): Identifier
+ */
+fn new_identifier(name: string, line: i32, col: i32): Identifier {
+  var node: Identifier
+  node.base.node_type = 10  // IDENTIFIER
+  node.base.line = line
+  node.base.col = col
+  node.name = name
+  return node
+}
+
+/**
+ * new_binary_op(left: ASTNode, op: string, right: ASTNode, line: i32, col: i32): BinaryOp
+ */
+fn new_binary_op(left: ASTNode, op: string, right: ASTNode, line: i32, col: i32): BinaryOp {
+  var node: BinaryOp
+  node.base.node_type = 11  // BINARY_OP
+  node.base.line = line
+  node.base.col = col
+  node.left = left
+  node.operator = op
+  node.right = right
+  return node
+}
+
+/**
+ * new_call_expression(callee: ASTNode, args: Array<ASTNode>, line: i32, col: i32): CallExpression
+ */
+fn new_call_expression(callee: ASTNode, args: Array<ASTNode>, line: i32, col: i32): CallExpression {
+  var node: CallExpression
+  node.base.node_type = 14  // CALL_EXPRESSION
+  node.base.line = line
+  node.base.col = col
+  node.callee = callee
+  node.arguments = args
+  return node
+}
+
+/**
+ * new_variable_declaration(kind: string, name: string, type_ann: string, init: ASTNode, line: i32, col: i32): VariableDeclaration
+ */
+fn new_variable_declaration(
+  kind: string,
+  name: string,
+  type_ann: string,
+  init: ASTNode,
+  line: i32,
+  col: i32
+): VariableDeclaration {
+  var node: VariableDeclaration
+  node.base.node_type = 29  // VARIABLE_DECLARATION
+  node.base.line = line
+  node.base.col = col
+  node.kind = kind
+  node.name = name
+  node.type_annotation = type_ann
+  node.init = init
+  return node
+}
+
+/**
+ * new_block_statement(body: Array<ASTNode>, line: i32, col: i32): BlockStatement
+ */
+fn new_block_statement(body: Array<ASTNode>, line: i32, col: i32): BlockStatement {
+  var node: BlockStatement
+  node.base.node_type = 21  // BLOCK_STATEMENT
+  node.base.line = line
+  node.base.col = col
+  node.body = body
+  return node
+}
+
+/**
+ * new_function_declaration(name: string, params: Array<FunctionParameter>, return_type: string, body: ASTNode, line: i32, col: i32): FunctionDeclaration
+ */
+fn new_function_declaration(
+  name: string,
+  params: Array<FunctionParameter>,
+  return_type: string,
+  body: ASTNode,
+  line: i32,
+  col: i32
+): FunctionDeclaration {
+  var node: FunctionDeclaration
+  node.base.node_type = 30  // FUNCTION_DECLARATION
+  node.base.line = line
+  node.base.col = col
+  node.name = name
+  node.params = params
+  node.return_type = return_type
+  node.body = body
+  node.is_async = false
+  return node
+}
+
+/**
+ * new_program(body: Array<ASTNode>): Program
+ */
+fn new_program(body: Array<ASTNode>): Program {
+  var node: Program
+  node.base.node_type = 99  // PROGRAM
+  node.base.line = 0
+  node.base.col = 0
+  node.body = body
+  return node
+}
+
+// ============================================
+// AST 출력 (디버깅)
+// ============================================
+
+/**
+ * node_type_to_string(node_type: i32): string
+ */
+fn node_type_to_string(node_type: i32): string {
+  if node_type == 0 { return "NumberLiteral" }
+  if node_type == 1 { return "StringLiteral" }
+  if node_type == 2 { return "BooleanLiteral" }
+  if node_type == 3 { return "ArrayLiteral" }
+  if node_type == 10 { return "Identifier" }
+  if node_type == 11 { return "BinaryOp" }
+  if node_type == 12 { return "UnaryOp" }
+  if node_type == 14 { return "CallExpression" }
+  if node_type == 20 { return "ExpressionStatement" }
+  if node_type == 21 { return "BlockStatement" }
+  if node_type == 29 { return "VariableDeclaration" }
+  if node_type == 30 { return "FunctionDeclaration" }
+  if node_type == 99 { return "Program" }
+  return "Unknown"
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_ast(): void {
+  println("")
+  println("🧪 Testing AST...")
+  println("")
+
+  // Test 1: Number literal
+  let num = new_number_literal(42, false, 1, 0)
+  println("✓ Created NumberLiteral: " + str(num.value))
+
+  // Test 2: String literal
+  let str_lit = new_string_literal("hello", 2, 0)
+  println("✓ Created StringLiteral: " + str_lit.value)
+
+  // Test 3: Boolean literal
+  let bool_lit = new_boolean_literal(true, 3, 0)
+  println("✓ Created BooleanLiteral: true")
+
+  // Test 4: Identifier
+  let id = new_identifier("x", 4, 0)
+  println("✓ Created Identifier: " + id.name)
+
+  // Test 5: Variable declaration
+  var init_expr: ASTNode
+  var decl = new_variable_declaration("let", "x", "i32", init_expr, 5, 0)
+  println("✓ Created VariableDeclaration: let " + decl.name + ": " + decl.type_annotation)
+
+  // Test 6: Function declaration
+  var params: Array<FunctionParameter> = []
+  var body: BlockStatement
+  var fn_decl = new_function_declaration("add", params, "i32", body.base, 6, 0)
+  println("✓ Created FunctionDeclaration: " + fn_decl.name)
+
+  // Test 7: Node type string
+  let type_str = node_type_to_string(0)
+  println("✓ Node type string: " + type_str)
+
+  println("")
+  println("✅ AST tests completed")
+}
+
+fn main(): void {
+  test_ast()
+}

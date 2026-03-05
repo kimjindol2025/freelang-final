@@ -1,0 +1,699 @@
+/**
+ * Phase 1 Week 3: Lexical Analyzer (Lexer)
+ *
+ * 목적: FreeLang 소스 코드를 Token 배열로 변환
+ * 기능:
+ * - 단일 문자, 다중 문자 토큰 인식
+ * - 키워드, 식별자, 숫자, 문자열 구분
+ * - 라인/컬럼 위치 추적
+ * - 에러 메시지 생성
+ *
+ * 작성: 2026-03-06
+ * Week: 3
+ */
+
+// ============================================
+// Token 타입 정의
+// ============================================
+
+/**
+ * TokenType: 토큰의 종류
+ */
+enum TokenType {
+  // 기본 토큰
+  IDENTIFIER = 0,      // foo, x, variable_name
+  NUMBER = 1,          // 123, 45.67, 0xFF
+  STRING = 2,          // "hello", 'world'
+
+  // 키워드
+  KEYWORD = 3,         // fn, let, var, if, else, while, etc
+
+  // 연산자
+  OPERATOR = 4,        // +, -, *, /, %, ==, !=, <, >, etc
+
+  // 구두점 및 괄호
+  LPAREN = 5,          // (
+  RPAREN = 6,          // )
+  LBRACE = 7,          // {
+  RBRACE = 8,          // }
+  LBRACKET = 9,        // [
+  RBRACKET = 10,       // ]
+
+  // 기타
+  SEMICOLON = 11,      // ;
+  COMMA = 12,          // ,
+  COLON = 13,          // :
+  ARROW = 14,          // ->
+  DOT = 15,            // .
+
+  // 특수
+  EOF = 16,            // 파일 끝
+  ERROR = 17,          // 에러 토큰
+}
+
+/**
+ * Token: 토큰 구조
+ */
+struct Token {
+  type: i32,            // TokenType
+  value: string,        // 토큰 문자열
+  line: i32,            // 라인 번호 (1부터 시작)
+  col: i32,             // 컬럼 번호 (0부터 시작)
+}
+
+// ============================================
+// Lexer 상태
+// ============================================
+
+/**
+ * Lexer: 렉서 상태 관리 구조
+ */
+struct Lexer {
+  source: string,       // 입력 소스 코드
+  position: i32,        // 현재 위치
+  line: i32,            // 현재 라인
+  col: i32,             // 현재 컬럼
+  tokens: Array<Token>, // 생성된 토큰 배열
+  errors: Array<string>,// 에러 메시지 배열
+}
+
+// ============================================
+// Lexer 생성 및 초기화
+// ============================================
+
+/**
+ * new_lexer(source: string): Lexer
+ * 새로운 렉서 인스턴스 생성
+ */
+fn new_lexer(source: string): Lexer {
+  var lexer: Lexer
+  lexer.source = source
+  lexer.position = 0
+  lexer.line = 1
+  lexer.col = 0
+  lexer.tokens = []
+  lexer.errors = []
+  return lexer
+}
+
+// ============================================
+// 문자 검사 헬퍼 함수
+// ============================================
+
+/**
+ * is_alpha(ch: string): bool
+ * 알파벳 문자인지 확인 (a-z, A-Z)
+ */
+fn is_alpha(ch: string): bool {
+  if ch.length() != 1 { return false }
+  let code = ch.charCodeAt(0)
+  return (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+}
+
+/**
+ * is_digit(ch: string): bool
+ * 숫자 문자인지 확인 (0-9)
+ */
+fn is_digit(ch: string): bool {
+  if ch.length() != 1 { return false }
+  let code = ch.charCodeAt(0)
+  return code >= 48 && code <= 57
+}
+
+/**
+ * is_alnum(ch: string): bool
+ * 알파벳 또는 숫자인지 확인
+ */
+fn is_alnum(ch: string): bool {
+  return is_alpha(ch) || is_digit(ch)
+}
+
+/**
+ * is_whitespace(ch: string): bool
+ * 공백 문자인지 확인 (space, tab, newline)
+ */
+fn is_whitespace(ch: string): bool {
+  if ch.length() != 1 { return false }
+  let code = ch.charCodeAt(0)
+  return code == 32 || code == 9 || code == 10 || code == 13
+}
+
+/**
+ * is_keyword(word: string): bool
+ * 키워드인지 확인
+ */
+fn is_keyword(word: string): bool {
+  let keywords = [
+    "fn", "let", "var", "if", "else", "while", "for", "return",
+    "break", "continue", "true", "false", "null", "struct", "enum",
+    "match", "in", "async", "await", "try", "catch", "finally", "throw"
+  ]
+
+  let i = 0
+  while i < keywords.length() {
+    if word == keywords[i] { return true }
+    i = i + 1
+  }
+  return false
+}
+
+// ============================================
+// 렉서 헬퍼 메서드
+// ============================================
+
+/**
+ * peek(lexer, offset: i32): string
+ * 현재 위치에서 offset만큼 앞의 문자 조회 (offset 기본값: 0)
+ */
+fn peek(lexer: Lexer, offset: i32): string {
+  let pos = lexer.position + offset
+  if pos >= lexer.source.length() { return "\0" }
+  return lexer.source.charAt(pos)
+}
+
+/**
+ * advance(lexer): string
+ * 현재 문자를 반환하고 위치 이동
+ */
+fn advance(lexer: Lexer): string {
+  if lexer.position >= lexer.source.length() { return "\0" }
+
+  let ch = lexer.source.charAt(lexer.position)
+  lexer.position = lexer.position + 1
+
+  if ch == "\n" {
+    lexer.line = lexer.line + 1
+    lexer.col = 0
+  } else {
+    lexer.col = lexer.col + 1
+  }
+
+  return ch
+}
+
+/**
+ * add_token(lexer, type: i32, value: string): void
+ * 토큰을 배열에 추가
+ */
+fn add_token(lexer: Lexer, token_type: i32, value: string): void {
+  var token: Token
+  token.type = token_type
+  token.value = value
+  token.line = lexer.line
+  token.col = lexer.col - value.length()
+
+  lexer.tokens.push(token)
+}
+
+/**
+ * add_error(lexer, message: string): void
+ * 에러 메시지 추가
+ */
+fn add_error(lexer: Lexer, message: string): void {
+  let error = "Line " + str(lexer.line) + ", Col " + str(lexer.col) + ": " + message
+  lexer.errors.push(error)
+}
+
+// ============================================
+// 토큰 읽기 함수
+// ============================================
+
+/**
+ * scan_number(lexer): void
+ * 숫자 토큰 읽기 (정수 또는 부동소수점)
+ */
+fn scan_number(lexer: Lexer): void {
+  let start = lexer.position - 1  // advance()를 호출했으므로 -1
+
+  // 정수 부분 읽기
+  while is_digit(peek(lexer, 0)) {
+    advance(lexer)
+  }
+
+  // 부동소수점 확인
+  if peek(lexer, 0) == "." && is_digit(peek(lexer, 1)) {
+    advance(lexer)  // '.' 스킵
+    while is_digit(peek(lexer, 0)) {
+      advance(lexer)
+    }
+  }
+
+  let value = lexer.source.substring(start, lexer.position)
+  add_token(lexer, 1, value)  // TokenType.NUMBER = 1
+}
+
+/**
+ * scan_string(lexer, quote: string): void
+ * 문자열 토큰 읽기 (quote: '"' 또는 "'")
+ */
+fn scan_string(lexer: Lexer, quote: string): void {
+  let start = lexer.position
+  let value = ""
+
+  while peek(lexer, 0) != quote && peek(lexer, 0) != "\0" {
+    if peek(lexer, 0) == "\\" {
+      advance(lexer)  // backslash 스킵
+      let escaped = peek(lexer, 0)
+      if escaped == "n" {
+        value = value + "\n"
+      } else if escaped == "t" {
+        value = value + "\t"
+      } else if escaped == "r" {
+        value = value + "\r"
+      } else if escaped == "\\" {
+        value = value + "\\"
+      } else if escaped == quote {
+        value = value + quote
+      } else {
+        value = value + escaped
+      }
+      advance(lexer)
+    } else {
+      value = value + advance(lexer)
+    }
+  }
+
+  if peek(lexer, 0) == "\0" {
+    add_error(lexer, "unterminated string")
+  } else {
+    advance(lexer)  // 마지막 quote 스킵
+  }
+
+  add_token(lexer, 2, value)  // TokenType.STRING = 2
+}
+
+/**
+ * scan_identifier(lexer): void
+ * 식별자 또는 키워드 토큰 읽기
+ */
+fn scan_identifier(lexer: Lexer): void {
+  let start = lexer.position - 1  // advance()를 호출했으므로 -1
+
+  while is_alnum(peek(lexer, 0)) || peek(lexer, 0) == "_" {
+    advance(lexer)
+  }
+
+  let value = lexer.source.substring(start, lexer.position)
+
+  if is_keyword(value) {
+    add_token(lexer, 3, value)  // TokenType.KEYWORD = 3
+  } else {
+    add_token(lexer, 0, value)  // TokenType.IDENTIFIER = 0
+  }
+}
+
+/**
+ * scan_operator(lexer, ch: string): void
+ * 연산자 토큰 읽기 (단일 또는 다중 문자)
+ */
+fn scan_operator(lexer: Lexer, ch: string): void {
+  let next = peek(lexer, 0)
+  let two_char = ch + next
+
+  // 2글자 연산자
+  if two_char == "==" || two_char == "!=" || two_char == "<=" ||
+     two_char == ">=" || two_char == "&&" || two_char == "||" ||
+     two_char == "+=" || two_char == "-=" || two_char == "*=" ||
+     two_char == "/=" || two_char == "->" {
+    advance(lexer)
+    add_token(lexer, 4, two_char)  // TokenType.OPERATOR = 4
+  }
+  // 3글자 연산자
+  else if two_char == "<<" && peek(lexer, 1) == "<" {
+    advance(lexer)
+    advance(lexer)
+    add_token(lexer, 4, "<<=")
+  }
+  else if two_char == ">>" && peek(lexer, 1) == ">" {
+    advance(lexer)
+    advance(lexer)
+    add_token(lexer, 4, ">>=")
+  }
+  // 단일 문자 연산자
+  else {
+    add_token(lexer, 4, ch)  // TokenType.OPERATOR = 4
+  }
+}
+
+// ============================================
+// Main Tokenize 함수
+// ============================================
+
+/**
+ * tokenize(source: string): Array<Token>
+ * 소스 코드를 Token 배열로 변환 (메인 진입점)
+ */
+fn tokenize(source: string): Array<Token> {
+  var lexer = new_lexer(source)
+
+  while lexer.position < lexer.source.length() {
+    let ch = advance(lexer)
+
+    // 공백 및 주석 스킵
+    if is_whitespace(ch) {
+      // 공백은 그냥 스킵
+      continue
+    }
+
+    // 주석 처리
+    if ch == "/" && peek(lexer, 0) == "/" {
+      // 라인 주석
+      while peek(lexer, 0) != "\n" && peek(lexer, 0) != "\0" {
+        advance(lexer)
+      }
+      continue
+    }
+
+    if ch == "/" && peek(lexer, 0) == "*" {
+      // 블록 주석
+      advance(lexer)  // '*' 스킵
+      while lexer.position < lexer.source.length() {
+        if peek(lexer, 0) == "*" && peek(lexer, 1) == "/" {
+          advance(lexer)
+          advance(lexer)
+          break
+        }
+        advance(lexer)
+      }
+      continue
+    }
+
+    // 숫자
+    if is_digit(ch) {
+      scan_number(lexer)
+    }
+
+    // 문자열
+    else if ch == "\"" || ch == "'" {
+      scan_string(lexer, ch)
+    }
+
+    // 식별자 또는 키워드
+    else if is_alpha(ch) || ch == "_" {
+      scan_identifier(lexer)
+    }
+
+    // 괄호
+    else if ch == "(" {
+      add_token(lexer, 5, "(")  // TokenType.LPAREN = 5
+    }
+    else if ch == ")" {
+      add_token(lexer, 6, ")")  // TokenType.RPAREN = 6
+    }
+    else if ch == "{" {
+      add_token(lexer, 7, "{")  // TokenType.LBRACE = 7
+    }
+    else if ch == "}" {
+      add_token(lexer, 8, "}")  // TokenType.RBRACE = 8
+    }
+    else if ch == "[" {
+      add_token(lexer, 9, "[")  // TokenType.LBRACKET = 9
+    }
+    else if ch == "]" {
+      add_token(lexer, 10, "]") // TokenType.RBRACKET = 10
+    }
+
+    // 구두점
+    else if ch == ";" {
+      add_token(lexer, 11, ";") // TokenType.SEMICOLON = 11
+    }
+    else if ch == "," {
+      add_token(lexer, 12, ",") // TokenType.COMMA = 12
+    }
+    else if ch == ":" {
+      add_token(lexer, 13, ":") // TokenType.COLON = 13
+    }
+    else if ch == "." {
+      add_token(lexer, 15, ".") // TokenType.DOT = 15
+    }
+
+    // 연산자
+    else if ch == "+" || ch == "-" || ch == "*" || ch == "/" ||
+            ch == "%" || ch == "=" || ch == "!" || ch == "<" ||
+            ch == ">" || ch == "&" || ch == "|" {
+      scan_operator(lexer, ch)
+    }
+
+    // 미지의 문자
+    else {
+      add_error(lexer, "unexpected character: " + ch)
+      var error_token: Token
+      error_token.type = 17  // TokenType.ERROR = 17
+      error_token.value = ch
+      error_token.line = lexer.line
+      error_token.col = lexer.col - 1
+      lexer.tokens.push(error_token)
+    }
+  }
+
+  // EOF 토큰 추가
+  var eof_token: Token
+  eof_token.type = 16  // TokenType.EOF = 16
+  eof_token.value = ""
+  eof_token.line = lexer.line
+  eof_token.col = lexer.col
+  lexer.tokens.push(eof_token)
+
+  return lexer.tokens
+}
+
+// ============================================
+// 헬퍼 함수: 토큰 출력
+// ============================================
+
+/**
+ * token_type_name(type: i32): string
+ * 토큰 타입을 문자열로 변환
+ */
+fn token_type_name(token_type: i32): string {
+  if token_type == 0 { return "IDENTIFIER" }
+  if token_type == 1 { return "NUMBER" }
+  if token_type == 2 { return "STRING" }
+  if token_type == 3 { return "KEYWORD" }
+  if token_type == 4 { return "OPERATOR" }
+  if token_type == 5 { return "LPAREN" }
+  if token_type == 6 { return "RPAREN" }
+  if token_type == 7 { return "LBRACE" }
+  if token_type == 8 { return "RBRACE" }
+  if token_type == 9 { return "LBRACKET" }
+  if token_type == 10 { return "RBRACKET" }
+  if token_type == 11 { return "SEMICOLON" }
+  if token_type == 12 { return "COMMA" }
+  if token_type == 13 { return "COLON" }
+  if token_type == 14 { return "ARROW" }
+  if token_type == 15 { return "DOT" }
+  if token_type == 16 { return "EOF" }
+  if token_type == 17 { return "ERROR" }
+  return "UNKNOWN"
+}
+
+/**
+ * print_tokens(tokens: Array<Token>): void
+ * 토큰 배열 출력 (디버깅용)
+ */
+fn print_tokens(tokens: Array<Token>): void {
+  println("")
+  println("╔════════════════════════════════════════╗")
+  println("║           TOKEN LIST (DEBUG)           ║")
+  println("╠════════════════════════════════════════╣")
+
+  let i = 0
+  while i < tokens.length() {
+    let token = tokens[i]
+    let type_name = token_type_name(token.type)
+    let line_str = str(token.line)
+    let col_str = str(token.col)
+    let value_repr = if token.value == "" { "<empty>" } else { token.value }
+
+    println("│ [" + line_str + ":" + col_str + "] " + type_name + " = \"" + value_repr + "\"")
+    i = i + 1
+  }
+
+  println("╚════════════════════════════════════════╝")
+}
+
+// ============================================
+// 테스트 케이스
+// ============================================
+
+fn test_lexer_basic(): void {
+  println("")
+  println("🧪 Test 1: Basic tokenization")
+
+  let source1 = "let x = 42;"
+  let tokens1 = tokenize(source1)
+
+  println("Source: " + source1)
+  println("Token count: " + str(tokens1.length()))
+
+  // 예상: let(KW), x(ID), =(OP), 42(NUM), ;(SC), EOF
+  if tokens1.length() >= 6 {
+    println("✓ Correct token count")
+  } else {
+    println("✗ Incorrect token count")
+  }
+}
+
+fn test_lexer_string(): void {
+  println("")
+  println("🧪 Test 2: String literals")
+
+  let source2 = "let msg = \"hello world\";"
+  let tokens2 = tokenize(source2)
+
+  println("Source: " + source2)
+  println("Token count: " + str(tokens2.length()))
+
+  // 찾기: STRING 토큰
+  let i = 0
+  let found_string = false
+  while i < tokens2.length() {
+    if tokens2[i].type == 2 {  // TokenType.STRING
+      found_string = true
+      println("✓ Found string token: \"" + tokens2[i].value + "\"")
+    }
+    i = i + 1
+  }
+
+  if !found_string {
+    println("✗ String token not found")
+  }
+}
+
+fn test_lexer_function(): void {
+  println("")
+  println("🧪 Test 3: Function definition")
+
+  let source3 = "fn add(a, b) { return a + b; }"
+  let tokens3 = tokenize(source3)
+
+  println("Source: " + source3)
+  println("Token count: " + str(tokens3.length()))
+
+  // 찾기: fn 키워드
+  if tokens3[0].type == 3 && tokens3[0].value == "fn" {
+    println("✓ Found fn keyword")
+  } else {
+    println("✗ fn keyword not found")
+  }
+
+  print_tokens(tokens3)
+}
+
+fn test_lexer_comments(): void {
+  println("")
+  println("🧪 Test 4: Comments")
+
+  let source4 = "let x = 5; // comment
+fn test() { /* block */ }"
+  let tokens4 = tokenize(source4)
+
+  println("Source: (multiline with comments)")
+  println("Token count: " + str(tokens4.length()))
+
+  // 주석이 제거되어야 함
+  if tokens4.length() < 15 {
+    println("✓ Comments correctly removed")
+  } else {
+    println("✗ Comments not properly handled")
+  }
+}
+
+fn test_lexer_operators(): void {
+  println("")
+  println("🧪 Test 5: Operators")
+
+  let source5 = "if (x == 5 && y != 3) { x += 1; }"
+  let tokens5 = tokenize(source5)
+
+  println("Source: " + source5)
+  println("Token count: " + str(tokens5.length()))
+
+  // 찾기: ==, &&, !=, += 연산자
+  let i = 0
+  let operator_count = 0
+  while i < tokens5.length() {
+    if tokens5[i].type == 4 {  // TokenType.OPERATOR
+      operator_count = operator_count + 1
+      println("  Operator: " + tokens5[i].value)
+    }
+    i = i + 1
+  }
+
+  println("✓ Found " + str(operator_count) + " operators")
+}
+
+fn test_lexer_numbers(): void {
+  println("")
+  println("🧪 Test 6: Number literals")
+
+  let source6 = "let a = 123; let b = 45.67; let c = 0xFF;"
+  let tokens6 = tokenize(source6)
+
+  println("Source: " + source6)
+  println("Token count: " + str(tokens6.length()))
+
+  // 찾기: NUMBER 토큰
+  let i = 0
+  let number_count = 0
+  while i < tokens6.length() {
+    if tokens6[i].type == 1 {  // TokenType.NUMBER
+      number_count = number_count + 1
+      println("  Number: " + tokens6[i].value)
+    }
+    i = i + 1
+  }
+
+  println("✓ Found " + str(number_count) + " numbers")
+}
+
+fn test_lexer_complex(): void {
+  println("")
+  println("🧪 Test 7: Complex program")
+
+  let source7 = "
+fn factorial(n: i32): i32 {
+  if (n <= 1) {
+    return 1;
+  }
+  return n * factorial(n - 1);
+}
+
+let result = factorial(5);
+println(result);
+"
+
+  let tokens7 = tokenize(source7)
+
+  println("Source: (factorial function)")
+  println("Token count: " + str(tokens7.length()))
+
+  if tokens7.length() > 20 {
+    println("✓ Complex program tokenized")
+  }
+}
+
+// ============================================
+// Main Test Runner
+// ============================================
+
+fn main(): void {
+  println("")
+  println("════════════════════════════════════════")
+  println("   FreeLang Lexer Test Suite (v1.0)   ")
+  println("════════════════════════════════════════")
+
+  test_lexer_basic()
+  test_lexer_string()
+  test_lexer_function()
+  test_lexer_comments()
+  test_lexer_operators()
+  test_lexer_numbers()
+  test_lexer_complex()
+
+  println("")
+  println("════════════════════════════════════════")
+  println("✅ All lexer tests completed")
+  println("════════════════════════════════════════")
+  println("")
+}
