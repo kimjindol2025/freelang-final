@@ -1,0 +1,120 @@
+# ================================================================
+# Simple Prototype Tests - 실행 가능한 최소 테스트 케이스
+# v2.5.0 기능 검증용
+# ================================================================
+
+# Test 1: 기본 break 테스트 (간단한 버전)
+fn test_simple_break() {
+  let x = 0
+  let y = 0
+
+  while x < 10 {
+    if x == 3 {
+      break
+    }
+    y = y + 1
+    x = x + 1
+  }
+
+  # y should be 3 (0, 1, 2까지 증가하고 x=3에서 break)
+  return y
+}
+
+# Test 2: 기본 continue 테스트
+fn test_simple_continue() {
+  let x = 0
+  let sum = 0
+
+  while x < 5 {
+    x = x + 1
+    if x == 3 {
+      continue
+    }
+    sum = sum + x
+  }
+
+  # sum should be 1 + 2 + 4 + 5 = 12 (3 제외)
+  return sum
+}
+
+# Test 3: 기본 match 테스트
+fn test_simple_match() {
+  let n = 2
+  let result = ""
+
+  match n
+    0 => result = "zero",
+    1 => result = "one",
+    2 => result = "two",
+    _ => result = "other"
+  end
+
+  return result
+}
+
+# Test 4: 와일드카드 match 테스트
+fn test_simple_wildcard() {
+  let n = 99
+  let result = ""
+
+  match n
+    1 => result = "one",
+    _ => result = "many"
+  end
+
+  return result
+}
+
+# Test 5: 배열 기본 테스트 (호환성)
+fn test_simple_array() {
+  let arr = [1, 2, 3]
+  let first = arr[0]
+  let len_val = len(arr)
+
+  return first + len_val  # 1 + 3 = 4
+}
+
+# Test 6: 함수 호출 기본 테스트
+fn add(a: i32, b: i32): i32 {
+  return a + b
+}
+
+fn test_simple_function() {
+  let result = add(10, 20)
+  return result  # 30
+}
+
+# ================================================================
+# Main: 모든 테스트 실행
+# ================================================================
+
+fn main() {
+  # Test 1: break
+  let break_result = test_simple_break()
+  println(break_result)  # Expected: 3
+
+  # Test 2: continue
+  let continue_result = test_simple_continue()
+  println(continue_result)  # Expected: 12
+
+  # Test 3: match
+  let match_result = test_simple_match()
+  println(match_result)  # Expected: "two"
+
+  # Test 4: wildcard
+  let wildcard_result = test_simple_wildcard()
+  println(wildcard_result)  # Expected: "many"
+
+  # Test 5: array
+  let array_result = test_simple_array()
+  println(array_result)  # Expected: 4
+
+  # Test 6: function
+  let function_result = test_simple_function()
+  println(function_result)  # Expected: 30
+
+  return null
+}
+
+# 실행
+main()
