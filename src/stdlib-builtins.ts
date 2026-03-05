@@ -10,6 +10,8 @@ import { SimplePromise } from './runtime/simple-promise';
 import { RegexObject } from './stdlib/regex/regex-impl';
 import { registerMathExtendedFunctions } from './stdlib-math-extended';
 import { registerHttpExtendedFunctions } from './stdlib-http-extended';
+import { registerApiFunctions } from './stdlib-api-functions';
+import { registerTestingFunctions } from './stdlib-testing-functions';
 
 /**
  * stdlib 함수들을 NativeFunctionRegistry에 등록
@@ -2785,6 +2787,18 @@ export function registerStdlibFunctions(registry: NativeFunctionRegistry): void 
   // Phase G: HTTP/Network 확장 함수 (150개)
   // ────────────────────────────────────────────────────────────
   registerHttpExtendedFunctions(registry);
+
+  // ────────────────────────────────────────────────────────────
+  // Phase D: API Functions (100개)
+  // REST Client, GraphQL, WebAPI, API Gateway, API Testing
+  // ────────────────────────────────────────────────────────────
+  registerApiFunctions(registry);
+
+  // ────────────────────────────────────────────────────────────
+  // Phase D: Testing Functions (80개)
+  // Test Framework, Assertions, Mocking, Spying
+  // ────────────────────────────────────────────────────────────
+  registerTestingFunctions(registry);
 
   // Silent registration (no console output)
 }
