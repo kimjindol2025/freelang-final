@@ -1,0 +1,288 @@
+# ================================================================
+# FreeLang Standard Library - Result Module (Error Handling)
+# ================================================================
+#
+# Result 패턴 (Rust의 Result 영감)
+# Ok<T> / Err<E> 타입 구현
+# Phase C 구현
+# 목표: 200줄
+#
+# ================================================================
+
+# ================================================================
+# 섹션 1: Result 생성자
+# ================================================================
+
+# ok(value) - 성공 결과 생성
+fn ok(value: any): map {
+  # 주석: 성공 결과를 나타내는 Result 생성
+  # 예: ok(42) -> {"ok": true, "value": 42, "error": null}
+  return {
+    "ok": true,
+    "value": value,
+    "error": null
+  }
+}
+
+# err(message) - 에러 결과 생성
+fn err(message: string): map {
+  # 주석: 실패 결과를 나타내는 Result 생성
+  # 예: err("Something went wrong") -> {"ok": false, "value": null, "error": "..."}
+  return {
+    "ok": false,
+    "value": null,
+    "error": message
+  }
+}
+
+# ================================================================
+# 섹션 2: Result 판별
+# ================================================================
+
+# is_ok(result) - 성공 여부 확인
+fn is_ok(result: map): bool {
+  # 주석: result가 Ok인지 확인
+  # 예: is_ok(ok(42)) -> true
+  # 예: is_ok(err("fail")) -> false
+  return result["ok"] == true
+}
+
+# is_err(result) - 에러 여부 확인
+fn is_err(result: map): bool {
+  # 주석: result가 Err인지 확인
+  # 예: is_err(ok(42)) -> false
+  # 예: is_err(err("fail")) -> true
+  return result["ok"] == false
+}
+
+# ================================================================
+# 섹션 3: Result 값 추출
+# ================================================================
+
+# unwrap(result) - 값 추출 (에러면 panic)
+fn unwrap(result: map): any {
+  # 주석: Ok면 값을 반환, Err면 에러 메시지 출력
+  # 예: unwrap(ok(42)) -> 42
+  # 예: unwrap(err("fail")) -> panics!
+  if is_ok(result) {
+    return result["value"]
+  } else {
+    # 에러 출력 (간단한 panic 시뮬레이션)
+    println!("panic: {}", result["error"])
+    return null
+  }
+}
+
+# unwrap_or(result, default) - 값 추출 또는 기본값
+fn unwrap_or(result: map, default: any): any {
+  # 주석: Ok면 값, Err면 default 반환
+  # 예: unwrap_or(ok(42), 0) -> 42
+  # 예: unwrap_or(err("fail"), 0) -> 0
+  if is_ok(result) {
+    return result["value"]
+  } else {
+    return default
+  }
+}
+
+# unwrap_or_else(result, fn) - 값 추출 또는 함수 실행
+fn unwrap_or_else(result: map, fn: fn(string)->any): any {
+  # 주석: Ok면 값, Err면 fn(error) 실행
+  # 예: unwrap_or_else(ok(42), fn(e) -> 0) -> 42
+  # 예: unwrap_or_else(err("fail"), fn(e) -> 0) -> 0
+  if is_ok(result) {
+    return result["value"]
+  } else {
+    let error_msg = result["error"]
+    return fn(error_msg)
+  }
+}
+
+# expect(result, message) - 값 추출 (커스텀 메시지)
+fn expect(result: map, message: string): any {
+  # 주석: Ok면 값, Err면 커스텀 메시지 출력
+  # 예: expect(ok(42), "should be ok") -> 42
+  # 예: expect(err("fail"), "should be ok") -> panics with "should be ok"
+  if is_ok(result) {
+    return result["value"]
+  } else {
+    println!("panic: {} ({})", message, result["error"])
+    return null
+  }
+}
+
+# ================================================================
+# 섹션 4: Result 변환 (map, and_then)
+# ================================================================
+
+# result_map(result, fn) - Ok 값에 함수 적용
+fn result_map(result: map, fn: fn(any)->any): map {
+  # 주석: Ok면 fn(value)의 결과를 새 Result로, Err면 그대로
+  # 예: result_map(ok(5), fn(x) -> x * 2) -> ok(10)
+  # 예: result_map(err("fail"), fn(x) -> x * 2) -> err("fail")
+  if is_ok(result) {
+    let value = result["value"]
+    let new_value = fn(value)
+    return ok(new_value)
+  } else {
+    return result
+  }
+}
+
+# result_and_then(result, fn) - 체이닝 (flatMap)
+fn result_and_then(result: map, fn: fn(any)->map): map {
+  # 주석: Ok면 fn(value)를 실행 (fn이 Result 반환), Err면 그대로
+  # 예: result_and_then(ok(5), fn(x) -> ok(x * 2)) -> ok(10)
+  # 예: result_and_then(ok(5), fn(x) -> err("fail")) -> err("fail")
+  if is_ok(result) {
+    let value = result["value"]
+    return fn(value)
+  } else {
+    return result
+  }
+}
+
+# result_or(result, fallback) - Ok 또는 fallback
+fn result_or(result: map, fallback: map): map {
+  # 주석: Ok면 result, Err면 fallback
+  # 예: result_or(ok(42), ok(0)) -> ok(42)
+  # 예: result_or(err("fail"), ok(0)) -> ok(0)
+  if is_ok(result) {
+    return result
+  } else {
+    return fallback
+  }
+}
+
+# result_or_else(result, fn) - Ok 또는 함수 실행
+fn result_or_else(result: map, fn: fn(string)->map): map {
+  # 주석: Ok면 result, Err면 fn(error)
+  # 예: result_or_else(ok(42), fn(e) -> ok(0)) -> ok(42)
+  # 예: result_or_else(err("fail"), fn(e) -> ok(0)) -> ok(0)
+  if is_ok(result) {
+    return result
+  } else {
+    let error_msg = result["error"]
+    return fn(error_msg)
+  }
+}
+
+# ================================================================
+# 섹션 5: Result 검증
+# ================================================================
+
+# ok_count(results) - 성공 개수 세기
+fn ok_count(results: [map]): i32 {
+  # 주석: Ok 결과의 개수
+  # 예: ok_count([ok(1), err("x"), ok(2)]) -> 2
+  let count = 0
+  let i = 0
+
+  while i < len(results) {
+    if is_ok(results[i]) {
+      count = count + 1
+    }
+    i = i + 1
+  }
+
+  return count
+}
+
+# err_count(results) - 에러 개수 세기
+fn err_count(results: [map]): i32 {
+  # 주석: Err 결과의 개수
+  # 예: err_count([ok(1), err("x"), ok(2)]) -> 1
+  let count = 0
+  let i = 0
+
+  while i < len(results) {
+    if is_err(results[i]) {
+      count = count + 1
+    }
+    i = i + 1
+  }
+
+  return count
+}
+
+# ================================================================
+# 섹션 6: Result 수집
+# ================================================================
+
+# collect_ok(results) - 모든 Ok 값 수집
+fn collect_ok(results: [map]): [any] {
+  # 주석: Ok 결과들의 값만 배열로 반환
+  # 예: collect_ok([ok(1), err("x"), ok(2)]) -> [1, 2]
+  let values = []
+  let i = 0
+
+  while i < len(results) {
+    if is_ok(results[i]) {
+      values = values + [results[i]["value"]]
+    }
+    i = i + 1
+  }
+
+  return values
+}
+
+# collect_err(results) - 모든 Err 메시지 수집
+fn collect_err(results: [map]): [string] {
+  # 주석: Err 결과들의 메시지만 배열로 반환
+  # 예: collect_err([ok(1), err("x"), ok(2), err("y")]) -> ["x", "y"]
+  let errors = []
+  let i = 0
+
+  while i < len(results) {
+    if is_err(results[i]) {
+      errors = errors + [results[i]["error"]]
+    }
+    i = i + 1
+  }
+
+  return errors
+}
+
+# ================================================================
+# 테스트
+# ================================================================
+
+#[cfg(test)]
+fn test_result_basic() {
+  let r1 = ok(42)
+  assert_eq!(is_ok(r1), true)
+  assert_eq!(unwrap(r1), 42)
+
+  let r2 = err("oops")
+  assert_eq!(is_err(r2), true)
+  assert_eq!(unwrap_or(r2, 0), 0)
+
+  println!("✅ Result basic tests passed")
+}
+
+#[cfg(test)]
+fn test_result_map() {
+  let r1 = ok(5)
+  let r2 = result_map(r1, fn(x) -> x * 2)
+  assert_eq!(unwrap(r2), 10)
+
+  let r3 = err("fail")
+  let r4 = result_map(r3, fn(x) -> x * 2)
+  assert_eq!(is_err(r4), true)
+
+  println!("✅ Result map tests passed")
+}
+
+#[cfg(test)]
+fn test_result_collect() {
+  let results = [ok(1), err("x"), ok(2), err("y"), ok(3)]
+  let values = collect_ok(results)
+  let errors = collect_err(results)
+
+  assert_eq!(len(values), 3)
+  assert_eq!(len(errors), 2)
+  assert_eq!(ok_count(results), 3)
+  assert_eq!(err_count(results), 2)
+
+  println!("✅ Result collect tests passed")
+}

@@ -1,0 +1,59 @@
+{
+  "name": "freelang",
+  "version": "2.4.0",
+  "description": "FreeLang v2.4.0 - Complete Language Enhancement with 10 Feature Improvements",
+  "main": "main.fl",
+  "keywords": [
+    "freelang",
+    "language",
+    "interpreter",
+    "lexer",
+    "parser",
+    "stdlib",
+    "functional-programming",
+    "error-handling",
+    "result-pattern"
+  ],
+  "author": "Kim Jin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://gogs.dclub.kr/kim/freelang-final.git"
+  },
+  "homepage": "https://gogs.dclub.kr/kim/freelang-final",
+  "bugs": {
+    "url": "https://gogs.dclub.kr/kim/freelang-final/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "*.fl",
+    "README.md",
+    "FREELANG_V2_4_0_COMPLETION_REPORT.md",
+    "IMPLEMENTATION_SUMMARY.md"
+  ],
+  "scripts": {
+    "test": "echo 'Run: flc test_*.fl'",
+    "build": "echo 'FreeLang is interpreted, no build needed'"
+  },
+  "metadata": {
+    "stage": "production",
+    "tests": 48,
+    "unforgiving_rules": 8,
+    "code_lines": 8204,
+    "timestamp": "2026-03-05T00:00:00Z",
+    "features": [
+      "return-early-exit",
+      "for-in-loop",
+      "dictionary-literal",
+      "member-access",
+      "struct-support",
+      "stdlib-completion",
+      "result-error-handling",
+      "debug-tools",
+      "map-utilities",
+      "advanced-functional"
+    ]
+  }
+}
