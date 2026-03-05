@@ -1,0 +1,346 @@
+/**
+ * Phase 2 Week 13-20: x86-64 Instruction Selection
+ *
+ * IR → x86-64 어셈블리 변환
+ * 작성: 2026-03-06
+ */
+
+// ============================================
+// x86-64 Instruction 정의
+// ============================================
+
+enum x86Opcode {
+  MOV = 0,
+  ADD = 1,
+  SUB = 2,
+  IMUL = 3,
+  IDIV = 4,
+  CMP = 5,
+  JMP = 6,
+  JE = 7,
+  JNE = 8,
+  PUSH = 9,
+  POP = 10,
+  CALL = 11,
+  RET = 12,
+  LEA = 13,
+  NOP = 99,
+}
+
+struct x86Instruction {
+  opcode: i32,
+  operand1: string,     // dst or arg1
+  operand2: string,     // src or arg2
+  operand3: string,     // optional
+  comment: string,
+}
+
+struct x86Program {
+  instructions: Array<x86Instruction>,
+  labels: Map<string, i32>,
+  globals: Array<string>,
+  functions: Array<string>,
+}
+
+// ============================================
+// Instruction Selection Engine
+// ============================================
+
+struct InstructionSelector {
+  ir_program: IRProgram,
+  x86_program: x86Program,
+  reg_counter: i32,
+  label_counter: i32,
+}
+
+/**
+ * new_isel(ir: IRProgram): InstructionSelector
+ */
+fn new_isel(ir: IRProgram): InstructionSelector {
+  var isel: InstructionSelector
+  isel.ir_program = ir
+  isel.x86_program.instructions = []
+  isel.x86_program.labels = map_new()
+  isel.x86_program.globals = []
+  isel.x86_program.functions = []
+  isel.reg_counter = 0
+  isel.label_counter = 0
+  return isel
+}
+
+/**
+ * allocate_register(isel: InstructionSelector): string
+ */
+fn allocate_register(isel: InstructionSelector): string {
+  let regs: Array<string> = []
+  regs.push("rax")
+  regs.push("rbx")
+  regs.push("rcx")
+  regs.push("rdx")
+
+  let reg_idx = isel.reg_counter % 4
+  isel.reg_counter = isel.reg_counter + 1
+
+  return regs[reg_idx]
+}
+
+/**
+ * emit_x86(isel: InstructionSelector, opcode: i32, op1: string, op2: string, comment: string): void
+ */
+fn emit_x86(
+  isel: InstructionSelector,
+  opcode: i32,
+  op1: string,
+  op2: string,
+  comment: string
+): void {
+  var instr: x86Instruction
+  instr.opcode = opcode
+  instr.operand1 = op1
+  instr.operand2 = op2
+  instr.operand3 = ""
+  instr.comment = comment
+  isel.x86_program.instructions.push(instr)
+}
+
+/**
+ * opcode_to_mnemonic(opcode: i32): string
+ */
+fn opcode_to_mnemonic(opcode: i32): string {
+  if opcode == 0 { return "mov" }
+  if opcode == 1 { return "add" }
+  if opcode == 2 { return "sub" }
+  if opcode == 3 { return "imul" }
+  if opcode == 4 { return "idiv" }
+  if opcode == 5 { return "cmp" }
+  if opcode == 6 { return "jmp" }
+  if opcode == 7 { return "je" }
+  if opcode == 8 { return "jne" }
+  if opcode == 9 { return "push" }
+  if opcode == 10 { return "pop" }
+  if opcode == 11 { return "call" }
+  if opcode == 12 { return "ret" }
+  if opcode == 13 { return "lea" }
+  return "nop"
+}
+
+// ============================================
+// IR → x86-64 변환
+// ============================================
+
+/**
+ * select_ir_instruction(isel: InstructionSelector, instr: IRInstruction): void
+ */
+fn select_ir_instruction(
+  isel: InstructionSelector,
+  instr: IRInstruction
+): void {
+  let ir_opcode = instr.opcode
+  let result = instr.result
+  let ops = instr.operands
+
+  // ADD: t0 = x + y
+  if ir_opcode == 0 {
+    let reg = allocate_register(isel)
+    emit_x86(isel, 0, reg, ops[0], "load x")      // mov rax, x
+    emit_x86(isel, 1, reg, ops[1], "add y")       // add rax, y
+    emit_x86(isel, 0, result, reg, "store result")// mov result, rax
+    return
+  }
+
+  // SUB: t0 = x - y
+  if ir_opcode == 1 {
+    let reg = allocate_register(isel)
+    emit_x86(isel, 0, reg, ops[0], "load x")
+    emit_x86(isel, 2, reg, ops[1], "sub y")
+    emit_x86(isel, 0, result, reg, "store result")
+    return
+  }
+
+  // MUL: t0 = x * y
+  if ir_opcode == 2 {
+    let reg = allocate_register(isel)
+    emit_x86(isel, 0, "rax", ops[0], "load x")
+    emit_x86(isel, 3, "rax", ops[1], "imul y")
+    emit_x86(isel, 0, result, "rax", "store result")
+    return
+  }
+
+  // DIV: t0 = x / y
+  if ir_opcode == 3 {
+    emit_x86(isel, 0, "rax", ops[0], "load x")
+    emit_x86(isel, 0, "rcx", ops[1], "load y")
+    emit_x86(isel, 4, "rcx", "", "idiv rcx")
+    emit_x86(isel, 0, result, "rax", "store result")
+    return
+  }
+
+  // LOAD: t0 = arr[i]
+  if ir_opcode == 10 {
+    let reg = allocate_register(isel)
+    emit_x86(isel, 13, reg, ops[0], "lea arr[i]")
+    emit_x86(isel, 0, result, reg, "load from memory")
+    return
+  }
+
+  // STORE: arr[i] = value
+  if ir_opcode == 11 {
+    let reg = allocate_register(isel)
+    emit_x86(isel, 0, reg, ops[0], "load value")
+    emit_x86(isel, 0, result, reg, "store to memory")
+    return
+  }
+
+  // BR: goto label
+  if ir_opcode == 20 {
+    emit_x86(isel, 6, instr.label, "", "jmp label")
+    return
+  }
+
+  // BRZ: if x == 0 goto label
+  if ir_opcode == 21 {
+    let cond = ops[0]
+    emit_x86(isel, 5, cond, "0", "cmp cond, 0")
+    emit_x86(isel, 7, instr.label, "", "je label")
+    return
+  }
+
+  // CALL: result = call func(args)
+  if ir_opcode == 30 {
+    let func_name = ops[0]
+    emit_x86(isel, 11, func_name, "", "call function")
+    emit_x86(isel, 0, result, "rax", "store return value")
+    return
+  }
+
+  // RET: return value
+  if ir_opcode == 23 {
+    if ops.length() > 0 {
+      emit_x86(isel, 0, "rax", ops[0], "load return value")
+    }
+    emit_x86(isel, 12, "", "", "ret")
+    return
+  }
+}
+
+/**
+ * select_all_instructions(isel: InstructionSelector): void
+ */
+fn select_all_instructions(isel: InstructionSelector): void {
+  let block_idx = 0
+  while block_idx < isel.ir_program.blocks.length() {
+    let block = isel.ir_program.blocks[block_idx]
+
+    let instr_idx = 0
+    while instr_idx < block.instructions.length() {
+      select_ir_instruction(isel, block.instructions[instr_idx])
+      instr_idx = instr_idx + 1
+    }
+
+    block_idx = block_idx + 1
+  }
+}
+
+// ============================================
+// x86-64 어셈블리 출력
+// ============================================
+
+/**
+ * print_x86_instruction(instr: x86Instruction): string
+ */
+fn print_x86_instruction(instr: x86Instruction): string {
+  let mnemonic = opcode_to_mnemonic(instr.opcode)
+  let result = "\t" + mnemonic + " "
+
+  if strlen(instr.operand1) > 0 {
+    result = result + instr.operand1
+  }
+
+  if strlen(instr.operand2) > 0 {
+    result = result + ", " + instr.operand2
+  }
+
+  if strlen(instr.comment) > 0 {
+    result = result + "\t; " + instr.comment
+  }
+
+  return result
+}
+
+/**
+ * generate_asm(isel: InstructionSelector): string
+ */
+fn generate_asm(isel: InstructionSelector): string {
+  var asm_code = ""
+
+  asm_code = asm_code + ".globl main\n"
+  asm_code = asm_code + ".section .text\n"
+  asm_code = asm_code + "main:\n"
+  asm_code = asm_code + "\tpush rbp\n"
+  asm_code = asm_code + "\tmov rbp, rsp\n"
+  asm_code = asm_code + "\n"
+
+  let i = 0
+  while i < isel.x86_program.instructions.length() {
+    let instr = isel.x86_program.instructions[i]
+    asm_code = asm_code + print_x86_instruction(instr) + "\n"
+    i = i + 1
+  }
+
+  asm_code = asm_code + "\n"
+  asm_code = asm_code + "\tmov rsp, rbp\n"
+  asm_code = asm_code + "\tpop rbp\n"
+  asm_code = asm_code + "\tret\n"
+
+  return asm_code
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_isel(): void {
+  println("")
+  println("🧪 Testing x86-64 Instruction Selection...")
+  println("")
+
+  // 간단한 IR 생성
+  var ir = new_ir_program()
+  let block_name = create_ir_block(ir)
+  let block = new_ir_basic_block(block_name)
+
+  // t0 = 5 + 3
+  var ops1: Array<string> = []
+  ops1.push("5")
+  ops1.push("3")
+  let instr1 = new_ir_instruction(0, "t0", ops1)
+  add_instruction(block, instr1)
+
+  // return t0
+  var ops2: Array<string> = []
+  ops2.push("t0")
+  let instr2 = new_ir_instruction(23, "", ops2)
+  add_instruction(block, instr2)
+
+  ir.blocks.push(block)
+
+  // Instruction Selection
+  var isel = new_isel(ir)
+  select_all_instructions(isel)
+
+  println("✓ Instruction selection completed")
+
+  // Generate assembly
+  let asm = generate_asm(isel)
+  println("")
+  println("Generated x86-64 Assembly:")
+  println("═══════════════════════════════════════")
+  println(asm)
+  println("═══════════════════════════════════════")
+
+  println("✅ x86-64 ISel tests completed")
+}
+
+fn main(): void {
+  test_isel()
+}

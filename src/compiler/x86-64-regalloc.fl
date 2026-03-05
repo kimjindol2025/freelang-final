@@ -1,0 +1,282 @@
+/**
+ * Phase 2 Week 15-16: Register Allocation (Linear Scan)
+ *
+ * 변수 → 레지스터 할당
+ * 작성: 2026-03-06
+ */
+
+// ============================================
+// Liveness Analysis 구조
+// ============================================
+
+struct LivenessInfo {
+  variable: string,
+  first_use: i32,
+  last_use: i32,
+  live_range: Array<i32>,
+}
+
+struct RegisterAllocation {
+  variable: string,
+  register: string,
+  spill_location: i32,
+  is_spilled: bool,
+}
+
+struct RegisterAllocator {
+  x86_program: x86Program,
+  liveness_info: Array<LivenessInfo>,
+  register_map: Map<string, RegisterAllocation>,
+  available_regs: Array<string>,
+  spill_offset: i32,
+}
+
+// ============================================
+// 사용 가능 레지스터
+// ============================================
+
+/**
+ * get_available_registers(): Array<string>
+ * Caller-saved: rax, rcx, rdx, rsi, rdi, r8-r11
+ * Callee-saved: rbp, rbx, r12-r15 (보존해야 함)
+ */
+fn get_available_registers(): Array<string> {
+  var regs: Array<string> = []
+  regs.push("rax")
+  regs.push("rcx")
+  regs.push("rdx")
+  regs.push("rsi")
+  regs.push("rdi")
+  regs.push("r8")
+  regs.push("r9")
+  regs.push("r10")
+  regs.push("r11")
+  return regs
+}
+
+/**
+ * new_register_allocator(x86_prog: x86Program): RegisterAllocator
+ */
+fn new_register_allocator(x86_prog: x86Program): RegisterAllocator {
+  var ra: RegisterAllocator
+  ra.x86_program = x86_prog
+  ra.liveness_info = []
+  ra.register_map = map_new()
+  ra.available_regs = get_available_registers()
+  ra.spill_offset = -8
+  return ra
+}
+
+// ============================================
+// Liveness Analysis
+// ============================================
+
+/**
+ * analyze_liveness(ra: RegisterAllocator): void
+ * 각 변수의 라이프타임 계산
+ */
+fn analyze_liveness(ra: RegisterAllocator): void {
+  println("📊 Analyzing variable liveness...")
+
+  let i = 0
+  while i < ra.x86_program.instructions.length() {
+    let instr = ra.x86_program.instructions[i]
+
+    // operand1 사용
+    if strlen(instr.operand1) > 0 && instr.operand1[0] != 'r' {  // 레지스터 아님
+      var info: LivenessInfo
+      info.variable = instr.operand1
+      info.first_use = i
+      info.last_use = i
+      ra.liveness_info.push(info)
+    }
+
+    // operand2 사용
+    if strlen(instr.operand2) > 0 && instr.operand2[0] != 'r' {
+      var info: LivenessInfo
+      info.variable = instr.operand2
+      info.first_use = i
+      info.last_use = i
+      ra.liveness_info.push(info)
+    }
+
+    i = i + 1
+  }
+}
+
+// ============================================
+// Linear Scan Register Allocation
+// ============================================
+
+/**
+ * allocate_registers(ra: RegisterAllocator): void
+ */
+fn allocate_registers(ra: RegisterAllocator): void {
+  println("🔍 Allocating registers (Linear Scan)...")
+
+  analyze_liveness(ra)
+
+  let i = 0
+  while i < ra.liveness_info.length() {
+    let live_info = ra.liveness_info[i]
+    let var_name = live_info.variable
+
+    // 이미 할당됨
+    if map_has(ra.register_map, var_name) {
+      i = i + 1
+      continue
+    }
+
+    // 사용 가능 레지스터 할당
+    var alloc: RegisterAllocation
+    alloc.variable = var_name
+    alloc.is_spilled = false
+
+    if i < ra.available_regs.length() {
+      alloc.register = ra.available_regs[i]
+      println("  ✓ " + var_name + " → " + alloc.register)
+    } else {
+      // Spill to stack
+      alloc.register = "spill"
+      alloc.spill_location = ra.spill_offset
+      alloc.is_spilled = true
+      ra.spill_offset = ra.spill_offset - 8
+      println("  ⚠️  " + var_name + " → [rbp" + str(alloc.spill_location) + "] (spilled)")
+    }
+
+    map_set(ra.register_map, var_name, alloc)
+    i = i + 1
+  }
+}
+
+/**
+ * get_allocated_register(ra: RegisterAllocator, var_name: string): string
+ */
+fn get_allocated_register(ra: RegisterAllocator, var_name: string): string {
+  if !map_has(ra.register_map, var_name) {
+    return "rax"  // default
+  }
+
+  let alloc = map_get(ra.register_map, var_name)
+  return alloc.register
+}
+
+// ============================================
+// Spill Code Generation
+// ============================================
+
+/**
+ * emit_spill_load(ra: RegisterAllocator, var_name: string): string
+ * [rbp-8]에서 rax로 로드
+ */
+fn emit_spill_load(ra: RegisterAllocator, var_name: string): string {
+  if !map_has(ra.register_map, var_name) {
+    return "rax"
+  }
+
+  let alloc = map_get(ra.register_map, var_name)
+  if !alloc.is_spilled {
+    return alloc.register
+  }
+
+  // Load from stack
+  println("\tmov rax, [rbp" + str(alloc.spill_location) + "]\t; load " + var_name)
+  return "rax"
+}
+
+/**
+ * emit_spill_store(ra: RegisterAllocator, var_name: string, source_reg: string): void
+ * rax에서 [rbp-8]로 저장
+ */
+fn emit_spill_store(ra: RegisterAllocator, var_name: string, source_reg: string): void {
+  if !map_has(ra.register_map, var_name) {
+    return
+  }
+
+  let alloc = map_get(ra.register_map, var_name)
+  if !alloc.is_spilled {
+    return
+  }
+
+  // Store to stack
+  println("\tmov [rbp" + str(alloc.spill_location) + "], " + source_reg + "\t; store " + var_name)
+}
+
+// ============================================
+// 함수 프롤로그/에필로그
+// ============================================
+
+/**
+ * emit_prologue(ra: RegisterAllocator): void
+ */
+fn emit_prologue(ra: RegisterAllocator): void {
+  println(".globl main")
+  println(".section .text")
+  println("main:")
+  println("\tpush rbp\t\t; save old frame pointer")
+  println("\tmov rbp, rsp\t\t; set up new frame")
+  println("\tsub rsp, " + str(-ra.spill_offset) + "\t; allocate stack space")
+  println("")
+}
+
+/**
+ * emit_epilogue(ra: RegisterAllocator): void
+ */
+fn emit_epilogue(ra: RegisterAllocator): void {
+  println("")
+  println("\tadd rsp, " + str(-ra.spill_offset) + "\t; deallocate stack")
+  println("\tpop rbp\t\t; restore frame pointer")
+  println("\tret\t\t; return")
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_regalloc(): void {
+  println("")
+  println("🧪 Testing Register Allocator...")
+  println("")
+
+  // 간단한 x86 프로그램 생성
+  var prog: x86Program
+  prog.instructions = []
+  prog.labels = map_new()
+  prog.globals = []
+  prog.functions = []
+
+  // 명령어 추가 (간단화)
+  var instr1: x86Instruction
+  instr1.opcode = 0  // MOV
+  instr1.operand1 = "t0"
+  instr1.operand2 = "5"
+  prog.instructions.push(instr1)
+
+  var instr2: x86Instruction
+  instr2.opcode = 1  // ADD
+  instr2.operand1 = "t0"
+  instr2.operand2 = "3"
+  prog.instructions.push(instr2)
+
+  // Register Allocation
+  var ra = new_register_allocator(prog)
+  allocate_registers(ra)
+
+  println("")
+  println("Register allocation completed:")
+  println("═══════════════════════════════════════")
+
+  emit_prologue(ra)
+
+  println("\t; ... instructions ...")
+
+  emit_epilogue(ra)
+
+  println("═══════════════════════════════════════")
+  println("")
+  println("✅ Register allocator tests completed")
+end
+
+fn main(): void {
+  test_regalloc()
+}

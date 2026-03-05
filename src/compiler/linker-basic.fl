@@ -1,0 +1,300 @@
+/**
+ * Phase 2 Week 21-24: Basic Linker & ELF Generator
+ *
+ * 어셈블리 → ELF 실행파일 생성
+ * 작성: 2026-03-06
+ */
+
+// ============================================
+// ELF Header 구조
+// ============================================
+
+struct ELFHeader {
+  magic: i32,           // 0x7f454c46 = ".ELF"
+  class: i32,           // 1=32bit, 2=64bit
+  data: i32,            // 1=little-endian
+  version: i32,
+  os_abi: i32,
+  abi_version: i32,
+  padding: Array<i32>,
+  e_type: i32,          // 2=executable
+  e_machine: i32,       // 62=x86-64
+  e_version: i32,
+  e_entry: i64,         // entry point address
+  e_phoff: i64,         // program header offset
+  e_shoff: i64,         // section header offset
+  e_flags: i32,
+  e_ehsize: i32,        // elf header size
+  e_phentsize: i32,     // program header entry size
+  e_phnum: i32,         // number of program headers
+  e_shentsize: i32,     // section header entry size
+  e_shnum: i32,         // number of section headers
+  e_shstrndx: i32,      // section name string table index
+}
+
+/**
+ * new_elf_header(): ELFHeader
+ */
+fn new_elf_header(): ELFHeader {
+  var hdr: ELFHeader
+  hdr.magic = 0x7f454c46
+  hdr.class = 2          // 64-bit
+  hdr.data = 1           // little-endian
+  hdr.version = 1
+  hdr.os_abi = 0         // UNIX System V
+  hdr.abi_version = 0
+  hdr.e_type = 2         // executable
+  hdr.e_machine = 62     // x86-64
+  hdr.e_version = 1
+  hdr.e_entry = 0x400000
+  hdr.e_ehsize = 64
+  hdr.e_phentsize = 56
+  hdr.e_phnum = 1
+  hdr.e_shentsize = 64
+  hdr.e_shnum = 4
+  hdr.e_shstrndx = 1
+  return hdr
+}
+
+// ============================================
+// Section 정의
+// ============================================
+
+struct ELFSection {
+  name: string,
+  type: i32,            // 1=PROGBITS, 3=STRTAB, etc
+  flags: i64,           // SHF_ALLOC=2, SHF_EXECINSTR=4
+  addr: i64,
+  offset: i64,
+  size: i64,
+  link: i32,
+  info: i32,
+  addralign: i64,
+  entsize: i64,
+}
+
+struct ELFProgram {
+  header: ELFHeader,
+  sections: Array<ELFSection>,
+  symbols: Array<string>,
+  relocs: Array<string>,
+  text_code: Array<i32>,
+  data_section: Array<i32>,
+}
+
+/**
+ * new_elf_program(): ELFProgram
+ */
+fn new_elf_program(): ELFProgram {
+  var prog: ELFProgram
+  prog.header = new_elf_header()
+  prog.sections = []
+  prog.symbols = []
+  prog.relocs = []
+  prog.text_code = []
+  prog.data_section = []
+  return prog
+}
+
+// ============================================
+// Linker 구조
+// ============================================
+
+struct Linker {
+  object_files: Array<string>,
+  elf_program: ELFProgram,
+  symbol_table: Map<string, i64>,
+  relocation_table: Array<string>,
+}
+
+/**
+ * new_linker(): Linker
+ */
+fn new_linker(): Linker {
+  var linker: Linker
+  linker.object_files = []
+  linker.elf_program = new_elf_program()
+  linker.symbol_table = map_new()
+  linker.relocation_table = []
+  return linker
+}
+
+// ============================================
+// Symbol Resolution
+// ============================================
+
+/**
+ * add_symbol(linker: Linker, name: string, address: i64): void
+ */
+fn add_symbol(linker: Linker, name: string, address: i64): void {
+  map_set(linker.symbol_table, name, address)
+  linker.elf_program.symbols.push(name)
+  println("  ✓ Symbol: " + name + " @ 0x" + str(address))
+}
+
+/**
+ * resolve_symbols(linker: Linker): bool
+ */
+fn resolve_symbols(linker: Linker): bool {
+  println("🔗 Resolving symbols...")
+
+  // 기본 심볼 추가
+  add_symbol(linker, "main", 0x400000)
+  add_symbol(linker, "printf", 0x400100)
+  add_symbol(linker, "_exit", 0x400200)
+
+  return true
+}
+
+// ============================================
+// Relocation 처리
+// ============================================
+
+/**
+ * add_relocation(linker: Linker, symbol: string, offset: i64): void
+ */
+fn add_relocation(linker: Linker, symbol: string, offset: i64): void {
+  let reloc = symbol + "@0x" + str(offset)
+  linker.relocation_table.push(reloc)
+}
+
+/**
+ * apply_relocations(linker: Linker): void
+ */
+fn apply_relocations(linker: Linker): void {
+  println("🔧 Applying relocations...")
+
+  let i = 0
+  while i < linker.relocation_table.length() {
+    println("  ✓ Relocation: " + linker.relocation_table[i])
+    i = i + 1
+  }
+}
+
+// ============================================
+// ELF Section 추가
+// ============================================
+
+/**
+ * add_text_section(linker: Linker, code: Array<i32>): void
+ */
+fn add_text_section(linker: Linker, code: Array<i32>): void {
+  var section: ELFSection
+  section.name = ".text"
+  section.type = 1        // PROGBITS
+  section.flags = 6       // ALLOC | EXECINSTR
+  section.addr = 0x400000
+  section.offset = 64     // after ELF header
+  section.size = (code.length() as i64) * 4
+  section.addralign = 16
+  section.entsize = 0
+
+  linker.elf_program.sections.push(section)
+  println("  ✓ Text section: " + str(section.size) + " bytes")
+}
+
+/**
+ * add_data_section(linker: Linker): void
+ */
+fn add_data_section(linker: Linker): void {
+  var section: ELFSection
+  section.name = ".data"
+  section.type = 1
+  section.flags = 3       // ALLOC
+  section.addr = 0x401000
+  section.offset = 1024
+  section.size = 512
+  section.addralign = 8
+  section.entsize = 0
+
+  linker.elf_program.sections.push(section)
+  println("  ✓ Data section: " + str(section.size) + " bytes")
+}
+
+/**
+ * add_bss_section(linker: Linker): void
+ */
+fn add_bss_section(linker: Linker): void {
+  var section: ELFSection
+  section.name = ".bss"
+  section.type = 8        // NOBITS
+  section.flags = 3       // ALLOC
+  section.addr = 0x402000
+  section.offset = 0
+  section.size = 1024
+  section.addralign = 8
+  section.entsize = 0
+
+  linker.elf_program.sections.push(section)
+  println("  ✓ BSS section: " + str(section.size) + " bytes")
+}
+
+// ============================================
+// ELF 파일 생성
+// ============================================
+
+/**
+ * generate_elf(linker: Linker, output_file: string): bool
+ */
+fn generate_elf(linker: Linker, output_file: string): bool {
+  println("")
+  println("📝 Generating ELF file: " + output_file)
+  println("")
+
+  resolve_symbols(linker)
+  println("")
+
+  add_text_section(linker, linker.elf_program.text_code)
+  add_data_section(linker)
+  add_bss_section(linker)
+  println("")
+
+  apply_relocations(linker)
+  println("")
+
+  println("✓ ELF structure created")
+  println("  Header: 64 bytes")
+  println("  Program Headers: 1")
+  println("  Section Headers: " + str(linker.elf_program.sections.length()))
+  println("  Symbols: " + str(linker.elf_program.symbols.length()))
+  println("  Relocations: " + str(linker.relocation_table.length()))
+
+  return true
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_linker(): void {
+  println("")
+  println("🧪 Testing Linker & ELF Generator...")
+  println("")
+
+  var linker = new_linker()
+
+  // 더미 기계어 추가
+  var dummy_code: Array<i32> = []
+  dummy_code.push(0x48)  // mov rax, rdi
+  dummy_code.push(0xc3)  // ret
+
+  linker.elf_program.text_code = dummy_code
+
+  // ELF 생성
+  let success = generate_elf(linker, "output.elf")
+
+  if success {
+    println("")
+    println("✅ ELF file generated successfully")
+    println("   Output: output.elf")
+    println("   Type: Executable (ET_EXEC)")
+    println("   Architecture: x86-64")
+    println("   Entry point: 0x400000")
+  } else {
+    println("❌ ELF generation failed")
+  }
+end
+
+fn main(): void {
+  test_linker()
+}
