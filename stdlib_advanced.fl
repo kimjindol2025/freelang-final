@@ -216,14 +216,30 @@ fn nest(arr: [any], depth: i32): [any] {
 # 섹션 5: 변환 & 조합
 # ================================================================
 
-# groupBy(arr, keyFn) - 키별 그룹화 (간단한 버전)
-fn groupBy(arr: [any], keyFn: fn(any)->string): any {
+# groupBy(arr, keyFn) - 키별 그룹화 (map 기반)
+fn groupBy(arr: [any], keyFn: fn(any)->string): map {
   # 주석: keyFn의 반환값을 기준으로 그룹화
   # 예: groupBy([{g:1,v:5}, {g:1,v:6}, {g:2,v:7}],
   #            fn(x)->x.g)
-  # 반환: {1: [...], 2: [...]}
-  # TODO: Object 생성 로직 복잡 - 스킵
-  return null
+  # 반환: {"1": [...], "2": [...]}
+  let result = {}
+  let i = 0
+
+  while i < len(arr) {
+    let elem = arr[i]
+    let key = keyFn(elem)
+
+    # 키가 없으면 새 배열 생성, 있으면 기존 배열에 추가
+    if result[key] == null {
+      result[key] = [elem]
+    } else {
+      result[key] = result[key] + [elem]
+    }
+
+    i = i + 1
+  }
+
+  return result
 }
 
 # keyBy(arr, keyFn) - 키별 객체 생성
@@ -265,23 +281,52 @@ fn filterValues(obj: any, fn: fn(any)->bool): any {
 # 섹션 7: 캐싱 & 메모이제이션
 # ================================================================
 
-# memoize(fn) - 함수 결과 캐싱
+# memoize(fn) - 함수 결과 캐싱 (map 기반)
 fn memoize(fn: fn(any)->any): fn(any)->any {
   # 주석: 함수의 결과를 캐싱하여 성능 향상
   # 예: let fib_memo = memoize(fn(n)->fib(n))
-  # 첫 호출: 계산 수행
-  # 두 번째 호출: 캐시에서 반환
-  # TODO: 클로저와 상태 관리 필요 - 복잡
-  return fn
+  # 첫 호출: 계산 수행, 결과 저장
+  # 두 번째 호출: 캐시에서 반환 (O(1))
+  # 구현: 클로저를 통해 cache map을 유지
+
+  let cache = {}
+  let memoizedFn = fn(arg: any) {
+    let key = "" + arg  # 인자를 문자열 키로 변환
+    let cached_value = cache[key]
+
+    if cached_value != null {
+      return cached_value
+    }
+
+    # 캐시 미스: 함수 실행
+    let result = fn(arg)
+    cache[key] = result
+    return result
+  }
+
+  return memoizedFn
 }
 
-# once(fn) - 함수 한 번만 실행
+# once(fn) - 함수 한 번만 실행 (상태 기반)
 fn once(fn: fn(any)->any): fn(any)->any {
   # 주석: 함수를 한 번만 실행하고 결과 반복 반환
   # 예: let init = once(fn() -> initialize())
-  # 첫 호출: 함수 실행
-  # 두 번째 이후: 캐시된 값 반환
-  return fn
+  # 첫 호출: 함수 실행, 결과 저장
+  # 두 번째 이후: 캐시된 값 반환 (함수 미실행)
+  # 구현: 클로저를 통해 호출 여부 플래그 유지
+
+  let called = false
+  let result = null
+
+  let onceFn = fn(arg: any) {
+    if not(called) {
+      result = fn(arg)
+      called = true
+    }
+    return result
+  }
+
+  return onceFn
 }
 
 # ================================================================
@@ -292,12 +337,17 @@ fn once(fn: fn(any)->any): fn(any)->any {
 fn pipe(value: any, fns: [fn(any)->any]): any {
   # 주석: 값을 함수들의 파이프라인으로 처리
   # 예: pipe(5, [fn(x)->x*2, fn(x)->x+3]) -> 13
+  # 구현: 각 함수 순서대로 적용하여 값 변환
+
   let result = value
   let i = 0
+
   while i < len(fns) {
-    # result = fns[i](result)
+    let fn_to_apply = fns[i]
+    result = fn_to_apply(result)
     i = i + 1
   }
+
   return result
 }
 

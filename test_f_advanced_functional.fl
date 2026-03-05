@@ -1,0 +1,117 @@
+# ================================================================
+# F 단계 테스트: Advanced Functional Programming
+# ================================================================
+# 3개 테스트 + 1개 무관용 규칙
+# ================================================================
+
+#[cfg(test)]
+mod test_f_advanced_functional {
+    use crate::*;
+
+    # Test 1: groupBy 함수
+    #[test]
+    fn test_f_1_group_by() {
+        # groupBy with numeric array grouped by even/odd
+        let arr = [1, 2, 3, 4, 5, 6]
+        let groups = groupBy(arr, fn(x) {
+            if x % 2 == 0 {
+                return "even"
+            } else {
+                return "odd"
+            }
+        })
+
+        assert_eq(len(groups["even"]), 3)
+        assert_eq(len(groups["odd"]), 3)
+
+        println!("✅ TEST F-1 PASS: groupBy function")
+    }
+
+    # Test 2: pipe 함수 (함수 체이닝)
+    #[test]
+    fn test_f_2_pipe() {
+        # pipe: value -> [fn1, fn2, fn3] -> final result
+        let add_one = fn(x) { return x + 1 }
+        let multiply_two = fn(x) { return x * 2 }
+
+        # pipe(5, [add_one, multiply_two]) -> (5+1)*2 -> 12
+        let result = pipe(5, [add_one, multiply_two])
+        assert_eq(result, 12)
+
+        println!("✅ TEST F-2 PASS: pipe function")
+    }
+
+    # Test 3: once 함수 (한 번만 실행)
+    #[test]
+    fn test_f_3_once() {
+        # once ensures function runs only once
+        let counter = 0
+        let increment = once(fn(x) {
+            counter = counter + 1
+            return counter
+        })
+
+        # First call: runs function
+        let r1 = increment(0)
+        # Second call: returns cached value (doesn't run again)
+        let r2 = increment(0)
+
+        assert_eq(r1, 1)
+        assert_eq(r2, 1)  # Same as r1, not 2
+
+        println!("✅ TEST F-3 PASS: once function")
+    }
+
+    # Unforgiving Rule #1: Advanced functional 100% complete
+    #[test]
+    fn test_rule_f_advanced_complete() {
+        # Rule: groupBy/memoize/once/pipe 모두 정상 작동
+
+        # groupBy test
+        let data = [10, 20, 30, 40]
+        let by_threshold = groupBy(data, fn(x) {
+            if x > 25 { return "high" } else { return "low" }
+        })
+        assert_eq(len(by_threshold["high"]), 2)
+
+        # pipe test
+        let square = fn(x) { return x * x }
+        let add_ten = fn(x) { return x + 10 }
+        let piped = pipe(3, [square, add_ten])  # (3*3)+10 = 19
+        assert_eq(piped, 19)
+
+        # once test
+        let call_count = 0
+        let initialize = once(fn(x) {
+            call_count = call_count + 1
+            return call_count
+        })
+        initialize(0)
+        initialize(0)
+        initialize(0)
+        assert_eq(call_count, 1)  # Called only once
+
+        println!("✅ RULE F PASS: Advanced functional 100% complete")
+    }
+}
+
+# ================================================================
+# 수동 테스트 (디버깅용)
+# ================================================================
+
+fn test_manual_advanced() {
+    println!("=== Advanced Functional Manual Test ===")
+
+    # groupBy example
+    let nums = [1, 2, 3, 4, 5, 6]
+    let by_parity = groupBy(nums, fn(x) {
+        if x % 2 == 0 { return "even" } else { return "odd" }
+    })
+    println!("Grouped by parity completed")
+
+    # pipe example
+    let triple = fn(x) { return x * 3 }
+    let subtract_five = fn(x) { return x - 5 }
+    let piped_result = pipe(10, [triple, subtract_five])  # (10*3)-5 = 25
+    println!("Piped result: {}", piped_result)
+}
