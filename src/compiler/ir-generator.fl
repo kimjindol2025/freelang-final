@@ -8,6 +8,26 @@
  */
 
 // ============================================
+// AST Node Type Definitions (for dispatch)
+// ============================================
+
+// AST Node 타입 식별자
+// 1: VarDeclaration
+// 2: IfStatement
+// 3: WhileStatement
+// 4: ReturnStatement
+// 5: ExpressionStatement
+// 6: BinaryExpression
+// 7: Identifier
+// 8: Literal
+// 9: CallExpression
+// 10: ArrayExpression
+// 11: AssignmentExpression
+// 12: UpdateExpression
+// 13: UnaryExpression
+// 14: ArrayIndexExpression
+
+// ============================================
 // IR Generator 구조
 // ============================================
 
@@ -104,15 +124,15 @@ fn generate_let_statement(
   var_name: string,
   initial_value: string
 ): void {
-  // ALLOCA: 스택에 공간 할당
+  // ALLOCA: 스택에 공간 할당 (opcode = 13)
   var alloca_ops: Array<string> = []
   alloca_ops.push("4")  // i32 = 4 bytes
-  emit_instruction(gen, 12, var_name, alloca_ops)
+  emit_instruction(gen, 13, var_name, alloca_ops)
 
-  // STORE: 값 저장
+  // STORE: 값 저장 (opcode = 12)
   var store_ops: Array<string> = []
   store_ops.push(initial_value)
-  emit_instruction(gen, 11, var_name, store_ops)
+  emit_instruction(gen, 12, var_name, store_ops)
 }
 
 /**
@@ -195,6 +215,9 @@ fn generate_while_loop(
 /**
  * generate_binary_op(gen: IRGenerator, left: string, op: string, right: string): string
  * x + y → t0 = ADD x, y (반환: "t0")
+ * 산술: +, -, *, /, %
+ * 비교: ==, !=, <, >, <=, >=
+ * 논리: &&, ||
  */
 fn generate_binary_op(
   gen: IRGenerator,
@@ -205,11 +228,22 @@ fn generate_binary_op(
   let result = create_temp_var(gen.program)
 
   let opcode = 0
-  if op == "+" { opcode = 0 }
-  if op == "-" { opcode = 1 }
-  if op == "*" { opcode = 2 }
-  if op == "/" { opcode = 3 }
-  if op == "%" { opcode = 4 }
+  // 산술 연산자
+  if op == "+" { opcode = 0 }     // ADD
+  else if op == "-" { opcode = 1 }     // SUB
+  else if op == "*" { opcode = 2 }     // MUL
+  else if op == "/" { opcode = 3 }     // DIV
+  else if op == "%" { opcode = 4 }     // MOD
+  // 비교 연산자
+  else if op == "==" { opcode = 5 }    // EQ
+  else if op == "!=" { opcode = 6 }    // NEQ
+  else if op == "<" { opcode = 7 }     // LT
+  else if op == ">" { opcode = 8 }     // GT
+  else if op == "<=" { opcode = 9 }    // LTE
+  else if op == ">=" { opcode = 10 }   // GTE
+  // 논리 연산자
+  else if op == "&&" { opcode = 14 }   // AND
+  else if op == "||" { opcode = 15 }   // OR
 
   var ops: Array<string> = []
   ops.push(left)
@@ -245,7 +279,7 @@ fn generate_function_call(
 
 /**
  * generate_array_access(gen: IRGenerator, array_var: string, index: string): string
- * arr[i] → t0 = LOAD arr, i
+ * arr[i] → t0 = LOAD arr, i (opcode = 11)
  */
 fn generate_array_access(
   gen: IRGenerator,
@@ -257,14 +291,14 @@ fn generate_array_access(
   var ops: Array<string> = []
   ops.push(array_var)
   ops.push(index)
-  emit_instruction(gen, 10, result, ops)
+  emit_instruction(gen, 11, result, ops)
 
   return result
 }
 
 /**
  * generate_array_assignment(gen: IRGenerator, array_var: string, index: string, value: string): void
- * arr[i] = x → STORE arr[i], x
+ * arr[i] = x → STORE arr[i], x (opcode = 12)
  */
 fn generate_array_assignment(
   gen: IRGenerator,
@@ -276,7 +310,116 @@ fn generate_array_assignment(
   ops.push(array_var)
   ops.push(index)
   ops.push(value)
-  emit_instruction(gen, 11, array_var, ops)
+  emit_instruction(gen, 12, array_var, ops)
+}
+
+// ============================================
+// AST Dispatch
+// ============================================
+
+/**
+ * generate_statement(gen: IRGenerator, node_type: i32, ...): void
+ * AST 노드 타입별로 다른 핸들러를 호출하는 디스패치 함수
+ *
+ * 지원하는 노드 타입:
+ * 1: VarDeclaration (var_name, initial_value)
+ * 2: IfStatement (cond_var, then_block, else_block)
+ * 3: WhileStatement (cond_var, body_block, exit_block)
+ * 4: ReturnStatement (return_value)
+ * 5: ExpressionStatement (처리 필요)
+ */
+fn generate_statement(gen: IRGenerator, node_type: i32): void {
+  // AST 노드 타입별 분기 처리
+  // 이 함수는 기본 스켈레톤으로, 실제 호출은 매개변수와 함께 특화된 함수를 사용
+
+  if node_type == 1 {
+    // VarDeclaration: generate_let_statement(gen, var_name, initial_value) 호출
+    // 예: generate_statement_var_decl(gen, "x", "5")
+  }
+  else if node_type == 2 {
+    // IfStatement: generate_if_statement(gen, cond_var, then_block, else_block) 호출
+  }
+  else if node_type == 3 {
+    // WhileStatement: generate_while_loop(gen, cond_var, body_block, exit_block) 호출
+  }
+  else if node_type == 4 {
+    // ReturnStatement: generate_return_statement(gen, return_value) 호출
+  }
+  else {
+    // 알 수 없는 노드 타입
+  }
+}
+
+/**
+ * generate_program(gen: IRGenerator, statements: Array<...>): void
+ * Program의 statement 배열을 순회하며 각 statement에 대해 IR 생성
+ *
+ * 사용 예:
+ * var stmts: Array<...> = [...]
+ * generate_program(gen, stmts)
+ */
+fn generate_program_from_statements(
+  gen: IRGenerator,
+  num_statements: i32
+): void {
+  // Statement 배열을 순회하며 각 statement 처리
+  // 실제 구현에서는 Program 구조체를 받아서 body 배열 순회
+
+  let i = 0
+  while i < num_statements {
+    // Statement 처리
+    // generate_statement(gen, statements[i])
+    i = i + 1
+  }
+}
+
+/**
+ * Helper: generate_statement_var_decl
+ * VarDeclaration 처리
+ */
+fn generate_statement_var_decl(
+  gen: IRGenerator,
+  var_name: string,
+  initial_value: string
+): void {
+  generate_let_statement(gen, var_name, initial_value)
+}
+
+/**
+ * Helper: generate_statement_if
+ * IfStatement 처리
+ */
+fn generate_statement_if(
+  gen: IRGenerator,
+  cond_var: string,
+  then_block: string,
+  else_block: string
+): void {
+  generate_if_statement(gen, cond_var, then_block, else_block)
+}
+
+/**
+ * Helper: generate_statement_while
+ * WhileStatement 처리
+ */
+fn generate_statement_while(
+  gen: IRGenerator,
+  cond_var: string,
+  body_block: string,
+  exit_block: string
+): void {
+  generate_while_loop(gen, cond_var, body_block, exit_block)
+}
+
+/**
+ * Helper: generate_statement_return
+ * ReturnStatement 처리
+ */
+fn generate_statement_return(
+  gen: IRGenerator,
+  return_value: string
+): void {
+  generate_return_statement(gen, return_value)
 }
 
 // ============================================
@@ -294,39 +437,84 @@ fn test_ir_generator(): void {
   generate_let_statement(gen, "x", "5")
   println("✓ Let statement IR generated: let x = 5")
 
-  // Test 2: Binary operation
+  // Test 2: Arithmetic operations
   let add_result = generate_binary_op(gen, "x", "+", "3")
   println("✓ Binary operation IR: x + 3 → " + add_result)
 
-  // Test 3: Function call
+  let sub_result = generate_binary_op(gen, "x", "-", "2")
+  println("✓ Binary operation IR: x - 2 → " + sub_result)
+
+  // Test 3: Comparison operators
+  let eq_result = generate_binary_op(gen, "x", "==", "5")
+  println("✓ Comparison operation IR: x == 5 → " + eq_result)
+
+  let lt_result = generate_binary_op(gen, "x", "<", "10")
+  println("✓ Comparison operation IR: x < 10 → " + lt_result)
+
+  let gte_result = generate_binary_op(gen, "y", ">=", "0")
+  println("✓ Comparison operation IR: y >= 0 → " + gte_result)
+
+  // Test 4: Logical operators
+  let and_result = generate_binary_op(gen, "cond1", "&&", "cond2")
+  println("✓ Logical operation IR: cond1 && cond2 → " + and_result)
+
+  let or_result = generate_binary_op(gen, "a", "||", "b")
+  println("✓ Logical operation IR: a || b → " + or_result)
+
+  // Test 5: Function call
   var args: Array<string> = []
   args.push("x")
   args.push("3")
   let call_result = generate_function_call(gen, "add", args)
   println("✓ Function call IR: add(x, 3) → " + call_result)
 
-  // Test 4: Return statement
+  // Test 6: Return statement
   generate_return_statement(gen, call_result)
   println("✓ Return statement IR generated")
 
-  // Test 5: Array access
+  // Test 7: Array access
   let array_elem = generate_array_access(gen, "arr", "0")
   println("✓ Array access IR: arr[0] → " + array_elem)
 
-  // Test 6: If statement
+  // Test 8: Array assignment
+  generate_array_assignment(gen, "arr", "1", "42")
+  println("✓ Array assignment IR: arr[1] = 42")
+
+  // Test 9: If statement
   let then_block = create_new_block(gen)
   let else_block = create_new_block(gen)
   generate_if_statement(gen, "x", then_block, else_block)
   println("✓ If statement IR generated")
 
-  // Test 7: While loop
+  // Test 10: While loop
   gen.current_block = create_new_block(gen)
   let body_block = create_new_block(gen)
   let exit_block = create_new_block(gen)
   generate_while_loop(gen, "cond", body_block, exit_block)
   println("✓ While loop IR generated")
 
-  // Test 8: Print IR
+  // Test 11: Helper functions for statement dispatch
+  gen.current_block = create_new_block(gen)
+  generate_statement_var_decl(gen, "result", "0")
+  println("✓ Statement dispatch: var_decl helper works")
+
+  gen.current_block = create_new_block(gen)
+  let new_then = create_new_block(gen)
+  let new_else = create_new_block(gen)
+  generate_statement_if(gen, "flag", new_then, new_else)
+  println("✓ Statement dispatch: if helper works")
+
+  gen.current_block = create_new_block(gen)
+  let loop_body = create_new_block(gen)
+  let loop_exit = create_new_block(gen)
+  generate_statement_while(gen, "i", loop_body, loop_exit)
+  println("✓ Statement dispatch: while helper works")
+
+  gen.current_block = create_new_block(gen)
+  generate_statement_return(gen, "result")
+  println("✓ Statement dispatch: return helper works")
+
+  // Test 12: Print IR
   print_ir_program(gen.program)
 
   println("✅ IR generator tests completed")

@@ -59,7 +59,7 @@ fn map(arr: [any], fn: fn(any)->any): [any] {
   let i = 0
   while i < length(arr) {
     let mapped = fn(arr[i])
-    # 주석: result에 mapped 추가 (배열 append 필요)
+    result = result + [mapped]
     i = i + 1
   }
 
@@ -76,7 +76,7 @@ fn filter(arr: [any], fn: fn(any)->bool): [any] {
   while i < length(arr) {
     let elem = arr[i]
     if fn(elem) {
-      # 주석: result에 elem 추가
+      result = result + [elem]
     }
     i = i + 1
   }
@@ -232,8 +232,8 @@ fn sort(arr: [any], fn: fn(any, any)->i32): [any] {
       if cmp > 0 {
         # swap arr[j]와 arr[j+1]
         let temp = arr[j]
-        # arr[j] = arr[j+1]
-        # arr[j+1] = temp
+        arr[j] = arr[j + 1]
+        arr[j + 1] = temp
       }
       j = j + 1
     }
@@ -251,7 +251,7 @@ fn reverse(arr: [any]): [any] {
   let i = length(arr) - 1
 
   while i >= 0 {
-    # result에 arr[i] 추가
+    result = result + [arr[i]]
     i = i - 1
   }
 
@@ -270,13 +270,13 @@ fn concat(arr1: [any], arr2: [any]): [any] {
 
   let i = 0
   while i < length(arr1) {
-    # result에 arr1[i] 추가
+    result = result + [arr1[i]]
     i = i + 1
   }
 
   let j = 0
   while j < length(arr2) {
-    # result에 arr2[j] 추가
+    result = result + [arr2[j]]
     j = j + 1
   }
 

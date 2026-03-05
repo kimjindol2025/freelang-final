@@ -22,7 +22,10 @@ fn readFile(path: string): string {
     return ""
   }
   # result는 {ok: bool, value?: string, error?: string} 형태
-  # 값 추출은 불가하므로 일단 플레이스홀더
+  # 값 추출: MemberExpression으로 result.ok와 result.value 접근
+  if result.ok {
+    return result.value
+  }
   return ""
 }
 
@@ -57,7 +60,9 @@ fn writeFile(path: string, content: string): bool {
   if result == null {
     return false
   }
-  return true
+  # result는 {ok: bool, error?: string} 형태
+  # result.ok가 true이면 성공
+  return result.ok
 }
 
 # appendFile(path, content) - 파일에 추가 쓰기
@@ -65,7 +70,13 @@ fn appendFile(path: string, content: string): bool {
   # 주석: 파일의 끝에 내용을 추가
   # 예: appendFile("log.txt", "new line\n") -> true
   # 파일이 없으면 생성
-  return true
+  # 구현: 내장 함수 append_file() 사용
+  let result = append_file(path, content)
+  if result == null {
+    return false
+  }
+  # result는 {ok: bool, error?: string} 형태
+  return result.ok
 }
 
 # writeFileLines(path, lines) - 배열을 파일에 쓰기
@@ -349,14 +360,28 @@ fn joinPath(base: string, relative: string): string {
 fn dirname(path: string): string {
   # 주석: 경로에서 디렉토리 부분만 추출
   # 예: dirname("/home/user/file.txt") -> "/home/user"
-  return ""
+  # 구현: lastIndexOf로 마지막 "/" 찾고 그 이전 부분 반환
+  let idx = lastIndexOf(path, "/")
+  if idx <= 0 {
+    # "/" 없으면 현재 디렉토리 "."
+    return "."
+  }
+  # "/" 이전 부분 반환 (substring: [0, idx))
+  return substring(path, 0, idx)
 }
 
 # basename(path) - 파일명만 추출
 fn basename(path: string): string {
   # 주석: 경로에서 파일명만 추출
   # 예: basename("/home/user/file.txt") -> "file.txt"
-  return ""
+  # 구현: lastIndexOf로 마지막 "/" 찾고 그 이후 부분 반환
+  let idx = lastIndexOf(path, "/")
+  if idx < 0 {
+    # "/" 없으면 전체 문자열이 파일명
+    return path
+  }
+  # "/" 이후 부분 반환 (substring: [idx+1, len))
+  return substring(path, idx + 1, len(path))
 }
 
 # extension(path) - 확장자 추출
@@ -364,7 +389,14 @@ fn extension(path: string): string {
   # 주석: 파일 확장자 추출
   # 예: extension("file.txt") -> "txt"
   # 예: extension("archive.tar.gz") -> "gz"
-  return ""
+  # 구현: lastIndexOf로 마지막 "." 찾고 그 이후 부분 반환
+  let idx = lastIndexOf(path, ".")
+  if idx < 0 {
+    # "." 없으면 확장자 없음 (빈 문자열)
+    return ""
+  }
+  # "." 이후 부분 반환 (substring: [idx+1, len))
+  return substring(path, idx + 1, len(path))
 }
 
 # ================================================================
@@ -376,7 +408,9 @@ fn getEnv(name: string): string {
   # 주석: 환경 변수 값 읽기
   # 예: getEnv("HOME") -> "/home/user"
   # 예: getEnv("PATH") -> "/usr/bin:..."
-  return ""
+  # 구현: 내장 함수 get_env() 사용
+  # get_env()는 문자열을 직접 반환 (없으면 "")
+  return get_env(name)
 }
 
 # setEnv(name, value) - 환경 변수 설정

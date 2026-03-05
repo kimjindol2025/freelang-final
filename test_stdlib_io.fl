@@ -1,0 +1,214 @@
+# ================================================================
+# Test: stdlib_io.fl - 파일 I/O 함수 검증
+# ================================================================
+
+# 테스트: readFile & writeFile
+fn testReadWrite(): null {
+  print("=== Test 1: readFile & writeFile ===")
+
+  # 파일 쓰기
+  let write_result = writeFile("test_data.txt", "Hello, FreeLang!")
+  print("writeFile('test_data.txt', 'Hello, FreeLang!') = " + write_result as string)
+
+  # 파일 읽기
+  let content = readFile("test_data.txt")
+  print("readFile('test_data.txt') = '" + content + "'")
+
+  # 검증
+  if content == "Hello, FreeLang!" {
+    print("✓ readFile/writeFile 성공")
+  } else {
+    print("✗ readFile/writeFile 실패: 기대값 'Hello, FreeLang!', 실제값 '" + content + "'")
+  }
+  print("")
+  return null
+}
+
+# 테스트: appendFile
+fn testAppend(): null {
+  print("=== Test 2: appendFile ===")
+
+  # 초기화
+  writeFile("test_append.txt", "Line 1")
+  print("writeFile('test_append.txt', 'Line 1')")
+
+  # 추가 쓰기
+  let append_result = appendFile("test_append.txt", "\nLine 2")
+  print("appendFile('test_append.txt', '\\nLine 2') = " + append_result as string)
+
+  # 검증
+  let content = readFile("test_append.txt")
+  print("readFile('test_append.txt') = '" + content + "'")
+
+  if content == "Line 1\nLine 2" {
+    print("✓ appendFile 성공")
+  } else {
+    print("✗ appendFile 실패: 기대값 'Line 1\\nLine 2', 실제값 '" + content + "'")
+  }
+  print("")
+  return null
+}
+
+# 테스트: getEnv
+fn testGetEnv(): null {
+  print("=== Test 3: getEnv ===")
+
+  # PATH 환경변수 읽기 (항상 존재)
+  let path = getEnv("PATH")
+  print("getEnv('PATH') = '" + path + "'")
+
+  if path != "" {
+    print("✓ getEnv 성공 (PATH 환경변수 읽음)")
+  } else {
+    print("✗ getEnv 실패: PATH 환경변수가 비어있음")
+  }
+
+  # 존재하지 않는 환경변수
+  let nonexistent = getEnv("NONEXISTENT_VAR_12345")
+  print("getEnv('NONEXISTENT_VAR_12345') = '" + nonexistent + "'")
+
+  if nonexistent == "" {
+    print("✓ getEnv 성공 (존재하지 않는 변수는 빈 문자열 반환)")
+  } else {
+    print("✗ getEnv 실패: 존재하지 않는 변수가 빈 문자열이 아님")
+  }
+  print("")
+  return null
+}
+
+# 테스트: basename
+fn testBasename(): null {
+  print("=== Test 4: basename ===")
+
+  # 케이스 1
+  let base1 = basename("/home/user/file.txt")
+  print("basename('/home/user/file.txt') = '" + base1 + "'")
+  if base1 == "file.txt" {
+    print("✓ basename 성공 (케이스 1)")
+  } else {
+    print("✗ basename 실패: 기대값 'file.txt', 실제값 '" + base1 + "'")
+  }
+
+  # 케이스 2: 경로 없음
+  let base2 = basename("simple.txt")
+  print("basename('simple.txt') = '" + base2 + "'")
+  if base2 == "simple.txt" {
+    print("✓ basename 성공 (케이스 2)")
+  } else {
+    print("✗ basename 실패: 기대값 'simple.txt', 실제값 '" + base2 + "'")
+  }
+
+  # 케이스 3: 디렉토리
+  let base3 = basename("/home/user/")
+  print("basename('/home/user/') = '" + base3 + "'")
+  if base3 == "" {
+    print("✓ basename 성공 (케이스 3: 마지막 / 제거)")
+  } else {
+    print("! basename: 기대값 '', 실제값 '" + base3 + "'")
+  }
+  print("")
+  return null
+}
+
+# 테스트: dirname
+fn testDirname(): null {
+  print("=== Test 5: dirname ===")
+
+  # 케이스 1
+  let dir1 = dirname("/home/user/file.txt")
+  print("dirname('/home/user/file.txt') = '" + dir1 + "'")
+  if dir1 == "/home/user" {
+    print("✓ dirname 성공 (케이스 1)")
+  } else {
+    print("✗ dirname 실패: 기대값 '/home/user', 실제값 '" + dir1 + "'")
+  }
+
+  # 케이스 2: 경로 없음
+  let dir2 = dirname("simple.txt")
+  print("dirname('simple.txt') = '" + dir2 + "'")
+  if dir2 == "." {
+    print("✓ dirname 성공 (케이스 2)")
+  } else {
+    print("✗ dirname 실패: 기대값 '.', 실제값 '" + dir2 + "'")
+  }
+
+  # 케이스 3
+  let dir3 = dirname("/home/")
+  print("dirname('/home/') = '" + dir3 + "'")
+  if dir3 == "" {
+    print("✓ dirname 성공 (케이스 3: 루트 디렉토리)")
+  } else {
+    print("! dirname: 기대값 '', 실제값 '" + dir3 + "'")
+  }
+  print("")
+  return null
+}
+
+# 테스트: extension
+fn testExtension(): null {
+  print("=== Test 6: extension ===")
+
+  # 케이스 1
+  let ext1 = extension("file.txt")
+  print("extension('file.txt') = '" + ext1 + "'")
+  if ext1 == "txt" {
+    print("✓ extension 성공 (케이스 1)")
+  } else {
+    print("✗ extension 실패: 기대값 'txt', 실제값 '" + ext1 + "'")
+  }
+
+  # 케이스 2: 복수 점
+  let ext2 = extension("archive.tar.gz")
+  print("extension('archive.tar.gz') = '" + ext2 + "'")
+  if ext2 == "gz" {
+    print("✓ extension 성공 (케이스 2)")
+  } else {
+    print("✗ extension 실패: 기대값 'gz', 실제값 '" + ext2 + "'")
+  }
+
+  # 케이스 3: 확장자 없음
+  let ext3 = extension("README")
+  print("extension('README') = '" + ext3 + "'")
+  if ext3 == "" {
+    print("✓ extension 성공 (케이스 3)")
+  } else {
+    print("✗ extension 실패: 기대값 '', 실제값 '" + ext3 + "'")
+  }
+
+  # 케이스 4: 경로 포함
+  let ext4 = extension("/home/user/document.pdf")
+  print("extension('/home/user/document.pdf') = '" + ext4 + "'")
+  if ext4 == "pdf" {
+    print("✓ extension 성공 (케이스 4)")
+  } else {
+    print("✗ extension 실패: 기대값 'pdf', 실제값 '" + ext4 + "'")
+  }
+  print("")
+  return null
+}
+
+# ================================================================
+# 메인 테스트 진입점
+# ================================================================
+
+fn main(): null {
+  print("================================================")
+  print("FreeLang stdlib_io.fl 검증 테스트")
+  print("================================================")
+  print("")
+
+  # 모든 테스트 실행
+  testReadWrite()
+  testAppend()
+  testGetEnv()
+  testBasename()
+  testDirname()
+  testExtension()
+
+  print("================================================")
+  print("모든 테스트 완료")
+  print("================================================")
+  return null
+}
+
+main()

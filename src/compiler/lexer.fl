@@ -139,6 +139,18 @@ fn is_whitespace(ch: string): bool {
 }
 
 /**
+ * is_hex_digit(ch: string): bool
+ * 16진수 숫자인지 확인 (0-9, a-f, A-F)
+ */
+fn is_hex_digit(ch: string): bool {
+  if ch.length() != 1 { return false }
+  let code = ch.charCodeAt(0)
+  return (code >= 48 && code <= 57) ||   // 0-9
+         (code >= 97 && code <= 102) ||  // a-f
+         (code >= 65 && code <= 70)      // A-F
+}
+
+/**
  * is_keyword(word: string): bool
  * 키워드인지 확인
  */
@@ -220,10 +232,34 @@ fn add_error(lexer: Lexer, message: string): void {
 
 /**
  * scan_number(lexer): void
- * 숫자 토큰 읽기 (정수 또는 부동소수점)
+ * 숫자 토큰 읽기 (정수, 16진수, 또는 부동소수점)
+ * 지원: 123, 45.67, 0xFF, 0xABCD
  */
 fn scan_number(lexer: Lexer): void {
   let start = lexer.position - 1  // advance()를 호출했으므로 -1
+
+  // 16진수 확인 (0x 또는 0X로 시작)
+  if lexer.source.charAt(start) == "0" &&
+     (peek(lexer, 0) == "x" || peek(lexer, 0) == "X") {
+    advance(lexer)  // 'x' 또는 'X' 스킵
+
+    // 최소 1개의 16진수 숫자 필요
+    if !is_hex_digit(peek(lexer, 0)) {
+      add_error(lexer, "invalid hexadecimal literal: expected hex digit after 0x")
+      let value = lexer.source.substring(start, lexer.position)
+      add_token(lexer, 1, value)
+      return
+    }
+
+    // 16진수 숫자 읽기
+    while is_hex_digit(peek(lexer, 0)) {
+      advance(lexer)
+    }
+
+    let value = lexer.source.substring(start, lexer.position)
+    add_token(lexer, 1, value)  // TokenType.NUMBER = 1
+    return
+  }
 
   // 정수 부분 읽기
   while is_digit(peek(lexer, 0)) {
@@ -305,16 +341,22 @@ fn scan_identifier(lexer: Lexer): void {
 /**
  * scan_operator(lexer, ch: string): void
  * 연산자 토큰 읽기 (단일 또는 다중 문자)
+ * 주의: -> 는 특별한 ARROW 토큰(14)이므로 구분 처리
  */
 fn scan_operator(lexer: Lexer, ch: string): void {
   let next = peek(lexer, 0)
   let two_char = ch + next
 
+  // Arrow 연산자 (특별 처리)
+  if two_char == "->" {
+    advance(lexer)
+    add_token(lexer, 14, "->")  // TokenType.ARROW = 14 (✅ 수정됨)
+  }
   // 2글자 연산자
-  if two_char == "==" || two_char == "!=" || two_char == "<=" ||
+  else if two_char == "==" || two_char == "!=" || two_char == "<=" ||
      two_char == ">=" || two_char == "&&" || two_char == "||" ||
      two_char == "+=" || two_char == "-=" || two_char == "*=" ||
-     two_char == "/=" || two_char == "->" {
+     two_char == "/=" {
     advance(lexer)
     add_token(lexer, 4, two_char)  // TokenType.OPERATOR = 4
   }
@@ -673,6 +715,67 @@ println(result);
   }
 }
 
+fn test_lexer_hex_literals(): void {
+  println("")
+  println("🧪 Test 8: Hexadecimal literals (BUG FIX #1)")
+
+  let source8 = "let a = 0xFF; let b = 0x10; let c = 0xABCD;"
+  let tokens8 = tokenize(source8)
+
+  println("Source: " + source8)
+  println("Token count: " + str(tokens8.length()))
+
+  // 찾기: NUMBER 토큰 (16진수)
+  let i = 0
+  let hex_count = 0
+  while i < tokens8.length() {
+    if tokens8[i].type == 1 {  // TokenType.NUMBER
+      let val = tokens8[i].value
+      // 16진수 확인: 0x로 시작
+      if val.length() >= 3 && val.charAt(0) == "0" &&
+         (val.charAt(1) == "x" || val.charAt(1) == "X") {
+        hex_count = hex_count + 1
+        println("  Hex: " + val)
+      }
+    }
+    i = i + 1
+  }
+
+  if hex_count == 3 {
+    println("✓ All 3 hex literals parsed correctly")
+  } else {
+    println("✗ Expected 3 hex literals, found " + str(hex_count))
+  }
+}
+
+fn test_lexer_arrow_token(): void {
+  println("")
+  println("🧪 Test 9: Arrow token type (BUG FIX #2)")
+
+  let source9 = "fn add(x: i32): i32 -> x + 1"
+  let tokens9 = tokenize(source9)
+
+  println("Source: " + source9)
+  println("Token count: " + str(tokens9.length()))
+
+  // 찾기: ARROW 토큰 (type = 14)
+  let i = 0
+  let arrow_count = 0
+  while i < tokens9.length() {
+    if tokens9[i].type == 14 {  // TokenType.ARROW
+      arrow_count = arrow_count + 1
+      println("  Found ARROW token: " + tokens9[i].value)
+    }
+    i = i + 1
+  }
+
+  if arrow_count == 1 {
+    println("✓ Arrow token has correct type (ARROW = 14)")
+  } else {
+    println("✗ Expected 1 arrow token with type 14, found " + str(arrow_count))
+  }
+}
+
 // ============================================
 // Main Test Runner
 // ============================================
@@ -690,6 +793,8 @@ fn main(): void {
   test_lexer_operators()
   test_lexer_numbers()
   test_lexer_complex()
+  test_lexer_hex_literals()
+  test_lexer_arrow_token()
 
   println("")
   println("════════════════════════════════════════")

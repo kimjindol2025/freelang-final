@@ -19,10 +19,22 @@ enum IROpcode {
   DIV = 3,
   MOD = 4,
 
+  // 비교 (Comparison)
+  EQ = 5,         // ==
+  NEQ = 6,        // !=
+  LT = 7,         // <
+  GT = 8,         // >
+  LTE = 9,        // <=
+  GTE = 10,       // >=
+
   // 메모리
-  LOAD = 10,
-  STORE = 11,
-  ALLOCA = 12,
+  LOAD = 11,
+  STORE = 12,
+  ALLOCA = 13,
+
+  // 논리 (Logical)
+  AND = 14,       // &&
+  OR = 15,        // ||
 
   // 제어 흐름
   BR = 20,        // 무조건 분기
@@ -78,9 +90,17 @@ fn opcode_to_string(opcode: i32): string {
   if opcode == 2 { return "MUL" }
   if opcode == 3 { return "DIV" }
   if opcode == 4 { return "MOD" }
-  if opcode == 10 { return "LOAD" }
-  if opcode == 11 { return "STORE" }
-  if opcode == 12 { return "ALLOCA" }
+  if opcode == 5 { return "EQ" }
+  if opcode == 6 { return "NEQ" }
+  if opcode == 7 { return "LT" }
+  if opcode == 8 { return "GT" }
+  if opcode == 9 { return "LTE" }
+  if opcode == 10 { return "GTE" }
+  if opcode == 11 { return "LOAD" }
+  if opcode == 12 { return "STORE" }
+  if opcode == 13 { return "ALLOCA" }
+  if opcode == 14 { return "AND" }
+  if opcode == 15 { return "OR" }
   if opcode == 20 { return "BR" }
   if opcode == 21 { return "BRZ" }
   if opcode == 22 { return "LABEL" }
