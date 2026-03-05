@@ -1,0 +1,281 @@
+/**
+ * Phase 3 Week 29-32: Minimal Kernel
+ *
+ * 부트로더 후 제어권을 받아 실행되는 커널
+ * 메모리, 프로세스, 인터럽트 처리
+ *
+ * 작성: 2026-03-06
+ */
+
+// ============================================
+// 메모리 관리자
+// ============================================
+
+struct PageTableEntry {
+  address: i64,
+  present: bool,
+  writable: bool,
+  user: bool,
+}
+
+struct MemoryManager {
+  physical_pages: i64,
+  free_pages: i64,
+  page_size: i32,
+  page_table: Array<PageTableEntry>,
+}
+
+/**
+ * initialize_memory(total_memory: i64): MemoryManager
+ */
+fn initialize_memory(total_memory: i64): MemoryManager {
+  var mm: MemoryManager
+  mm.physical_pages = total_memory / 4096  // 4KB 페이지
+  mm.free_pages = mm.physical_pages
+  mm.page_size = 4096
+  mm.page_table = []
+
+  println("[KERNEL] Memory Manager initialized")
+  println("  Physical memory: " + str(total_memory / 1024 / 1024) + " MB")
+  println("  Total pages: " + str(mm.physical_pages))
+
+  return mm
+}
+
+/**
+ * allocate_page(mm: MemoryManager): i64
+ */
+fn allocate_page(mm: MemoryManager): i64 {
+  if mm.free_pages <= 0 {
+    println("[ERROR] Out of memory!")
+    return 0
+  }
+
+  let page_addr = mm.free_pages * (mm.page_size as i64)
+  mm.free_pages = mm.free_pages - 1
+
+  return page_addr
+}
+
+/**
+ * free_page(mm: MemoryManager, page_addr: i64): void
+ */
+fn free_page(mm: MemoryManager, page_addr: i64): void {
+  mm.free_pages = mm.free_pages + 1
+}
+
+// ============================================
+// 프로세스 관리자
+// ============================================
+
+enum ProcessState {
+  CREATED = 0,
+  READY = 1,
+  RUNNING = 2,
+  BLOCKED = 3,
+  TERMINATED = 4,
+}
+
+struct Process {
+  pid: i32,
+  state: i32,
+  entry_point: i64,
+  stack_addr: i64,
+  memory_size: i64,
+  priority: i32,
+}
+
+struct ProcessManager {
+  processes: Array<Process>,
+  current_pid: i32,
+  process_count: i32,
+  scheduler_ticks: i32,
+}
+
+/**
+ * initialize_process_manager(): ProcessManager
+ */
+fn initialize_process_manager(): ProcessManager {
+  var pm: ProcessManager
+  pm.processes = []
+  pm.current_pid = 1
+  pm.process_count = 0
+  pm.scheduler_ticks = 0
+
+  println("[KERNEL] Process Manager initialized")
+
+  return pm
+}
+
+/**
+ * create_process(pm: ProcessManager, entry: i64): i32
+ */
+fn create_process(pm: ProcessManager, entry: i64): i32 {
+  var proc: Process
+  proc.pid = pm.current_pid
+  proc.state = 0  // CREATED
+  proc.entry_point = entry
+  proc.stack_addr = 0x80000000 + (pm.current_pid as i64) * 0x10000
+  proc.memory_size = 0x10000
+  proc.priority = 1
+
+  pm.processes.push(proc)
+  pm.current_pid = pm.current_pid + 1
+  pm.process_count = pm.process_count + 1
+
+  println("[KERNEL] Process created: PID=" + str(proc.pid))
+
+  return proc.pid
+}
+
+/**
+ * schedule(pm: ProcessManager): i32
+ * 다음 실행할 프로세스 선택
+ */
+fn schedule(pm: ProcessManager): i32 {
+  if pm.process_count == 0 {
+    return 0
+  }
+
+  let next_idx = pm.scheduler_ticks % pm.process_count
+  pm.scheduler_ticks = pm.scheduler_ticks + 1
+
+  return pm.processes[next_idx].pid
+}
+
+// ============================================
+// 인터럽트 핸들러
+// ============================================
+
+struct InterruptDescriptor {
+  vector: i32,
+  handler: i64,
+  is_trap: bool,
+}
+
+struct InterruptTable {
+  descriptors: Array<InterruptDescriptor>,
+  descriptor_count: i32,
+}
+
+/**
+ * initialize_interrupts(): InterruptTable
+ */
+fn initialize_interrupts(): InterruptTable {
+  var idt: InterruptTable
+  idt.descriptors = []
+  idt.descriptor_count = 0
+
+  println("[KERNEL] IDT initialized")
+
+  return idt
+}
+
+/**
+ * register_interrupt_handler(idt: InterruptTable, vector: i32, handler: i64): void
+ */
+fn register_interrupt_handler(
+  idt: InterruptTable,
+  vector: i32,
+  handler: i64
+): void {
+  var desc: InterruptDescriptor
+  desc.vector = vector
+  desc.handler = handler
+  desc.is_trap = false
+
+  idt.descriptors.push(desc)
+  idt.descriptor_count = idt.descriptor_count + 1
+
+  println("[KERNEL] Handler registered: Vector " + str(vector))
+}
+
+// ============================================
+// 부팅 시작
+// ============================================
+
+/**
+ * kernel_main(memory_size: i64): void
+ * 커널 메인 함수 (부트로더에서 호출)
+ */
+fn kernel_main(memory_size: i64): void {
+  println("")
+  println("╔═══════════════════════════════════════╗")
+  println("║   FreeLang Kernel v1.0               ║")
+  println("║   Starting up...                     ║")
+  println("╚═══════════════════════════════════════╝")
+  println("")
+
+  // 메모리 초기화
+  var mm = initialize_memory(memory_size)
+  println("")
+
+  // 프로세스 관리자 초기화
+  var pm = initialize_process_manager()
+  println("")
+
+  // 인터럽트 테이블 초기화
+  var idt = initialize_interrupts()
+  println("")
+
+  // 프로세스 생성 (테스트)
+  let pid1 = create_process(pm, 0x10000)
+  let pid2 = create_process(pm, 0x20000)
+  println("")
+
+  // 스케줄링 테스트
+  let next_pid = schedule(pm)
+  println("[KERNEL] Next process: PID=" + str(next_pid))
+  println("")
+
+  // 시스템 정보 출력
+  println("╔═══════════════════════════════════════╗")
+  println("║   System Information                 ║")
+  println("╠═══════════════════════════════════════╣")
+  println("║ Memory: " + str(memory_size / 1024 / 1024) + " MB")
+  println("║ Free pages: " + str(mm.free_pages))
+  println("║ Processes: " + str(pm.process_count))
+  println("║ IDT entries: " + str(idt.descriptor_count))
+  println("╚═══════════════════════════════════════╝")
+  println("")
+
+  println("[KERNEL] Boot completed successfully!")
+  println("[KERNEL] System ready for user programs")
+  println("")
+
+  // 메인 루프
+  let tick = 0
+  while tick < 100 {
+    let running_pid = schedule(pm)
+    println("[KERNEL] [" + str(tick) + "] Running PID " + str(running_pid))
+    tick = tick + 1
+  }
+
+  println("")
+  println("[KERNEL] Shutdown initiated")
+}
+
+/**
+ * kernel_entry(memory_size: i64): void
+ * 부트로더가 호출하는 진입점
+ */
+fn kernel_entry(memory_size: i64): void {
+  kernel_main(memory_size)
+}
+
+// ============================================
+// 테스트
+// ============================================
+
+fn test_kernel(): void {
+  println("")
+  println("🧪 Testing Kernel components...")
+  println("")
+
+  // 4GB 메모리 시뮬레이션
+  kernel_main(4294967296)
+end
+
+fn main(): void {
+  test_kernel()
+}
