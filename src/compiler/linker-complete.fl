@@ -315,17 +315,51 @@ fn generate_elf_binary(asm_code: string): Array<i32> {
 }
 
 // ============================================
+// Helper: 바이트 배열 → 문자열 변환
+// ============================================
+
+fn bytes_to_string(bytes: Array<i32>): string {
+  var result = ""
+  var i = 0
+
+  while i < bytes.length() {
+    // 각 바이트(0-255)를 문자로 변환
+    // fromCharCode()는 runtime.js에서 제공
+    let byte_val = bytes[i]
+    let char = fromCharCode(byte_val)
+    result = result + char
+    i = i + 1
+  }
+
+  return result
+}
+
+// ============================================
 // 바이너리를 파일로 저장
 // ============================================
 
 fn write_binary_file(filename: string, binary: Array<i32>): bool {
-  // 실제 구현: FreeLang 런타임의 write_file() 사용
-  // 현재는 시뮬레이션
+  // Step 1: 바이트 배열을 문자열로 변환
+  let content = bytes_to_string(binary)
 
-  // 참고: FreeLang 런타임에서 제공하는 함수 활용
-  // write_bytes(filename, binary)
+  // Step 2: write_file() 내장 함수 호출
+  // write_file()는 runtime.js에서 제공: {ok: bool, error?: string}
+  let result = write_file(filename, content)
 
-  return true
+  // Step 3: 성공 여부 반환
+  if result == null {
+    println("✗ write_binary_file error: null result")
+    return false
+  }
+
+  // result.ok 확인
+  if result.ok {
+    println("✓ Binary written: " + filename + " (" + str(binary.length()) + " bytes)")
+    return true
+  } else {
+    println("✗ write_binary_file error: " + result.error)
+    return false
+  }
 }
 
 // ============================================
@@ -387,6 +421,49 @@ fn compile_and_link(source_code: string, output_exe: string): bool {
 // 테스트 및 검증
 // ============================================
 
+fn test_bytes_to_string(): void {
+  println("[Test] bytes_to_string() conversion")
+
+  // ELF 매직 넘버: 0x7f, 0x45, 0x4c, 0x46 (".ELF")
+  var magic: Array<i32> = []
+  magic = magic + [0x7f]  // DEL (127)
+  magic = magic + [0x45]  // 'E'
+  magic = magic + [0x4c]  // 'L'
+  magic = magic + [0x46]  // 'F'
+
+  let result = bytes_to_string(magic)
+  println("  Input bytes: [0x7f, 0x45, 0x4c, 0x46]")
+  println("  Output string length: " + str(strlen(result)))
+  println("  ✓ Conversion successful")
+  println("")
+}
+
+fn test_write_binary_file(): void {
+  println("[Test] write_binary_file() implementation")
+
+  // ELF 매직 넘버로 테스트 바이너리 생성
+  var test_binary: Array<i32> = []
+  test_binary = test_binary + [0x7f]  // DEL
+  test_binary = test_binary + [0x45]  // 'E'
+  test_binary = test_binary + [0x4c]  // 'L'
+  test_binary = test_binary + [0x46]  // 'F'
+  test_binary = test_binary + [0x02]  // 64-bit
+  test_binary = test_binary + [0x01]  // little-endian
+
+  // 파일에 저장
+  let filename = "test-elf.bin"
+  let ok = write_binary_file(filename, test_binary)
+
+  if ok {
+    println("  ✓ Binary file written successfully")
+    println("    Filename: " + filename)
+    println("    Size: " + str(test_binary.length()) + " bytes")
+  } else {
+    println("  ✗ Binary file write failed")
+  }
+  println("")
+}
+
 fn test_elf_linker(): void {
   println("╔════════════════════════════════════════╗")
   println("║     ELF Linker Test Suite              ║")
@@ -425,8 +502,16 @@ fn test_elf_linker(): void {
   println("    Magic bytes: 0x7f 0x45 0x4c 0x46 (.ELF)")
   println("")
 
-  // Test 5: 전체 컴파일 → 링크
-  println("Test 5: Full Compilation Pipeline")
+  // Test 5: 바이트 배열 → 문자열 변환
+  println("Test 5: bytes_to_string() conversion")
+  test_bytes_to_string()
+
+  // Test 6: 바이너리 파일 쓰기
+  println("Test 6: Binary File Writing")
+  test_write_binary_file()
+
+  // Test 7: 전체 컴파일 → 링크
+  println("Test 7: Full Compilation Pipeline")
   let success = compile_and_link("let x = 5;", "compiler.exe")
   if success {
     println("  ✓ Compilation and linking successful")
