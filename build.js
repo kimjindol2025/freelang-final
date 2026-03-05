@@ -87,7 +87,8 @@ function buildAnalysis() {
     ['stdlib-string-extended.ts', 1655],
     ['stdlib-collection-extended.ts', 2628],
     ['stdlib-math-extended.ts', 1657],
-    ['stdlib-system-extended.ts', 1954]
+    ['stdlib-system-extended.ts', 1954],
+    ['stdlib-api-functions.ts', 1188]
   ];
 
   let totalLines = 0;
@@ -111,7 +112,8 @@ function buildAnalysis() {
     ['stdlib-string-extended.ts', 120],
     ['stdlib-collection-extended.ts', 120],
     ['stdlib-math-extended.ts', 115],
-    ['stdlib-system-extended.ts', 120]
+    ['stdlib-system-extended.ts', 120],
+    ['stdlib-api-functions.ts', 100]
   ];
 
   let totalFunctions = 0;
