@@ -4,6 +4,7 @@
  */
 
 const runtime = require('./runtime');
+const extendedBuiltins = require('./extended-builtins');
 const moduleLoader = require('./module-loader');
 const Promise = require('./promise');
 const { getGlobalEventLoop } = require('./event-loop');
@@ -135,6 +136,13 @@ class Evaluator {
 
     // Inject built-in functions from runtime
     for (const [name, fn] of Object.entries(runtime)) {
+      if (typeof fn === 'function') {
+        this.globalEnv.define(name, fn);
+      }
+    }
+
+    // Inject extended built-in functions (HTTP, Database, Utilities)
+    for (const [name, fn] of Object.entries(extendedBuiltins)) {
       if (typeof fn === 'function') {
         this.globalEnv.define(name, fn);
       }

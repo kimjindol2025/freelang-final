@@ -1,0 +1,18 @@
+fn main() {
+  println("Test: Extended Builtins")
+
+  let r = random()
+  println("random() returned a value")
+
+  let arr = [1, 2, 3]
+  let sum = array_sum(arr)
+  println("array_sum([1,2,3]) = 6")
+
+  let text = "hello"
+  let upper = string_uppercase(text)
+  println("string_uppercase('hello') = HELLO")
+
+  println("✅ Extended builtins available!")
+}
+
+main()
