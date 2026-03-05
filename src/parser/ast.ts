@@ -72,7 +72,8 @@ export type Expression =
   | ArrayExpression
   | MemberExpression
   | MatchExpression
-  | LambdaExpression;
+  | LambdaExpression
+  | AwaitExpression;  // Phase J: await expression
 
 export interface LiteralExpression {
   type: 'literal';
@@ -120,6 +121,16 @@ export interface LambdaExpression {
   body: Expression;           // Lambda body expression
   returnType?: string;        // Optional return type annotation
   capturedVars?: string[];    // Variables captured from enclosing scope
+}
+
+/**
+ * Phase J: Await Expression
+ * Pauses execution until a Promise resolves
+ * Only valid inside async functions
+ */
+export interface AwaitExpression {
+  type: 'await';
+  argument: Expression;  // Expression that returns a Promise<T>
 }
 
 /**
@@ -303,6 +314,7 @@ export interface FunctionStatement {
   returnType?: string;
   body: BlockStatement;
   intent?: string;
+  async?: boolean;  // Phase J: async function flag
   source?: {
     line: number;
     column: number;

@@ -305,7 +305,8 @@ export class VM {
         // Handle both arrays and objects
         let value;
         if (Array.isArray(container)) {
-          const idx = key as number;
+          // Convert float indices to int (truncate)
+          const idx = Math.floor(key as number);
           if (idx < 0 || idx >= container.length) throw new Error('oob:' + idx);
           value = container[idx];
         } else {
@@ -329,7 +330,8 @@ export class VM {
 
         // Handle both arrays and objects
         if (Array.isArray(container)) {
-          const idx = key as number;
+          // Convert float indices to int (truncate)
+          const idx = Math.floor(key as number);
           if (idx < 0 || idx >= container.length) throw new Error('oob:' + idx);
           container[idx] = val;
         } else {

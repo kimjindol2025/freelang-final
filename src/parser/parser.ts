@@ -43,6 +43,7 @@ import {
   CallExpression,
   ArrayExpression,
   LambdaExpression,  // Phase 3 Step 3: Lambda expressions
+  AwaitExpression,   // Phase J: async/await support
   LiteralPattern,
   VariablePattern,
   WildcardPattern,
@@ -716,6 +717,16 @@ export class Parser {
   private parsePrimaryExpression(): Expression {
     const token = this.current();
 
+    // Phase J: await expression
+    if (this.check(TokenType.AWAIT)) {
+      this.advance(); // consume 'await'
+      const argument = this.parsePrimaryExpression(); // Parse the promise/expression
+      return {
+        type: 'await',
+        argument
+      } as AwaitExpression;
+    }
+
     // typeof operator (unary)
     if (token.value === 'typeof') {
       this.advance(); // consume 'typeof'
@@ -1206,9 +1217,29 @@ export class Parser {
    *   - 표현식 문장
    */
   public parseStatement(): Statement {
+    // Phase J: async fn 함수 선언 (지원)
+    let isAsync = false;
+    if (this.check(TokenType.ASYNC)) {
+      this.advance();  // consume 'async'
+      isAsync = true;
+    }
+
     // Phase 2: fn 함수 선언 (지원)
     if (this.check(TokenType.FN)) {
-      return this.parseFunctionDeclaration() as any;
+      const stmt = this.parseFunctionDeclaration() as any;
+      if (isAsync) {
+        stmt.async = true;
+      }
+      return stmt;
+    }
+
+    // If 'async' was present but no 'fn' follows, it's an error
+    if (isAsync) {
+      throw new ParseError(
+        this.current().line,
+        this.current().column,
+        'Expected "fn" after "async"'
+      );
     }
 
     // Phase 4 Step 2: import 문
