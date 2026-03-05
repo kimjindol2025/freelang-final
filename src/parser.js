@@ -29,11 +29,12 @@ class VariableDeclaration extends ASTNode {
 }
 
 class FunctionDeclaration extends ASTNode {
-  constructor(name, params, body) {
+  constructor(name, params, body, isAsync = false) {
     super('FunctionDeclaration');
     this.name = name;
     this.params = params;
     this.body = body;
+    this.isAsync = isAsync;
   }
 }
 
@@ -126,6 +127,13 @@ class CatchClause extends ASTNode {
 class ThrowStatement extends ASTNode {
   constructor(argument) {
     super('ThrowStatement');
+    this.argument = argument;
+  }
+}
+
+class AwaitExpression extends ASTNode {
+  constructor(argument) {
+    super('AwaitExpression');
     this.argument = argument;
   }
 }
@@ -387,9 +395,21 @@ class Parser {
       return this.variableDeclaration();
     }
 
-    // Function declaration
+    // Function declaration (with optional async)
+    // Check for async before fn
+    let isAsync = false;
+    if (this.peek().type === TokenType.ASYNC) {
+      isAsync = true;
+      this.advance(); // consume async
+    }
+
     if (this.match(TokenType.FN)) {
-      return this.functionDeclaration();
+      const decl = this.functionDeclaration();
+      decl.isAsync = isAsync;
+      return decl;
+    } else if (isAsync) {
+      // async without fn is an error
+      throw new Error('Expected "fn" after "async"');
     }
 
     // If statement
@@ -459,6 +479,11 @@ class Parser {
   }
 
   functionDeclaration() {
+    let isAsync = false;
+
+    // fn 키워드는 statement()에서 이미 consume됨
+    // isAsync 플래그 처리는 필요 없음 (fn은 이미 진행됨)
+
     const name = this.consume(TokenType.IDENTIFIER, 'Expected function name').value;
     this.consume(TokenType.LPAREN, 'Expected ( after function name');
 
@@ -475,7 +500,7 @@ class Parser {
     const statements = this.blockStatementBody();
     const body = new BlockStatement(statements);
 
-    return new FunctionDeclaration(name, params, body);
+    return new FunctionDeclaration(name, params, body, isAsync);
   }
 
   ifStatement() {
@@ -781,6 +806,12 @@ class Parser {
   }
 
   unary() {
+    // Handle await expression
+    if (this.match(TokenType.AWAIT)) {
+      const argument = this.unary();
+      return new AwaitExpression(argument);
+    }
+
     if (this.match(TokenType.NOT, TokenType.MINUS, TokenType.PLUS,
                    TokenType.TILDE)) {
       const operator = this.tokens[this.current - 1].value;
@@ -937,7 +968,13 @@ class Parser {
       return new ObjectExpression(properties);
     }
 
-    // Function expression
+    // Function expression (with optional async)
+    let isAsync = false;
+    if (this.peek().type === TokenType.ASYNC) {
+      isAsync = true;
+      this.advance(); // consume async
+    }
+
     if (this.match(TokenType.FN)) {
       let name = null;
       if (this.peek().type === TokenType.IDENTIFIER) {
@@ -953,7 +990,12 @@ class Parser {
       this.consume(TokenType.RPAREN, 'Expected ) after parameters');
       this.consume(TokenType.LBRACE, 'Expected { before function body');
       const body = this.blockStatementBody();
-      return new FunctionExpression(name, params, new BlockStatement(body));
+      const expr = new FunctionExpression(name, params, new BlockStatement(body));
+      expr.isAsync = isAsync;
+      return expr;
+    } else if (isAsync) {
+      // async without fn is error
+      throw new Error('Expected "fn" after "async"');
     }
 
     // Parenthesized expression
@@ -1053,6 +1095,7 @@ module.exports = {
   Program, VariableDeclaration, FunctionDeclaration, BlockStatement, ExpressionStatement,
   IfStatement, WhileStatement, ForStatement, ForInStatement, ReturnStatement,
   BreakStatement, ContinueStatement, TryStatement, CatchClause, ThrowStatement, QuestionOp,
+  AwaitExpression,
   BinaryExpression, UnaryExpression, LogicalExpression,
   CallExpression, MemberExpression, AssignmentExpression, ConditionalExpression,
   ArrayExpression, ObjectExpression, Property, FunctionExpression, ArrowFunctionExpression,

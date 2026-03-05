@@ -39,6 +39,8 @@ const TokenType = {
   EXPORT: 'export',
   DEFAULT: 'default',
   AS: 'as',
+  ASYNC: 'async',
+  AWAIT: 'await',
 
   // Operators
   PLUS: 'plus',
@@ -120,6 +122,8 @@ const KEYWORDS = {
   export: TokenType.EXPORT,
   default: TokenType.DEFAULT,
   as: TokenType.AS,
+  async: TokenType.ASYNC,
+  await: TokenType.AWAIT,
   and: TokenType.AND,
   or: TokenType.OR
 };

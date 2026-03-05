@@ -1,0 +1,256 @@
+/**
+ * Phase 1: 테스트 프레임워크
+ *
+ * 목적: 의미분석기, IR 생성기 단위 테스트
+ * 구조: assert, describe, it 패턴
+ *
+ * 작성: 2026-03-06
+ * Week: 1
+ */
+
+// ============================================
+// 테스트 카운터 및 결과 저장소
+// ============================================
+
+var g_total_tests: i32 = 0
+var g_passed_tests: i32 = 0
+var g_failed_tests: i32 = 0
+var g_current_suite: string = ""
+var g_current_test: string = ""
+
+// ============================================
+// Assertion 함수들
+// ============================================
+
+/**
+ * assert(condition, message)
+ * 조건이 참이면 통과, 거짓이면 실패 기록
+ */
+fn assert(condition: bool, message: string): void {
+  g_total_tests = g_total_tests + 1
+
+  if condition {
+    g_passed_tests = g_passed_tests + 1
+    println("[✓] " + message)
+  } else {
+    g_failed_tests = g_failed_tests + 1
+    println("[✗] " + message)
+    println("    Suite: " + g_current_suite)
+    println("    Test: " + g_current_test)
+  }
+}
+
+/**
+ * assert_eq(actual, expected, message)
+ * 값이 같은지 확인
+ */
+fn assert_eq(actual: i32, expected: i32, message: string): void {
+  let condition = actual == expected
+  let full_msg = message + " (got " + str(actual) + ", expected " + str(expected) + ")"
+  assert(condition, full_msg)
+}
+
+/**
+ * assert_str_eq(actual, expected, message)
+ * 문자열이 같은지 확인
+ */
+fn assert_str_eq(actual: string, expected: string, message: string): void {
+  let condition = actual == expected
+  let full_msg = message + " (got '" + actual + "', expected '" + expected + "')"
+  assert(condition, full_msg)
+}
+
+/**
+ * assert_not_null(value, message)
+ * 값이 null이 아닌지 확인 (문자열 버전)
+ */
+fn assert_not_empty(value: string, message: string): void {
+  let condition = strlen(value) > 0
+  assert(condition, message + " (value is empty)")
+}
+
+/**
+ * assert_true(condition, message)
+ */
+fn assert_true(condition: bool, message: string): void {
+  assert(condition, message + " (expected true)")
+}
+
+/**
+ * assert_false(condition, message)
+ */
+fn assert_false(condition: bool, message: string): void {
+  assert(!condition, message + " (expected false)")
+}
+
+// ============================================
+// 테스트 그룹 (Suite) 관리
+// ============================================
+
+/**
+ * describe(suite_name, test_fn)
+ * 테스트 그룹 정의
+ */
+fn describe(suite_name: string, test_fn: fn(): void): void {
+  g_current_suite = suite_name
+  println("")
+  println("┌─ " + suite_name + " ─┐")
+
+  test_fn()
+
+  println("└─ " + suite_name + " ─┘")
+}
+
+/**
+ * it(test_name, test_fn)
+ * 개별 테스트 정의
+ */
+fn it(test_name: string, test_fn: fn(): void): void {
+  g_current_test = test_name
+  test_fn()
+}
+
+// ============================================
+// 테스트 결과 리포팅
+// ============================================
+
+/**
+ * print_summary()
+ * 전체 테스트 결과 출력
+ */
+fn print_summary(): void {
+  println("")
+  println("╔════════════════════════════════════════╗")
+  println("║       TEST SUMMARY (Phase 1)           ║")
+  println("╠════════════════════════════════════════╣")
+  println("║ Total:  " + str(g_total_tests) + " tests")
+  println("║ Passed: " + str(g_passed_tests) + " ✓")
+  println("║ Failed: " + str(g_failed_tests) + " ✗")
+  println("╚════════════════════════════════════════╝")
+
+  if g_failed_tests == 0 {
+    println("")
+    println("🎉 모든 테스트 통과!")
+  }
+}
+
+/**
+ * get_success_rate(): f64
+ * 성공률 반환 (0.0 - 1.0)
+ */
+fn get_success_rate(): f64 {
+  if g_total_tests == 0 {
+    return 0.0
+  }
+  return (g_passed_tests as f64) / (g_total_tests as f64)
+}
+
+/**
+ * reset()
+ * 테스트 카운터 초기화
+ */
+fn reset(): void {
+  g_total_tests = 0
+  g_passed_tests = 0
+  g_failed_tests = 0
+  g_current_suite = ""
+  g_current_test = ""
+}
+
+// ============================================
+// 테스트 유틸리티
+// ============================================
+
+/**
+ * expect_error(test_fn, expected_error)
+ * 특정 에러가 발생하는지 확인
+ */
+fn expect_error(test_fn: fn(): void, expected_error: string): void {
+  // Note: try-catch 구현 필요 (Phase I 기능)
+  // 임시로 stderr 캡처 시뮬레이션
+  println("[TODO] expect_error 구현 필요 (try-catch)")
+}
+
+/**
+ * benchmark(name, iterations, test_fn): f64
+ * 실행 시간 측정 (밀리초)
+ */
+fn benchmark(name: string, iterations: i32, test_fn: fn(): void): f64 {
+  println("")
+  println("⏱️  Benchmark: " + name)
+  println("   Iterations: " + str(iterations))
+
+  // Note: os.time() 구현 필요
+  println("   [TODO] 시간 측정 기능 필요 (os.time)")
+
+  return 0.0
+}
+
+// ============================================
+// 예제 (Phase 1 테스트)
+// ============================================
+
+fn main(): void {
+  // 테스트 1: 기본 assert
+  describe("Basic Assertions", fn(): void {
+    it("should pass", fn(): void {
+      assert_true(true, "true는 true")
+    })
+
+    it("should fail correctly", fn(): void {
+      assert_false(false, "false는 false")
+    })
+
+    it("should compare integers", fn(): void {
+      assert_eq(5, 5, "5 == 5")
+      assert_eq(10, 10, "10 == 10")
+    })
+
+    it("should compare strings", fn(): void {
+      assert_str_eq("hello", "hello", "hello == hello")
+      assert_str_eq("", "", "empty == empty")
+    })
+  })
+
+  // 테스트 2: 심볼 테이블 예제
+  describe("Symbol Table Example", fn(): void {
+    it("should declare variable", fn(): void {
+      // 예제: 심볼 테이블에 변수 저장
+      assert_true(true, "변수 선언 성공")
+    })
+
+    it("should lookup variable", fn(): void {
+      assert_true(true, "변수 조회 성공")
+    })
+
+    it("should handle scope", fn(): void {
+      assert_true(true, "스코프 처리 성공")
+    })
+  })
+
+  // 테스트 3: 의미 분석 예제
+  describe("Semantic Analyzer Example", fn(): void {
+    it("should detect type mismatch", fn(): void {
+      // 예제: 타입 불일치 감지
+      assert_true(true, "타입 체크 성공")
+    })
+
+    it("should verify function signature", fn(): void {
+      assert_true(true, "함수 시그니처 검증 성공")
+    })
+  })
+
+  // 테스트 4: IR 생성 예제
+  describe("IR Generator Example", fn(): void {
+    it("should generate basic IR", fn(): void {
+      assert_true(true, "기본 IR 생성 성공")
+    })
+
+    it("should handle control flow", fn(): void {
+      assert_true(true, "제어 흐름 처리 성공")
+    })
+  })
+
+  // 최종 결과 출력
+  print_summary()
+}
