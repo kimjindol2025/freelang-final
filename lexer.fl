@@ -284,8 +284,8 @@ fn readIdentifierOrKeyword(state: string): string {
   }
 
   # 키워드 목록
-  keywords = ["fn", "if", "else", "while", "for", "return", "let", "mut",
-              "true", "false", "null"]
+  keywords = ["fn", "if", "else", "while", "for", "in", "return", "let", "mut",
+              "struct", "true", "false", "null"]
 
   tokenType = "identifier"
 

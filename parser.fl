@@ -89,6 +89,10 @@ fn createMemberAccess(object: {}, property: string) {
   return { "type": "memberAccess", "object": object, "property": property }
 }
 
+fn createStructDefinition(name: string, fields: []) {
+  return { "type": "structDefinition", "name": name, "fields": fields }
+}
+
 # ================================================================
 # Parser 상태 관리
 # ================================================================
@@ -169,6 +173,10 @@ fn parseStatement(state: {}) {
   # 함수 정의
   if token["type"] == "keyword" and token["value"] == "fn" {
     return parseFunctionDefinition(state)
+  }
+  # struct 정의
+  else if token["type"] == "keyword" and token["value"] == "struct" {
+    return parseStructDefinition(state)
   }
   # if 문
   else if token["type"] == "keyword" and token["value"] == "if" {
@@ -268,6 +276,63 @@ fn parseFunctionDefinition(state: {}) {
 
   funcDef = createFunctionDefinition(funcName, params, body)
   return { "_state": state, "result": funcDef }
+}
+
+# struct 정의
+fn parseStructDefinition(state: {}) {
+  # struct 키워드 건너뛰기
+  state = advance(state)
+
+  # struct 이름
+  nameToken = currentToken(state)
+  if nameToken["type"] != "identifier" {
+    print("Expected identifier after 'struct'")
+    return { "_state": state, "result": null }
+  }
+  structName = nameToken["value"]
+  state = advance(state)
+
+  # 필드 정의 ({})
+  fields = []
+  if currentToken(state)["type"] == "lbrace" {
+    state = advance(state)
+
+    while currentToken(state)["type"] != "rbrace" and currentToken(state)["type"] != "eof" {
+      # 필드명
+      fieldToken = currentToken(state)
+      if fieldToken["type"] == "identifier" {
+        fieldName = fieldToken["value"]
+        state = advance(state)
+
+        # 타입 주석 (필수)
+        if currentToken(state)["type"] == "colon" {
+          state = advance(state)
+          typeToken = currentToken(state)
+          fieldType = typeToken["value"]
+          state = advance(state)
+
+          # 필드 추가
+          fields = fields + [{ "name": fieldName, "type": fieldType }]
+        }
+
+        # 쉼표
+        if currentToken(state)["type"] == "comma" {
+          state = advance(state)
+        }
+      }
+      else {
+        print("Expected field name in struct definition")
+        break
+      }
+    }
+
+    if currentToken(state)["type"] == "rbrace" {
+      state = advance(state)
+    }
+  }
+
+  structDef = createStructDefinition(structName, fields)
+  return { "_state": state, "result": structDef }
 }
 
 # if 문

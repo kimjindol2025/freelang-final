@@ -12,6 +12,7 @@
 # 전역 변수 저장소 (간단한 맵 구현)
 let globalVars: map = {}
 let globalFuncs: map = {}
+let globalStructs: map = {}  # struct 정의 저장소
 
 # 환경 생성
 fn createEnv(): map {
@@ -53,6 +54,19 @@ fn defineFunction(name: string, params: [string], body: map, env: map): any {
     "body": body
   }
   return null
+}
+
+# Struct 정의
+fn defineStruct(name: string, fields: [any], env: map): any {
+  globalStructs[name] = {
+    "fields": fields
+  }
+  return null
+}
+
+# Struct 타입 확인
+fn getStructDef(name: string): any {
+  return globalStructs[name]
 }
 
 # ================================================================
@@ -467,6 +481,14 @@ fn evalNode(node: map, env: map): any {
     let params = node["params"]
     let body = node["body"]
     defineFunction(node["name"], params, body, env)
+    return null
+  }
+
+  # Struct 정의
+  else if nodeType == "structDefinition" {
+    let name = node["name"]
+    let fields = node["fields"]
+    defineStruct(name, fields, env)
     return null
   }
   

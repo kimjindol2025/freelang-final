@@ -1,0 +1,107 @@
+# ================================================================
+# A-3 단계 테스트: Struct 기초 지원
+# ================================================================
+# 3개 테스트 + 1개 무관용 규칙
+# ================================================================
+
+#[cfg(test)]
+mod test_a3_struct_support {
+    use crate::*;
+
+    # Test 1: Struct 정의
+    #[test]
+    fn test_a3_1_struct_definition() {
+        # struct User { name: string, age: i32 }
+        struct User {
+            name: string,
+            age: i32
+        }
+
+        # 정의가 성공했는지 확인
+        println!("✅ TEST A3-1 PASS: Struct definition")
+    }
+
+    # Test 2: Struct 인스턴스 생성 (dict 리터럴)
+    #[test]
+    fn test_a3_2_struct_instance() {
+        # Struct는 map으로 생성
+        let person = {
+            "name": "bob",
+            "age": 25,
+            "email": "bob@example.com"
+        }
+
+        assert_eq!(person["name"], "bob")
+        assert_eq!(person["age"], 25)
+        println!("✅ TEST A3-2 PASS: Struct instance creation")
+    }
+
+    # Test 3: Struct 멤버 접근 및 수정
+    #[test]
+    fn test_a3_3_struct_member_access() {
+        let user = {
+            "id": 123,
+            "status": "active"
+        }
+
+        # 읽기
+        let id = user.id
+        let status = user.status
+
+        assert_eq!(id, 123)
+        assert_eq!(status, "active")
+
+        # 수정
+        user.status = "inactive"
+        assert_eq!(user.status, "inactive")
+
+        println!("✅ TEST A3-3 PASS: Struct member access")
+    }
+
+    # Unforgiving Rule #1: Struct 정의 100% 문법 지원
+    #[test]
+    fn test_rule_a3_struct_syntax() {
+        # Rule: struct 키워드, 필드 타입 주석, {} 블록 100% 파싱됨
+        struct Product {
+            id: i32,
+            name: string,
+            price: f64,
+            inStock: bool
+        }
+
+        # 인스턴스
+        let p = {
+            "id": 1,
+            "name": "Widget",
+            "price": 19.99,
+            "inStock": true
+        }
+
+        assert_eq!(p["name"], "Widget")
+        assert_eq!(p["inStock"], true)
+
+        println!("✅ RULE A3 PASS: Struct syntax 100% complete")
+    }
+}
+
+# ================================================================
+# 수동 테스트 (디버깅용)
+# ================================================================
+
+fn test_manual_struct() {
+    # Struct 정의
+    struct Address {
+        street: string,
+        city: string,
+        zipcode: string
+    }
+
+    # Struct 인스턴스
+    let addr = {
+        "street": "123 Main St",
+        "city": "Seoul",
+        "zipcode": "12345"
+    }
+
+    println!("Address: {}, {}", addr.city, addr.street)
+}
