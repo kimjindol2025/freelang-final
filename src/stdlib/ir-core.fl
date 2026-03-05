@@ -1,0 +1,68 @@
+// ─────────────────────────────────────────────────────────────────
+// IR Core Functions (자체호스팅 IR 생성기 핵심)
+// ─────────────────────────────────────────────────────────────────
+
+fn emitIRPush(value) {
+  return "PUSH:" + value;
+}
+
+fn emitIRADD() {
+  return "ADD";
+}
+
+fn emitIRSUB() {
+  return "SUB";
+}
+
+fn emitIRMUL() {
+  return "MUL";
+}
+
+fn emitIRCALL(name) {
+  return "CALL:" + name;
+}
+
+fn emitIRLOAD(varname) {
+  return "LOAD:" + varname;
+}
+
+fn emitIRSTORE(varname) {
+  return "STORE:" + varname;
+}
+
+fn emitIRRETURN() {
+  return "RETURN";
+}
+
+fn emitIRLABEL(label) {
+  return "LABEL:" + label;
+}
+
+fn emitIRJUMP(label) {
+  return "JUMP:" + label;
+}
+
+fn emitIRJMPFALSE(label) {
+  return "JMPF:" + label;
+}
+
+// IR 명령어 목록 생성
+fn createInstructionList() {
+  return [];
+}
+
+fn addInstruction(instrs, ir) {
+  instrs.push(instrs, ir);
+  return instrs;
+}
+
+// 테스트
+fn testIRCore() {
+  println("=== IR Core Test ===");
+  println(emitIRPush(5));
+  println(emitIRPush(3));
+  println(emitIRADD());
+  println(emitIRCALL("print"));
+}
+
+// testIRCore();
