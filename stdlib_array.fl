@@ -292,7 +292,7 @@ fn slice(arr: [any], start: i32, end: i32): [any] {
   let i = start
   while i < end {
     if i >= 0 && i < length(arr) {
-      # result에 arr[i] 추가
+      result = result + [arr[i]]
     }
     i = i + 1
   }
@@ -319,7 +319,7 @@ fn from(n: i32): [i32] {
 
   let i = 0
   while i < n {
-    # result에 i 추가
+    result = result + [i]
     i = i + 1
   }
 
@@ -334,7 +334,7 @@ fn range(start: i32, end: i32): [i32] {
 
   let i = start
   while i < end {
-    # result에 i 추가
+    result = result + [i]
     i = i + 1
   }
 
@@ -349,7 +349,7 @@ fn fill(n: i32, value: any): [any] {
 
   let i = 0
   while i < n {
-    # result에 value 추가
+    result = result + [value]
     i = i + 1
   }
 
@@ -369,7 +369,7 @@ fn unique(arr: [any]): [any] {
   let i = 0
   while i < length(arr) {
     if not(includes(result, arr[i])) {
-      # result에 arr[i] 추가
+      result = result + [arr[i]]
     }
     i = i + 1
   }

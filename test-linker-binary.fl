@@ -1,0 +1,35 @@
+var test_data = []
+test_data = test_data + [0x7f]
+test_data = test_data + [0x45]
+test_data = test_data + [0x4c]
+test_data = test_data + [0x46]
+test_data = test_data + [0x02]
+test_data = test_data + [0x01]
+
+println("Test 1: Byte array")
+println("Array length: " + str(test_data.length()))
+
+println("Test 2: write_file test")
+let simple_content = "Hello from binary writer!"
+let result = write_file("test-simple.txt", simple_content)
+println("Result ok: " + str(result.ok))
+
+println("Test 3: fromCharCode test")
+var hex_demo = []
+hex_demo = hex_demo + [72]
+hex_demo = hex_demo + [101]
+hex_demo = hex_demo + [108]
+hex_demo = hex_demo + [108]
+hex_demo = hex_demo + [111]
+
+let i = 0
+var demo_str = ""
+while i < hex_demo.length() {
+  let ch = fromCharCode(hex_demo[i])
+  demo_str = demo_str + ch
+  i = i + 1
+}
+
+println("Converted: " + demo_str)
+let res = write_file("test-demo.txt", demo_str)
+println("Write ok: " + str(res.ok))
