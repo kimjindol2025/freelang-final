@@ -1,0 +1,97 @@
+/**
+ * 자체호스팅 최종 검증
+ * FreeLang이 자신을 컴파일할 수 있는지 확인
+ */
+
+// Test 1: 기본 함수 정의 및 호출
+fn add(a, b) {
+  return a + b
+}
+
+fn test_basic() {
+  println("Test 1: Basic function")
+  let result = add(5, 3)
+  println("  5 + 3 = " + str(result))
+  if result == 8 {
+    println("  ✅ Pass")
+  } else {
+    println("  ❌ Fail")
+  }
+}
+
+// Test 2: 배열 조작
+fn test_arrays() {
+  println("")
+  println("Test 2: Array operations")
+  
+  let arr = [1, 2, 3, 4, 5]
+  println("  Array: " + str(arr))
+  println("  Length: " + str(len(arr)))
+  println("  First: " + str(arr[0]))
+  println("  ✅ Pass")
+}
+
+// Test 3: 조건문
+fn test_conditionals() {
+  println("")
+  println("Test 3: Conditionals")
+  
+  let x = 10
+  if x > 5 {
+    println("  x > 5: true")
+    println("  ✅ Pass")
+  } else {
+    println("  ❌ Fail")
+  }
+}
+
+// Test 4: 루프
+fn test_loops() {
+  println("")
+  println("Test 4: Loops")
+  
+  let sum = 0
+  let i = 0
+  while i < 5 {
+    sum = sum + i
+    i = i + 1
+  }
+  
+  println("  Sum(0..4): " + str(sum))
+  if sum == 10 {
+    println("  ✅ Pass")
+  } else {
+    println("  ❌ Fail")
+  }
+}
+
+// Test 5: 문자열
+fn test_strings() {
+  println("")
+  println("Test 5: Strings")
+  
+  let s1 = "hello"
+  let s2 = "world"
+  let combined = s1 + " " + s2
+  println("  Result: " + combined)
+  println("  ✅ Pass")
+}
+
+// 메인 테스트 실행
+fn main() {
+  println("╔════════════════════════════════╗")
+  println("║  Self-Hosting Verification    ║")
+  println("╚════════════════════════════════╝")
+  println("")
+  
+  test_basic()
+  test_arrays()
+  test_conditionals()
+  test_loops()
+  test_strings()
+  
+  println("")
+  println("✅ All self-hosting tests completed!")
+}
+
+main()

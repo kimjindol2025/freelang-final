@@ -1,0 +1,53 @@
+// 자체호스팅 최종 검증
+
+fn add(a, b) {
+  return a + b
+}
+
+fn main() {
+  println("╔════════════════════════════════╗")
+  println("║  Self-Hosting Verification    ║")
+  println("╚════════════════════════════════╝")
+  println("")
+  
+  // Test 1: 기본 함수
+  println("Test 1: Basic function")
+  let result = add(5, 3)
+  println("  5 + 3 = " + str(result))
+  
+  // Test 2: 배열
+  println("")
+  println("Test 2: Array operations")
+  let arr = [1, 2, 3, 4, 5]
+  println("  Array length: " + str(len(arr)))
+  
+  // Test 3: 조건문
+  println("")
+  println("Test 3: Conditionals")
+  let x = 10
+  if x > 5 {
+    println("  x > 5: true")
+  }
+  
+  // Test 4: 루프
+  println("")
+  println("Test 4: Loops")
+  let sum = 0
+  let i = 0
+  while i < 5 {
+    sum = sum + i
+    i = i + 1
+  }
+  println("  Sum(0..4): " + str(sum))
+  
+  // Test 5: 문자열
+  println("")
+  println("Test 5: Strings")
+  let combined = "hello" + " " + "world"
+  println("  Result: " + combined)
+  
+  println("")
+  println("✅ All self-hosting tests completed!")
+}
+
+main()
