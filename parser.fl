@@ -194,6 +194,30 @@ fn parseStatement(state: {}) {
   else if token["type"] == "keyword" and token["value"] == "return" {
     return parseReturnStatement(state)
   }
+  # break 문 (루프 탈출)
+  else if token["type"] == "keyword" and token["value"] == "break" {
+    state = advance(state)
+    node = { "type": "breakStatement" }
+    return { "_state": state, "value": node }
+  }
+  # continue 문 (다음 반복)
+  else if token["type"] == "keyword" and token["value"] == "continue" {
+    state = advance(state)
+    node = { "type": "continueStatement" }
+    return { "_state": state, "value": node }
+  }
+  # match 패턴 매칭
+  else if token["type"] == "keyword" and token["value"] == "match" {
+    return parseMatchStatement(state)
+  }
+  # async fn (async 함수 정의)
+  else if token["type"] == "keyword" and token["value"] == "async" {
+    state = advance(state)
+    if currentToken(state)["value"] == "fn" {
+      return parseFunctionDefinition(state, true)  # async=true
+    }
+    return { "_state": state, "error": "Expected 'fn' after 'async'" }
+  }
   # 블록
   else if token["type"] == "lbrace" {
     return parseBlockStatement(state)
@@ -361,6 +385,54 @@ fn parseIfStatement(state: {}) {
 
   ifStmt = createIfStatement(condition, thenBranch, elseBranch)
   return { "_state": state, "result": ifStmt }
+}
+
+# match 패턴 매칭
+fn parseMatchStatement(state: {}) {
+  # match 키워드 건너뛰기
+  state = advance(state)
+
+  # 매칭할 식
+  expr = parseExpression(state)
+  state = expr["_state"]
+
+  # arms 수집
+  arms = []
+
+  # 각 arm 파싱 (패턴 => 결과)
+  while currentToken(state)["type"] != "keyword" or currentToken(state)["value"] != "end" {
+    # 패턴 (숫자, 문자열, 또는 _)
+    patternToken = currentToken(state)
+    pattern = patternToken["value"]
+    state = advance(state)
+
+    # => 기대
+    if currentToken(state)["type"] != "arrow" {
+      state = advance(state)  # skip
+    } else {
+      state = advance(state)
+    }
+
+    # 결과 식 파싱
+    result = parseExpression(state)
+    state = result["_state"]
+
+    arm = { "pattern": pattern, "result": result["value"] }
+    arms = push(arms, arm)
+
+    # 쉼표 또는 end
+    if currentToken(state)["type"] == "comma" {
+      state = advance(state)
+    }
+  }
+
+  # end 키워드 건너뛰기
+  if currentToken(state)["value"] == "end" {
+    state = advance(state)
+  }
+
+  matchStmt = { "type": "matchStatement", "expr": expr["value"], "arms": arms }
+  return { "_state": state, "result": matchStmt }
 }
 
 # while 루프
@@ -628,6 +700,15 @@ fn parseMultiplication(state: {}) {
 
 # 단항 연산 (-, !, &, &mut)
 fn parseUnary(state: {}) {
+  # await 표현식 처리
+  if currentToken(state)["type"] == "keyword" and currentToken(state)["value"] == "await" {
+    state = advance(state)
+    operand = parseUnary(state)
+    state = operand["_state"]
+    awaitExpr = { "type": "awaitExpression", "operand": operand["result"] }
+    return { "_state": state, "result": awaitExpr }
+  }
+
   if currentToken(state)["type"] == "operator" and
      (currentToken(state)["value"] == "-" or
       currentToken(state)["value"] == "!" or
