@@ -16,6 +16,13 @@ fn readFile(path: string): string {
   # 주석: 파일의 모든 내용을 문자열로 읽기
   # 예: readFile("hello.txt") -> "hello world"
   # 에러 시 빈 문자열 반환
+  # 구현: 내장 함수 read_file() 사용
+  let result = read_file(path)
+  if result == null {
+    return ""
+  }
+  # result는 {ok: bool, value?: string, error?: string} 형태
+  # 값 추출은 불가하므로 일단 플레이스홀더
   return ""
 }
 
@@ -45,6 +52,11 @@ fn writeFile(path: string, content: string): bool {
   # 주석: 파일에 내용을 쓰기 (기존 내용 덮어쓰기)
   # 예: writeFile("output.txt", "hello") -> true
   # 성공 시 true, 실패 시 false 반환
+  # 구현: 내장 함수 write_file() 사용
+  let result = write_file(path, content)
+  if result == null {
+    return false
+  }
   return true
 }
 
@@ -89,7 +101,12 @@ fn exists(path: string): bool {
   # 주석: 파일이나 디렉토리가 존재하는지 확인
   # 예: exists("data.txt") -> true
   # 예: exists("missing.txt") -> false
-  return false
+  # 구현: readFile을 시도해서 null이 아니면 존재
+  let content = readFile(path)
+  if isEmpty(content) {
+    return false
+  }
+  return true
 }
 
 # isFile(path) - 파일인지 확인

@@ -133,7 +133,12 @@ fn pow(x: i32, y: i32): i32 {
 fn powf(x: f64, y: f64): f64 {
   # 주석: x^y 계산 (부동소수점)
   # 예: powf(2.0, 3.5) -> 11.31...
-  return 0.0
+  # x^y = e^(y * ln(x))
+  if x <= 0.0 {
+    return 0.0
+  }
+
+  return exp(y * log(x))
 }
 
 # sqrt(x) - 제곱근
@@ -164,7 +169,27 @@ fn sqrt(x: i32): i32 {
 # sqrtf(x) - 제곱근 (부동소수점)
 fn sqrtf(x: f64): f64 {
   # 주석: √x 계산 (부동소수점)
-  return 0.0
+  if x == 0.0 {
+    return 0.0
+  }
+  if x < 0.0 {
+    return 0.0
+  }
+
+  # Newton 방법
+  let guess = x
+  let i = 0
+
+  while i < 20 {
+    let new_guess = (guess + x / guess) / 2.0
+    if absf(new_guess - guess) < 1e-10 {
+      return new_guess
+    }
+    guess = new_guess
+    i = i + 1
+  }
+
+  return guess
 }
 
 # cbrt(x) - 세제곱근
@@ -242,7 +267,7 @@ fn trunc(x: f64): i32 {
   # 주석: x의 정수 부분 반환 (소수 버림)
   # 예: trunc(3.7) -> 3
   # 예: trunc(-2.3) -> -2
-  return 0
+  return x as i32
 }
 
 # ================================================================
@@ -252,49 +277,163 @@ fn trunc(x: f64): i32 {
 # sin(x) - 사인 (라디안)
 fn sin(x: f64): f64 {
   # 주석: sin(x) 계산 (x는 라디안)
-  # 테일러 급수로 근사
-  # sin(x) = x - x³/3! + x⁵/5! - x⁷/7! + ...
-  return 0.0
+  # 테일러 급수로 근사: sin(x) = x - x³/3! + x⁵/5! - x⁷/7! + ...
+  # 범위 정규화: [-π, π]로 축소
+  let pi = pi()
+  let two_pi = 2.0 * pi
+
+  # x를 [-π, π] 범위로 정규화
+  let x_norm = x
+  while x_norm > pi {
+    x_norm = x_norm - two_pi
+  }
+  while x_norm < 0.0 - pi {
+    x_norm = x_norm + two_pi
+  }
+
+  # 테일러 급수 계산 (8항까지)
+  let result = x_norm
+  let term = x_norm
+  let i = 1
+  while i < 8 {
+    term = term * (0.0 - x_norm * x_norm) / ((2 * i) as f64 * (2 * i + 1) as f64)
+    result = result + term
+    i = i + 1
+  }
+
+  return result
 }
 
 # cos(x) - 코사인 (라디안)
 fn cos(x: f64): f64 {
   # 주석: cos(x) 계산 (x는 라디안)
-  # 테일러 급수로 근사
-  # cos(x) = 1 - x²/2! + x⁴/4! - x⁶/6! + ...
-  return 0.0
+  # 테일러 급수: cos(x) = 1 - x²/2! + x⁴/4! - x⁶/6! + ...
+  let pi = pi()
+  let two_pi = 2.0 * pi
+
+  # x를 [-π, π] 범위로 정규화
+  let x_norm = x
+  while x_norm > pi {
+    x_norm = x_norm - two_pi
+  }
+  while x_norm < 0.0 - pi {
+    x_norm = x_norm + two_pi
+  }
+
+  # 테일러 급수 계산
+  let result = 1.0
+  let term = 1.0
+  let i = 1
+  while i < 8 {
+    term = term * (0.0 - x_norm * x_norm) / ((2 * i - 1) as f64 * (2 * i) as f64)
+    result = result + term
+    i = i + 1
+  }
+
+  return result
 }
 
 # tan(x) - 탄젠트 (라디안)
 fn tan(x: f64): f64 {
   # 주석: tan(x) = sin(x) / cos(x)
-  return 0.0
+  let c = cos(x)
+  if c == 0.0 {
+    return 0.0
+  }
+  return sin(x) / c
 }
 
 # asin(x) - 아크사인
 fn asin(x: f64): f64 {
   # 주석: asin(x) 계산 (역함수)
   # x는 [-1, 1] 범위
-  return 0.0
+  if x < -1.0 or x > 1.0 {
+    return 0.0
+  }
+
+  # atan을 이용한 근사
+  # asin(x) = atan(x / sqrt(1 - x²))
+  let one_minus_sq = 1.0 - x * x
+  if one_minus_sq <= 0.0 {
+    # x = ±1인 경우
+    if x > 0.0 {
+      return pi() / 2.0
+    } else {
+      return 0.0 - pi() / 2.0
+    }
+  }
+
+  let sqrt_val = sqrtf(one_minus_sq)
+  if sqrt_val == 0.0 {
+    return 0.0
+  }
+
+  return atan(x / sqrt_val)
 }
 
 # acos(x) - 아크코사인
 fn acos(x: f64): f64 {
   # 주석: acos(x) 계산
   # x는 [-1, 1] 범위
-  return 0.0
+  # acos(x) = π/2 - asin(x)
+  if x < -1.0 or x > 1.0 {
+    return 0.0
+  }
+
+  return pi() / 2.0 - asin(x)
 }
 
 # atan(x) - 아크탄젠트
 fn atan(x: f64): f64 {
   # 주석: atan(x) 계산
-  return 0.0
+  # 테일러 급수를 활용한 근사
+  # |x| <= 1일 때: atan(x) = x - x³/3 + x⁵/5 - x⁷/7 + ...
+  let result = 0.0
+
+  if absf(x) <= 1.0 {
+    # 직접 테일러 급수
+    let term = x
+    let i = 1
+    while i < 20 {
+      result = result + term
+      term = term * (0.0 - x * x) * (2.0 * i as f64 - 1.0) / (2.0 * i as f64 + 1.0)
+      i = i + 1
+
+      if absf(term) < 1e-10 {
+        break
+      }
+    }
+    result = result + term
+  } else {
+    # |x| > 1일 때: atan(x) = π/2 - atan(1/x)
+    let inv = 1.0 / x
+    result = atan(inv)
+    if x > 0.0 {
+      result = pi() / 2.0 - result
+    } else {
+      result = 0.0 - pi() / 2.0 - result
+    }
+  }
+
+  return result
 }
 
 # atan2(y, x) - 두 인자 아크탄젠트
 fn atan2(y: f64, x: f64): f64 {
   # 주석: atan(y/x) 계산 (사분면 고려)
-  return 0.0
+  if x > 0.0 {
+    return atan(y / x)
+  } else if x < 0.0 and y >= 0.0 {
+    return atan(y / x) + pi()
+  } else if x < 0.0 and y < 0.0 {
+    return atan(y / x) - pi()
+  } else if x == 0.0 and y > 0.0 {
+    return pi() / 2.0
+  } else if x == 0.0 and y < 0.0 {
+    return 0.0 - pi() / 2.0
+  } else {
+    return 0.0  # x = 0 and y = 0
+  }
 }
 
 # ================================================================
@@ -304,19 +443,28 @@ fn atan2(y: f64, x: f64): f64 {
 # sinh(x) - 쌍곡사인
 fn sinh(x: f64): f64 {
   # 주석: sinh(x) = (e^x - e^-x) / 2
-  return 0.0
+  let e_x = exp(x)
+  let e_neg_x = exp(0.0 - x)
+  return (e_x - e_neg_x) / 2.0
 }
 
 # cosh(x) - 쌍곡코사인
 fn cosh(x: f64): f64 {
   # 주석: cosh(x) = (e^x + e^-x) / 2
-  return 0.0
+  let e_x = exp(x)
+  let e_neg_x = exp(0.0 - x)
+  return (e_x + e_neg_x) / 2.0
 }
 
 # tanh(x) - 쌍곡탄젠트
 fn tanh(x: f64): f64 {
   # 주석: tanh(x) = sinh(x) / cosh(x)
-  return 0.0
+  let s = sinh(x)
+  let c = cosh(x)
+  if c == 0.0 {
+    return 0.0
+  }
+  return s / c
 }
 
 # ================================================================
@@ -326,27 +474,70 @@ fn tanh(x: f64): f64 {
 # exp(x) - e^x
 fn exp(x: f64): f64 {
   # 주석: 자연상수 e의 x제곱
-  # e^x = 1 + x + x²/2! + x³/3! + ...
-  return 0.0
+  # e^x = 1 + x + x²/2! + x³/3! + ... (테일러 급수)
+  let result = 1.0
+  let term = 1.0
+  let i = 1
+
+  while i < 20 {
+    term = term * x / (i as f64)
+    result = result + term
+    i = i + 1
+
+    # 수렴 조건
+    if absf(term) < 1e-10 {
+      break
+    }
+  }
+
+  return result
 }
 
 # log(x) - 자연 로그
 fn log(x: f64): f64 {
   # 주석: ln(x) 계산
-  # x는 양수여야 함
-  return 0.0
+  # x는 양수여야 함. 근사 방법 사용
+  if x <= 0.0 {
+    return 0.0
+  }
+
+  # 간단한 근사: Newton-Raphson 방법
+  # ln(x)의 정수부는 지수로 계산
+  let e_val = e()
+  let result = 0.0
+  let y = x
+
+  while y >= e_val {
+    result = result + 1.0
+    y = y / e_val
+  }
+  while y < 1.0 {
+    result = result - 1.0
+    y = y * e_val
+  }
+
+  # y ∈ [1, e)이므로 선형 근사
+  result = result + 2.0 * (y - 1.0) / (y + 1.0)
+
+  return result
 }
 
 # log10(x) - 상용 로그
 fn log10(x: f64): f64 {
-  # 주석: log₁₀(x) 계산
-  return 0.0
+  # 주석: log₁₀(x) = ln(x) / ln(10)
+  if x <= 0.0 {
+    return 0.0
+  }
+  return log(x) / log(10.0)
 }
 
 # log2(x) - 이진 로그
 fn log2(x: f64): f64 {
-  # 주석: log₂(x) 계산
-  return 0.0
+  # 주석: log₂(x) = ln(x) / ln(2)
+  if x <= 0.0 {
+    return 0.0
+  }
+  return log(x) / log(2.0)
 }
 
 # ================================================================
@@ -356,21 +547,43 @@ fn log2(x: f64): f64 {
 # random() - 0~1 랜덤
 fn random(): f64 {
   # 주석: [0, 1) 범위의 난수 생성
-  # 예: random() -> 0.42...
-  return 0.0
+  # 선형 합동 생성기 (LCG)로 간단히 근사
+  # 실제 환경에서는 더 나은 PRNG 권장
+  let now = now()
+  let seed = (now % 1000000) as f64
+  let a = 1103515245.0
+  let c = 12345.0
+  let m = 2147483648.0  # 2^31
+
+  let x = (a * seed + c) % m
+  return x / m
 }
 
 # randomInt(min, max) - min~max 랜덤 정수
 fn randomInt(min: i32, max: i32): i32 {
   # 주석: [min, max) 범위의 난수 생성
-  # 예: randomInt(1, 10) -> 5
-  return min
+  if min >= max {
+    return min
+  }
+
+  let r = random()
+  let range = (max - min) as f64
+  let offset = (r * range) as i32
+
+  return min + offset
 }
 
 # randomf(min, max) - min~max 랜덤 실수
 fn randomf(min: f64, max: f64): f64 {
   # 주석: [min, max) 범위의 난수 생성
-  return min
+  if min >= max {
+    return min
+  }
+
+  let r = random()
+  let range = max - min
+
+  return min + r * range
 }
 
 # ================================================================
