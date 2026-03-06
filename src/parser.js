@@ -222,6 +222,37 @@ class Literal extends ASTNode {
   }
 }
 
+class TryCatchStatement extends ASTNode {
+  constructor(tryBlock, catchClause, finallyBlock) {
+    super('TryCatchStatement');
+    this.tryBlock = tryBlock;
+    this.catchClause = catchClause;
+    this.finallyBlock = finallyBlock;
+  }
+}
+
+class CatchClause extends ASTNode {
+  constructor(param, body) {
+    super('CatchClause');
+    this.param = param;
+    this.body = body;
+  }
+}
+
+class ThrowStatement extends ASTNode {
+  constructor(argument) {
+    super('ThrowStatement');
+    this.argument = argument;
+  }
+}
+
+class FStringLiteral extends ASTNode {
+  constructor(parts) {
+    super('FStringLiteral');
+    this.parts = parts; // Array of { type: 'string'|'expression', value: string|expression }
+  }
+}
+
 // Parser class
 class Parser {
   constructor(tokens) {
@@ -322,6 +353,16 @@ class Parser {
     if (this.match(TokenType.CONTINUE)) {
       this.match(TokenType.SEMICOLON);
       return new ContinueStatement();
+    }
+
+    // Try-catch statement
+    if (this.match(TokenType.TRY)) {
+      return this.tryCatchStatement();
+    }
+
+    // Throw statement
+    if (this.match(TokenType.THROW)) {
+      return this.throwStatement();
     }
 
     // Expression statement
@@ -458,6 +499,36 @@ class Parser {
     }
     this.match(TokenType.SEMICOLON);
     return new ReturnStatement(argument);
+  }
+
+  tryCatchStatement() {
+    const tryBlock = this.blockStatement();
+    let catchClause = null;
+    let finallyBlock = null;
+
+    if (this.match(TokenType.CATCH)) {
+      this.consume(TokenType.LPAREN, 'Expected ( after catch');
+      const param = this.consume(TokenType.IDENTIFIER, 'Expected parameter name').value;
+      this.consume(TokenType.RPAREN, 'Expected ) after catch parameter');
+      const body = this.blockStatement();
+      catchClause = new CatchClause(param, body);
+    }
+
+    if (this.match(TokenType.FINALLY)) {
+      finallyBlock = this.blockStatement();
+    }
+
+    if (!catchClause && !finallyBlock) {
+      throw new Error('try statement must have catch or finally block');
+    }
+
+    return new TryCatchStatement(tryBlock, catchClause, finallyBlock);
+  }
+
+  throwStatement() {
+    const argument = this.expression();
+    this.match(TokenType.SEMICOLON);
+    return new ThrowStatement(argument);
   }
 
   expressionStatement() {
@@ -641,7 +712,14 @@ class Parser {
   }
 
   postfix() {
-    return this.call();
+    let expr = this.call();
+
+    // Handle ? operator (error propagation)
+    while (this.match(TokenType.QUESTION)) {
+      expr = new UnaryExpression('?', expr, false);
+    }
+
+    return expr;
   }
 
   call() {
@@ -704,7 +782,34 @@ class Parser {
     }
 
     if (this.match(TokenType.STRING)) {
-      return new Literal(this.tokens[this.current - 1].value, `"${this.tokens[this.current - 1].value}"`);
+      const token = this.tokens[this.current - 1];
+      const value = token.value;
+
+      // Check if it's an f-string
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed && parsed.fstring) {
+          // Parse f-string parts
+          const parts = parsed.parts.map(part => {
+            if (part.type === 'string') {
+              return { type: 'string', value: part.value };
+            } else {
+              // For expressions, we need to create a mini-parser
+              const Lexer = require('./lexer').Lexer;
+              const exprLexer = new Lexer(part.value);
+              const exprTokens = exprLexer.tokenize();
+              const exprParser = new Parser(exprTokens);
+              const exprAst = exprParser.expression();
+              return { type: 'expression', value: exprAst };
+            }
+          });
+          return new FStringLiteral(parts);
+        }
+      } catch (e) {
+        // Not an f-string, treat as regular string
+      }
+
+      return new Literal(value, `"${value}"`);
     }
 
     // Identifier
@@ -787,5 +892,5 @@ module.exports = {
   BreakStatement, ContinueStatement, BinaryExpression, UnaryExpression, LogicalExpression,
   CallExpression, MemberExpression, AssignmentExpression, ConditionalExpression,
   ArrayExpression, ObjectExpression, Property, FunctionExpression, ArrowFunctionExpression,
-  Identifier, Literal
+  Identifier, Literal, TryCatchStatement, CatchClause, ThrowStatement, FStringLiteral
 };

@@ -1,0 +1,109 @@
+// v2.6.0 Week 1 Tests: ? operator + f-string
+
+// ==========================================
+// Group A: ? Operator (Error Propagation)
+// ==========================================
+
+// A1: Basic ? operator with function returning value
+fn get_value() {
+  return 42;
+}
+
+let result1 = get_value()?;
+assert_eq(result1, 42, "A1: ? operator returns value");
+
+// A2: Try-catch basic structure
+try {
+  throw "error message";
+} catch (e) {
+  assert_eq(e, "error message", "A2: catch block receives thrown value");
+}
+
+// A3: Try-finally without catch
+let finally_executed = false;
+try {
+  let x = 10;
+} finally {
+  finally_executed = true;
+}
+assert_eq(finally_executed, true, "A3: finally block executes");
+
+// A4: Try-catch with finally
+let catch_executed = false;
+let finally_executed2 = false;
+try {
+  throw "test error";
+} catch (e) {
+  catch_executed = true;
+} finally {
+  finally_executed2 = true;
+}
+assert_eq(catch_executed && finally_executed2, true, "A4: catch and finally both execute");
+
+// A5: Throw statement with value
+try {
+  throw 123;
+} catch (err) {
+  assert_eq(err, 123, "A5: throw with numeric value");
+}
+
+// A6: Multiple throw-catch blocks
+let error_count = 0;
+try {
+  throw "error1";
+} catch (e1) {
+  error_count = error_count + 1;
+}
+try {
+  throw "error2";
+} catch (e2) {
+  error_count = error_count + 1;
+}
+assert_eq(error_count, 2, "A6: multiple try-catch blocks");
+
+// ==========================================
+// Group B: f-string (String Interpolation)
+// ==========================================
+
+// B1: Basic f-string with variable
+let name = "FreeLang";
+let greeting = f"Hello, {name}!";
+assert_eq(greeting, "Hello, FreeLang!", "B1: basic f-string with variable");
+
+// B2: f-string with expression
+let x = 10;
+let y = 20;
+let result = f"Sum is {x + y}";
+assert_eq(result, "Sum is 30", "B2: f-string with arithmetic expression");
+
+// B3: f-string with multiple interpolations
+let first = "Alice";
+let second = "Bob";
+let intro = f"{first} and {second} are friends";
+assert_eq(intro, "Alice and Bob are friends", "B3: multiple interpolations");
+
+// B4: f-string with function call
+fn double(n) {
+  return n * 2;
+}
+let doubled = f"Double of 5 is {double(5)}";
+assert_eq(doubled, "Double of 5 is 10", "B4: f-string with function call");
+
+// B5: f-string with array access
+let arr = [1, 2, 3, 4, 5];
+let elem = f"Third element is {arr[2]}";
+assert_eq(elem, "Third element is 3", "B5: f-string with array access");
+
+// B6: f-string with object property
+let obj = {x: 100, y: 200};
+let prop = f"Object x value is {obj.x}";
+assert_eq(prop, "Object x value is 100", "B6: f-string with object property");
+
+// ==========================================
+// Summary
+// ==========================================
+// Total tests: 12
+// Expected: All 12 tests pass
+// Test groups:
+//   - A1-A6: ? operator and try-catch-throw-finally
+//   - B1-B6: f-string interpolation

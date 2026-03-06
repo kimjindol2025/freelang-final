@@ -527,6 +527,30 @@ function startsWith(s, prefix) {
   return String(s).startsWith(String(prefix));
 }
 
+// ============================================================================
+// Testing Functions
+// ============================================================================
+
+/**
+ * assert_eq(actual: any, expected: any, message?: string): null
+ * Asserts that actual equals expected, throws if not
+ */
+function assert_eq(actual, expected, message = '') {
+  // Direct comparison
+  if (actual === expected) {
+    return null;
+  }
+  // JSON comparison
+  if (JSON.stringify(actual) === JSON.stringify(expected)) {
+    return null;
+  }
+  // Loose comparison for type conversion
+  if (actual == expected) {
+    return null;
+  }
+  throw new Error(`Assertion failed: ${message || `${actual} (${typeof actual}) === ${expected} (${typeof expected})`}`);
+}
+
 /**
  * endsWith(s: string, suffix: string): bool
  * Checks if string ends with suffix
@@ -2678,4 +2702,7 @@ module.exports = {
   typeof: typeof_,
   len,
   to_string,
+
+  // Testing Functions
+  assert_eq,
 };

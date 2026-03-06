@@ -10,7 +10,8 @@ const {
   IfStatement, WhileStatement, ForStatement, ForInStatement, ReturnStatement,
   BreakStatement, ContinueStatement, BinaryExpression, UnaryExpression, LogicalExpression,
   CallExpression, MemberExpression, AssignmentExpression, ConditionalExpression,
-  ArrayExpression, ObjectExpression, Property, FunctionExpression, Identifier, Literal
+  ArrayExpression, ObjectExpression, Property, FunctionExpression, Identifier, Literal,
+  TryCatchStatement, CatchClause, ThrowStatement, FStringLiteral
 } = require('./parser');
 
 // Control flow signals
@@ -269,6 +270,45 @@ class Evaluator {
         throw new ContinueException();
       }
 
+      if (node instanceof TryCatchStatement) {
+        let result = null;
+        let caught = false;
+
+        try {
+          result = this.eval(node.tryBlock, env);
+        } catch (e) {
+          if (node.catchClause) {
+            // Create a new environment for the catch block
+            const catchEnv = new Environment(env);
+            catchEnv.define(node.catchClause.param, e.message || e);
+            try {
+              result = this.eval(node.catchClause.body, catchEnv);
+              caught = true;
+            } catch (innerE) {
+              if (innerE.isReturn || innerE.isBreak || innerE.isContinue) {
+                throw innerE;
+              }
+              throw innerE;
+            }
+          } else {
+            throw e;
+          }
+        } finally {
+          if (node.finallyBlock) {
+            this.eval(node.finallyBlock, env);
+          }
+        }
+
+        return result;
+      }
+
+      if (node instanceof ThrowStatement) {
+        const value = this.eval(node.argument, env);
+        const error = new Error(value);
+        error.thrownValue = value;
+        throw error;
+      }
+
       if (node instanceof BinaryExpression) {
         const left = this.eval(node.left, env);
         const right = this.eval(node.right, env);
@@ -299,6 +339,17 @@ class Evaluator {
       }
 
       if (node instanceof UnaryExpression) {
+        // Handle ? operator (error propagation)
+        if (node.operator === '?') {
+          const arg = this.eval(node.argument, env);
+          // Check if arg is an error-like object (Result type)
+          if (arg && typeof arg === 'object' && arg.isErr) {
+            // Propagate error by returning it
+            throw new Error(`Error: ${arg.value || 'unknown error'}`);
+          }
+          return arg;
+        }
+
         const arg = this.eval(node.argument, env);
 
         switch (node.operator) {
@@ -434,6 +485,20 @@ class Evaluator {
 
       if (node instanceof Identifier) {
         return env.get(node.name);
+      }
+
+      if (node instanceof FStringLiteral) {
+        let result = '';
+        for (const part of node.parts) {
+          if (part.type === 'string') {
+            result += part.value;
+          } else if (part.type === 'expression') {
+            // Evaluate the expression and convert to string
+            const exprValue = this.eval(part.value, env);
+            result += String(exprValue);
+          }
+        }
+        return result;
       }
 
       if (node instanceof Literal) {

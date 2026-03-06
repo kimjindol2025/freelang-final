@@ -29,6 +29,10 @@ const TokenType = {
   ENUM: 'enum',
   BREAK: 'break',
   CONTINUE: 'continue',
+  TRY: 'try',
+  CATCH: 'catch',
+  THROW: 'throw',
+  FINALLY: 'finally',
 
   // Operators
   PLUS: 'plus',
@@ -101,6 +105,10 @@ const KEYWORDS = {
   enum: TokenType.ENUM,
   break: TokenType.BREAK,
   continue: TokenType.CONTINUE,
+  try: TokenType.TRY,
+  catch: TokenType.CATCH,
+  throw: TokenType.THROW,
+  finally: TokenType.FINALLY,
   and: TokenType.AND,
   or: TokenType.OR
 };
@@ -165,8 +173,14 @@ class Lexer {
         continue;
       }
 
-      // Skip line comments (#)
-      if (ch === '#') {
+      // Skip line comments (# or //)
+      if (ch === '#' || (ch === '/' && this.peek(1) === '/')) {
+        if (ch === '/') {
+          this.advance(); // /
+          this.advance(); // /
+        } else {
+          this.advance(); // #
+        }
         while (this.peek() && this.peek() !== '\n') {
           this.advance();
         }
@@ -276,6 +290,74 @@ class Lexer {
     }
 
     this.addToken(TokenType.STRING, str);
+  }
+
+  readFString(quote) {
+    this.advance(); // 'f'
+    this.advance(); // opening quote
+
+    const parts = [];
+    let currentStr = '';
+
+    while (this.peek() && this.peek() !== quote) {
+      if (this.peek() === '\\') {
+        this.advance();
+        const escaped = this.peek();
+        if (escaped === 'n') {
+          currentStr += '\n';
+          this.advance();
+        } else if (escaped === 't') {
+          currentStr += '\t';
+          this.advance();
+        } else if (escaped === 'r') {
+          currentStr += '\r';
+          this.advance();
+        } else if (escaped === '\\') {
+          currentStr += '\\';
+          this.advance();
+        } else if (escaped === quote) {
+          currentStr += quote;
+          this.advance();
+        } else {
+          currentStr += escaped || '';
+          this.advance();
+        }
+      } else if (this.peek() === '{') {
+        // Save current string part
+        if (currentStr.length > 0) {
+          parts.push({ type: 'string', value: currentStr });
+          currentStr = '';
+        }
+        // Extract expression inside {}
+        this.advance(); // '{'
+        let exprStr = '';
+        let braceCount = 1;
+        while (braceCount > 0 && this.peek()) {
+          const ch = this.peek();
+          if (ch === '{') braceCount++;
+          else if (ch === '}') braceCount--;
+          if (braceCount > 0) {
+            exprStr += ch;
+          }
+          this.advance();
+        }
+        parts.push({ type: 'expression', value: exprStr });
+      } else {
+        currentStr += this.advance();
+      }
+    }
+
+    // Save final string part
+    if (currentStr.length > 0) {
+      parts.push({ type: 'string', value: currentStr });
+    }
+
+    if (this.peek() === quote) {
+      this.advance(); // closing quote
+    }
+
+    // Store f-string as a special token with parts array
+    this.tokens.push(new Token(TokenType.STRING, JSON.stringify({ fstring: true, parts }), this.line, this.column));
   }
 
   readIdentifierOrKeyword() {
@@ -424,6 +506,10 @@ class Lexer {
       // Numbers
       if (this.isDigit(ch)) {
         this.readNumber();
+      }
+      // f-strings
+      else if (ch === 'f' && (this.peek(1) === '"' || this.peek(1) === "'")) {
+        this.readFString(this.peek(1));
       }
       // Strings
       else if (ch === '"' || ch === "'") {
