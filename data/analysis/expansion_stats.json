@@ -1,0 +1,24 @@
+{
+  "total_variants": 27000,
+  "expansion_factor": 3.0,
+  "mutation_distribution": {
+    "loop_unroll": 2531,
+    "nesting_depth": 2456,
+    "array_dimension": 2545,
+    "data_type_variation": 2593,
+    "instruction_reorder": 2667,
+    "variable_rename": 2540,
+    "constant_variation": 2543,
+    "register_allocation": 3087,
+    "cache_locality": 2999,
+    "branch_prediction": 3039
+  },
+  "strength_distribution": {
+    "4": 5841,
+    "1": 5891,
+    "2": 5731,
+    "3": 5995,
+    "5": 3542
+  },
+  "target": "Week 7: 50K \u2192 150K \ub370\uc774\ud130 (\ubaa9\ud45c \uc9c4\ud589\uc911)"
+}

@@ -1,0 +1,19 @@
+{
+  "total_variants": 9000,
+  "valid_variants": 9000,
+  "mutation_distribution": {
+    "loop_unroll": 1255,
+    "nesting_depth": 1230,
+    "array_dimension": 1311,
+    "data_type_variation": 1316,
+    "instruction_reorder": 1333,
+    "variable_rename": 1277,
+    "constant_variation": 1278
+  },
+  "strength_distribution": {
+    "4": 2263,
+    "1": 2256,
+    "2": 2210,
+    "3": 2271
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "total_labeled": 9000,
+  "average_cycle_count": 952.5064444444445,
+  "average_cache_hit_rate": 0.818674867033688,
+  "average_energy": 0.0019050128888888872,
+  "performance_distribution": {
+    "high_performance": 1255,
+    "degradation": 3481,
+    "low_performance": 3568,
+    "medium_performance": 696
+  }
+}

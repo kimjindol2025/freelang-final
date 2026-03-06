@@ -9,7 +9,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 50250;
+const PORT = 50251;
 const TASKS_DIR = '/tmp/claude-1000/-home-kimjin-Desktop-kim/tasks';
 const REPO_DIR = '/home/kimjin/Desktop/kim/freelang-final';
 

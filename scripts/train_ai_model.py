@@ -379,12 +379,18 @@ def main():
     print("🧠 FreeLang AI Compiler Optimizer - Model Training")
     print("=" * 60)
 
-    # 설정
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"\n📱 Device: {device}")
+    # 72코어 + 256GB 메모리 최대 활용
+    torch.set_num_threads(72)
+    torch.set_num_interop_threads(36)
+    print(f"\n⚡ CPU 스레드: {torch.get_num_threads()} | Interop: {torch.get_num_interop_threads()}")
+    print(f"💾 메모리: 256GB (116GB 캐시) - 최대 활용")
 
-    batch_size = 32
-    num_epochs = 50
+    # 설정 (CUDA 호환성 문제로 CPU 강제)
+    device = torch.device('cpu')  # CUDA 지원 안 됨
+    print(f"📱 Device: {device}")
+
+    batch_size = 512  # 256 → 512 (2배 증가, I/O 최적화)
+    num_epochs = 3   # 5 → 3 (속도 극대화)
     learning_rate = 0.001
 
     # Step 1: 데이터 로드
@@ -396,9 +402,9 @@ def main():
     test_dataset = CompilerOptimizationDataset(
         './data/synthetic/labeled_data.json', split='test')
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=0)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=0)
 
     print(f"  Train: {len(train_dataset)}, Val: {len(val_dataset)}, Test: {len(test_dataset)}")
 

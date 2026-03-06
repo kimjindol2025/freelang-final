@@ -1,0 +1,130 @@
+{
+  "dataset_info": {
+    "total_samples": 9000,
+    "source": "synthetic_variants",
+    "status": "✅ 분석 완료"
+  },
+  "metrics_distribution": {
+    "cycle_count": {
+      "min": 475,
+      "max": 1468,
+      "mean": 952.5064444444445,
+      "median": 974.0,
+      "stdev": 199.05076595170615,
+      "count": 9000
+    },
+    "memory_accesses": {
+      "min": 95,
+      "max": 125,
+      "mean": 101.957,
+      "median": 101.0,
+      "stdev": 6.055401875753186,
+      "count": 9000
+    },
+    "cache_hit_rate": {
+      "min": 0.7894736842105263,
+      "max": 0.8942307692307693,
+      "mean": 0.818674867033694,
+      "median": 0.8118811881188119,
+      "stdev": 0.02347835798479458,
+      "count": 9000
+    },
+    "cpu_utilization": {
+      "min": 37.50037227099728,
+      "max": 62.497905922779786,
+      "mean": 50.11743835490168,
+      "median": 50.19367743663466,
+      "stdev": 7.218721407436381,
+      "count": 9000
+    },
+    "ipc": {
+      "min": 1.5000148908398914,
+      "max": 2.4999162369111914,
+      "mean": 2.004697534196067,
+      "median": 2.007747097465386,
+      "stdev": 0.2887488562974552,
+      "count": 9000
+    },
+    "energy_consumption_mj": {
+      "min": 0.00095,
+      "max": 0.002936,
+      "mean": 0.001905012888888889,
+      "median": 0.001948,
+      "stdev": 0.00039810153190341236,
+      "count": 9000
+    },
+    "compilation_time_ms": {
+      "min": 8.200070399245169,
+      "max": 14.113410121596253,
+      "mean": 10.575280869621194,
+      "median": 10.56755076786281,
+      "stdev": 1.2847386696357699,
+      "count": 9000
+    },
+    "binary_size_bytes": {
+      "min": 125,
+      "max": 728,
+      "mean": 300.7097777777778,
+      "median": 271.0,
+      "stdev": 120.12395898731644,
+      "count": 9000
+    }
+  },
+  "mutation_distribution": {
+    "loop_unroll": 1255,
+    "nesting_depth": 1230,
+    "array_dimension": 1311,
+    "data_type_variation": 1316,
+    "instruction_reorder": 1333,
+    "variable_rename": 1277,
+    "constant_variation": 1278
+  },
+  "performance_categories": {
+    "high_performance": 1255,
+    "degradation": 3481,
+    "low_performance": 3568,
+    "medium_performance": 696
+  },
+  "improvement_distribution": {
+    "min_improvement": -46.800000000000004,
+    "max_improvement": 52.5,
+    "mean_improvement": 4.749355555555556,
+    "median_improvement": 2.6,
+    "stdev_improvement": 19.905076595170616
+  },
+  "mutation_strength_correlation": {
+    "1": {
+      "avg_improvement": 8.480141843971632,
+      "count": 2256,
+      "best": 38.3,
+      "worst": -15.4
+    },
+    "2": {
+      "avg_improvement": 4.183710407239819,
+      "count": 2210,
+      "best": 43.0,
+      "worst": -25.900000000000002
+    },
+    "3": {
+      "avg_improvement": 3.406560986349626,
+      "count": 2271,
+      "best": 47.8,
+      "worst": -36.4
+    },
+    "4": {
+      "avg_improvement": 2.9300486080424215,
+      "count": 2263,
+      "best": 52.5,
+      "worst": -46.800000000000004
+    }
+  },
+  "data_quality": {
+    "issues": {
+      "missing_fields": 0,
+      "invalid_metrics": 0,
+      "outliers": 0,
+      "duplicate_ids": 4778
+    },
+    "quality_score": 0.46911111111111115
+  }
+}
