@@ -1,0 +1,10 @@
+// 재귀 피보나치 (기본: 재귀 함수)
+fn fib(n) {
+  if n <= 1 {
+    return n
+  } else {
+    return fib(n - 1) + fib(n - 2)
+  }
+}
+
+return fib(10)
