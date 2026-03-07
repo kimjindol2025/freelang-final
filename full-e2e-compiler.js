@@ -672,4 +672,17 @@ async function main() {
   }
 }
 
-main();
+// Export for use as a module (semantic equivalence proof)
+module.exports = {
+  Lexer,
+  Parser,
+  IRGenerator,
+  X86Encoder,
+  ELFBuilder,
+  compile: main, // For script execution
+};
+
+// Run main if called directly as script
+if (require.main === module) {
+  main();
+}
