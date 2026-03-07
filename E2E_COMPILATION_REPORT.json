@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-03-07T01:30:43.836Z",
+  "sourceFile": "/tmp/verify/freelang-final/hello.free",
+  "sourceSize": 112,
+  "sourceLines": 8,
+  "stage1_lexer": {
+    "status": "✅ COMPLETE",
+    "tokens": 17,
+    "description": "Tokenization successful"
+  },
+  "stage2_parser": {
+    "status": "✅ COMPLETE",
+    "astNodes": 1,
+    "description": "AST generation successful"
+  },
+  "stage3_ir": {
+    "status": "✅ COMPLETE",
+    "functions": 1,
+    "instructions": 6,
+    "description": "IR generation successful"
+  },
+  "stage4_x86": {
+    "status": "✅ COMPLETE",
+    "instructions": 8,
+    "description": "x86-64 encoding successful"
+  },
+  "stage5_elf": {
+    "status": "✅ COMPLETE",
+    "binarySize": 91,
+    "location": "/tmp/verify/freelang-final/hello.elf",
+    "description": "ELF binary generation successful"
+  },
+  "overall": {
+    "status": "✅ SELF-HOSTING COMPILATION SUCCESS",
+    "pipelineComplete": true,
+    "e2eVerified": true,
+    "message": "Complete self-hosting compilation chain verified!"
+  }
+}

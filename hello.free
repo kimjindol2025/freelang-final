@@ -1,0 +1,7 @@
+// Simple hello world in FreeLang
+fn main() {
+  println("Hello, FreeLang Self-Hosting!");
+  return 0;
+}
+
+main()
