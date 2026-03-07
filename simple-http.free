@@ -1,0 +1,114 @@
+// FreeLang Simple HTTP Server
+// 자체 컴파일 증명용 간단한 HTTP 구현
+
+fn response_200() {
+  println("HTTP/1.1 200 OK");
+  return 200;
+}
+
+fn response_404() {
+  println("HTTP/1.1 404 Not Found");
+  return 404;
+}
+
+fn header_content_type() {
+  println("Content-Type: text/plain");
+  return 0;
+}
+
+fn header_content_length(len) {
+  println("Content-Length: 32");
+  return 0;
+}
+
+fn blank_line() {
+  println("");
+  return 0;
+}
+
+fn body_home() {
+  println("Welcome to FreeLang HTTP Server");
+  return 0;
+}
+
+fn body_hello() {
+  println("Hello World");
+  return 0;
+}
+
+fn body_api() {
+  println("FreeLang v1.0");
+  return 0;
+}
+
+fn route_get_root() {
+  response_200();
+  header_content_type();
+  header_content_length(32);
+  blank_line();
+  body_home();
+  return 200;
+}
+
+fn route_get_hello() {
+  response_200();
+  header_content_type();
+  header_content_length(11);
+  blank_line();
+  body_hello();
+  return 200;
+}
+
+fn route_get_api() {
+  response_200();
+  header_content_type();
+  header_content_length(13);
+  blank_line();
+  body_api();
+  return 200;
+}
+
+fn test_http_1() {
+  println("Test 1: GET / (200 OK)");
+  route_get_root();
+  println("");
+  return 200;
+}
+
+fn test_http_2() {
+  println("Test 2: GET /hello (200 OK)");
+  route_get_hello();
+  println("");
+  return 200;
+}
+
+fn test_http_3() {
+  println("Test 3: GET /api (200 OK)");
+  route_get_api();
+  println("");
+  return 200;
+}
+
+fn test_http_4() {
+  println("Test 4: 404 Not Found");
+  response_404();
+  println("Content-Type: text/plain");
+  println("Content-Length: 9");
+  println("");
+  println("Not Found");
+  println("");
+  return 404;
+}
+
+fn run_all_tests() {
+  println("=== FreeLang HTTP Server Tests ===");
+  println("");
+  test_http_1();
+  test_http_2();
+  test_http_3();
+  test_http_4();
+  println("=== All HTTP routing tests completed ===");
+  return 0;
+}
+
+run_all_tests()

@@ -1,27 +1,27 @@
 {
-  "timestamp": "2026-03-07T02:21:21.710Z",
-  "sourceFile": "hello.free",
-  "sourceSize": 112,
+  "timestamp": "2026-03-07T04:25:42.055Z",
+  "sourceFile": "simple-http.free",
+  "sourceSize": 1816,
   "stages": {
     "lexer": {
       "status": "✅",
-      "tokens": 17
+      "tokens": 358
     },
     "parser": {
       "status": "✅",
-      "astNodes": 2
+      "astNodes": 17
     },
     "irGenerator": {
       "status": "✅",
-      "instructions": 6
+      "instructions": 136
     },
     "x86Encoder": {
       "status": "✅",
-      "bytes": 30
+      "bytes": 680
     },
     "elfBuilder": {
       "status": "✅",
-      "outputSize": 150
+      "outputSize": 800
     }
   },
   "outputFile": "a.elf",
