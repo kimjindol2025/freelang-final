@@ -9,14 +9,15 @@ const moduleLoader = require('./module-loader');
 const Promise = require('./promise');
 const { getGlobalEventLoop } = require('./event-loop');
 const {
-  Program, VariableDeclaration, FunctionDeclaration, BlockStatement, ExpressionStatement,
+  Program, VariableDeclaration, FunctionDeclaration, StructDeclaration, TypeDeclaration, BlockStatement, ExpressionStatement,
   IfStatement, WhileStatement, ForStatement, ForInStatement, ReturnStatement,
   BreakStatement, ContinueStatement, TryStatement, CatchClause, ThrowStatement, QuestionOp,
   BinaryExpression, UnaryExpression, LogicalExpression,
   CallExpression, MemberExpression, AssignmentExpression, ConditionalExpression,
   ArrayExpression, ObjectExpression, Property, FunctionExpression, Identifier, Literal, FStringExpression,
   ImportDeclaration, ImportSpecifier, ImportDefaultSpecifier, ImportNamespaceSpecifier,
-  ExportDeclaration, ExportNamedDeclaration, ExportSpecifier, AwaitExpression
+  ExportDeclaration, ExportNamedDeclaration, ExportSpecifier, AwaitExpression,
+  ConstraintDeclaration
 } = require('./parser');
 
 // Control flow signals
@@ -107,10 +108,17 @@ class FreeLangFunction {
     this.isAsync = isAsync;
   }
 
-  call(evaluator, args) {
+  call(evaluator, args, thisContext = null) {
     const localEnv = new Environment(this.closure);
+
+    // Bind parameters
     for (let i = 0; i < this.params.length; i++) {
       localEnv.define(this.params[i], args[i] || null);
+    }
+
+    // Bind this context for method calls
+    if (thisContext !== null) {
+      localEnv.define('this', thisContext);
     }
 
     try {
@@ -129,10 +137,233 @@ class FreeLangFunction {
   }
 }
 
+class FreeLangStruct {
+  constructor(name, fields) {
+    this.name = name;
+    this.fields = fields;
+    this.fieldConstraints = this.extractConstraints(fields);
+  }
+
+  // Extract constraints from fields
+  extractConstraints(fields) {
+    const constraints = {};
+    for (const field of fields) {
+      if (field.constraints && field.constraints.length > 0) {
+        constraints[field.name] = field.constraints;
+      }
+    }
+    return constraints;
+  }
+
+  // Struct 인스턴스 생성
+  create(values = {}) {
+    const instance = { __structName: this.name };
+    for (const field of this.fields) {
+      instance[field.name] = values[field.name] || null;
+    }
+
+    // 자동 생성: is_valid() 메서드
+    instance.is_valid = () => {
+      return this.validateInstance(instance, false).valid;
+    };
+
+    // 자동 생성: errors() 메서드
+    instance.errors = () => {
+      return this.validateInstance(instance, true).errors;
+    };
+
+    // 메타데이터 접근: getConstraints()
+    instance.getConstraints = (fieldName) => {
+      if (fieldName) {
+        return this.fieldConstraints[fieldName] || [];
+      }
+      return this.fieldConstraints;
+    };
+
+    return instance;
+  }
+
+  // 인스턴스 검증 (static-guard)
+  validateInstance(instance, collectErrors = true) {
+    const errors = [];
+    let valid = true;
+
+    for (const fieldName in this.fieldConstraints) {
+      const constraints = this.fieldConstraints[fieldName];
+      const value = instance[fieldName];
+
+      for (const constraint of constraints) {
+        const result = this.validateConstraint(fieldName, value, constraint);
+
+        if (!result.valid) {
+          valid = false;
+          if (collectErrors) {
+            errors.push(result.error);
+          } else {
+            return { valid: false, errors: [] };
+          }
+        }
+      }
+    }
+
+    return { valid, errors };
+  }
+
+  // 제약 검증 로직
+  validateConstraint(fieldName, value, constraint) {
+    const name = constraint.name;
+    const args = constraint.args || [];
+
+    switch (name) {
+      case 'required':
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 필수 입력입니다.`
+          };
+        }
+        return { valid: true, error: null };
+
+      case 'min_len':
+        if (typeof value === 'string' && value.length < args[0]) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 최소 ${args[0]}자 이상이어야 합니다.`
+          };
+        }
+        if (Array.isArray(value) && value.length < args[0]) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 최소 ${args[0]}개 이상의 요소가 필요합니다.`
+          };
+        }
+        return { valid: true, error: null };
+
+      case 'max_len':
+        if (typeof value === 'string' && value.length > args[0]) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 최대 ${args[0]}자 이하여야 합니다.`
+          };
+        }
+        if (Array.isArray(value) && value.length > args[0]) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 최대 ${args[0]}개 이하의 요소만 가능합니다.`
+          };
+        }
+        return { valid: true, error: null };
+
+      case 'range':
+        const min = args[0];
+        const max = args[1];
+        if (typeof value === 'number' && (value < min || value > max)) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) ${min}~${max} 범위의 값이어야 합니다.`
+          };
+        }
+        return { valid: true, error: null };
+
+      case 'pattern':
+        const regex = new RegExp(args[0]);
+        if (typeof value === 'string' && !regex.test(value)) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 패턴 ${args[0]}과(와) 일치해야 합니다.`
+          };
+        }
+        return { valid: true, error: null };
+
+      case 'email':
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (typeof value === 'string' && !emailRegex.test(value)) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 유효한 이메일 주소여야 합니다.`
+          };
+        }
+        return { valid: true, error: null };
+
+      case 'min':
+        if (typeof value === 'number' && value < args[0]) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 최소 ${args[0]} 이상이어야 합니다.`
+          };
+        }
+        return { valid: true, error: null };
+
+      case 'max':
+        if (typeof value === 'number' && value > args[0]) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 최대 ${args[0]} 이하여야 합니다.`
+          };
+        }
+        return { valid: true, error: null };
+
+      default:
+        // Check custom constraints (사용자 정의 제약)
+        // 주의: FreeLangStruct에서 evaluator를 참조할 수 없으므로 주의
+        // validateConstraint를 호출할 때 evaluator 참조를 전달해야 함
+        return { valid: true, error: null };
+    }
+  }
+
+  // CustomConstraint를 적용하는 별도의 메서드 (evaluator 참조 필요)
+  validateWithCustomConstraints(fieldName, value, constraint, evaluator) {
+    const name = constraint.name;
+    const args = constraint.args || [];
+
+    // First try built-in constraints
+    const builtinResult = this.validateConstraint(fieldName, value, constraint);
+    if (builtinResult.error) {
+      return builtinResult;
+    }
+
+    // Then check custom constraints
+    if (evaluator && evaluator.customConstraints.has(name)) {
+      const validator = evaluator.customConstraints.get(name);
+      try {
+        // Call custom validator function
+        let isValid;
+        if (validator instanceof FreeLangFunction) {
+          isValid = evaluator.callFreeLangFunction(validator, [value]);
+        } else {
+          isValid = validator(value);
+        }
+
+        if (!isValid) {
+          return {
+            valid: false,
+            error: `${fieldName}은(는) 제약 '${name}'을(를) 만족하지 않습니다.`
+          };
+        }
+      } catch (err) {
+        return {
+          valid: false,
+          error: `${fieldName} 검증 중 오류: ${err.message}`
+        };
+      }
+    }
+
+    return { valid: true, error: null };
+  }
+
+  toString() {
+    return `[Struct: ${this.name}]`;
+  }
+}
+
 class Evaluator {
   constructor() {
     this.globalEnv = new Environment();
     this.currentEnv = this.globalEnv;
+
+    // Custom constraint registry (사용자 정의 제약 저장)
+    this.customConstraints = new Map();
+    this.structSchemas = new Map(); // struct 스키마 캐시
 
     // Inject built-in functions from runtime
     for (const [name, fn] of Object.entries(runtime)) {
@@ -151,6 +382,28 @@ class Evaluator {
     // Inject require() function for module loading
     this.globalEnv.define('require', (moduleName) => {
       return moduleLoader.require(moduleName);
+    });
+
+    // Inject register_constraint() for custom constraints
+    this.globalEnv.define('register_constraint', (name, validatorFn) => {
+      if (typeof name !== 'string') {
+        throw new Error('Constraint name must be a string');
+      }
+      if (typeof validatorFn !== 'function' && !(validatorFn instanceof FreeLangFunction)) {
+        throw new Error('Validator must be a function');
+      }
+      this.customConstraints.set(name, validatorFn);
+      return { name, registered: true };
+    });
+
+    // Inject get_schema() for reflection
+    this.globalEnv.define('get_schema', (structName) => {
+      return this.structSchemas.get(structName) || null;
+    });
+
+    // Inject list_constraints() for inspection
+    this.globalEnv.define('list_constraints', () => {
+      return Array.from(this.customConstraints.keys());
     });
   }
 
@@ -184,6 +437,34 @@ class Evaluator {
         const fn = new FreeLangFunction(node.params, node.body, env, node.name, node.isAsync);
         env.define(node.name, fn);
         return fn;
+      }
+
+      if (node instanceof StructDeclaration) {
+        // Struct은 생성자 함수로 정의됨
+        const structConstructor = new FreeLangStruct(node.name, node.fields);
+
+        // 스키마 저장 (reflection용)
+        this.structSchemas.set(node.name, {
+          name: node.name,
+          fields: node.fields.map(f => ({
+            name: f.name,
+            type: f.type,
+            constraints: f.constraints || []
+          }))
+        });
+
+        env.define(node.name, structConstructor);
+        return structConstructor;
+      }
+
+      if (node instanceof TypeDeclaration) {
+        // Type 선언은 타입 정보만 저장 (런타임에는 검사 없음)
+        const typeInfo = {
+          name: node.name,
+          typeExpression: node.typeExpression
+        };
+        env.define(node.name, typeInfo);
+        return typeInfo;
       }
 
       if (node instanceof ImportDeclaration) {
@@ -363,17 +644,41 @@ class Evaluator {
       }
 
       if (node instanceof CallExpression) {
-        const callee = this.eval(node.callee, env);
+        let callee;
+        let thisContext = null;
+
+        // Method chaining support: bind this when callee is MemberExpression
+        if (node.callee instanceof MemberExpression) {
+          const object = this.eval(node.callee.object, env);
+          let property;
+
+          if (node.callee.computed) {
+            property = this.eval(node.callee.property, env);
+          } else {
+            property = node.callee.property.name;
+          }
+
+          callee = object[property];
+          thisContext = object;
+        } else {
+          callee = this.eval(node.callee, env);
+        }
+
         const args = node.args.map(arg => this.eval(arg, env));
 
         if (callee instanceof FreeLangFunction) {
-          // async 함수면 Promise 반환
+          // Return Promise if async function
           if (callee.isAsync) {
             return new Promise((resolve, reject) => {
               try {
                 const localEnv = new Environment(callee.closure);
                 for (let i = 0; i < callee.params.length; i++) {
                   localEnv.define(callee.params[i], args[i] || null);
+                }
+
+                // Bind this context
+                if (thisContext !== null) {
+                  localEnv.define('this', thisContext);
                 }
 
                 let result = null;
@@ -387,7 +692,7 @@ class Evaluator {
                   }
                 }
 
-                // Promise면 연쇄, 아니면 resolve
+                // Chain Promise or resolve
                 if (result instanceof Promise) {
                   result.then(resolve, reject);
                 } else {
@@ -398,9 +703,15 @@ class Evaluator {
               }
             });
           }
-          return callee.call(this, args);
+
+          // Call with this context
+          return callee.call(this, args, thisContext);
         } else if (typeof callee === 'function') {
-          // Native function
+          // Native function (JavaScript functions, etc.)
+          // Use bind to set this context
+          if (thisContext !== null && callee.bind) {
+            return callee.bind(thisContext)(...args);
+          }
           return callee(...args);
         }
 

@@ -38,6 +38,22 @@ class FunctionDeclaration extends ASTNode {
   }
 }
 
+class StructDeclaration extends ASTNode {
+  constructor(name, fields) {
+    super('StructDeclaration');
+    this.name = name;
+    this.fields = fields;
+  }
+}
+
+class TypeDeclaration extends ASTNode {
+  constructor(name, typeExpression) {
+    super('TypeDeclaration');
+    this.name = name;
+    this.typeExpression = typeExpression;
+  }
+}
+
 class BlockStatement extends ASTNode {
   constructor(statements) {
     super('BlockStatement');
@@ -76,6 +92,16 @@ class ForStatement extends ASTNode {
     this.test = test;
     this.update = update;
     this.body = body;
+  }
+}
+
+// ConstraintDeclaration for Static-Guard validation
+class ConstraintDeclaration extends ASTNode {
+  constructor(name, args, kwargs = {}) {
+    super('ConstraintDeclaration');
+    this.name = name;      // 'required', 'min_len', 'pattern', 'range', etc.
+    this.args = args;      // Array of constraint arguments
+    this.kwargs = kwargs;  // Additional metadata (future use)
   }
 }
 
@@ -378,21 +404,47 @@ class Parser {
   }
 
   statement() {
+    // Collect constraints (@required, @min_len, etc.)
+    let constraints = [];
+    while (this.peek().type === TokenType.AT) {
+      constraints.push(this.parseConstraint());
+    }
+
     // Import declaration
     if (this.peek().type === TokenType.IMPORT) {
       this.advance(); // consume 'import'
-      return this.parseImportDeclaration();
+      const stmt = this.parseImportDeclaration();
+      if (constraints.length > 0) stmt.constraints = constraints;
+      return stmt;
     }
 
     // Export declaration
     if (this.peek().type === TokenType.EXPORT) {
       this.advance(); // consume 'export'
-      return this.parseExportDeclaration();
+      const stmt = this.parseExportDeclaration();
+      if (constraints.length > 0) stmt.constraints = constraints;
+      return stmt;
     }
 
     // Variable declaration
     if (this.match(TokenType.LET, TokenType.CONST, TokenType.VAR)) {
-      return this.variableDeclaration();
+      const stmt = this.variableDeclaration();
+      if (constraints.length > 0) stmt.constraints = constraints;
+      return stmt;
+    }
+
+    // Struct declaration
+    if (this.match(TokenType.STRUCT)) {
+      const stmt = this.structDeclaration();
+      if (constraints.length > 0) stmt.constraints = constraints;
+      return stmt;
+    }
+
+    // Type declaration
+    if (this.match(TokenType.TYPE)) {
+      const stmt = this.typeDeclaration();
+      if (constraints.length > 0) stmt.constraints = constraints;
+      return stmt;
     }
 
     // Function declaration (with optional async)
@@ -406,6 +458,7 @@ class Parser {
     if (this.match(TokenType.FN)) {
       const decl = this.functionDeclaration();
       decl.isAsync = isAsync;
+      if (constraints.length > 0) decl.constraints = constraints;
       return decl;
     } else if (isAsync) {
       // async without fn is an error
@@ -463,6 +516,48 @@ class Parser {
     return this.expressionStatement();
   }
 
+  parseConstraint() {
+    // @ token already verified by caller
+    this.advance(); // consume @
+
+    const name = this.consume(TokenType.IDENTIFIER, 'Expected constraint name').value;
+    const args = [];
+
+    // Parse constraint arguments if present
+    if (this.peek().type === TokenType.LPAREN) {
+      this.advance(); // consume (
+
+      while (this.peek().type !== TokenType.RPAREN && this.peek().type !== TokenType.EOF) {
+        // Parse argument (number, string, or identifier)
+        const token = this.peek();
+
+        if (token.type === TokenType.NUMBER) {
+          args.push(parseInt(token.value));
+          this.advance();
+        } else if (token.type === TokenType.STRING) {
+          args.push(token.value);
+          this.advance();
+        } else if (token.type === TokenType.IDENTIFIER) {
+          args.push(token.value);
+          this.advance();
+        } else {
+          throw new Error(`Unexpected token in constraint argument: ${token.type}`);
+        }
+
+        // Handle comma separator
+        if (this.peek().type === TokenType.COMMA) {
+          this.advance(); // consume ,
+        } else if (this.peek().type !== TokenType.RPAREN) {
+          throw new Error('Expected comma or ) in constraint arguments');
+        }
+      }
+
+      this.consume(TokenType.RPAREN, 'Expected ) after constraint arguments');
+    }
+
+    return new ConstraintDeclaration(name, args);
+  }
+
   variableDeclaration(consumeSemicolon = true) {
     const kind = this.tokens[this.current - 1].value;
     const name = this.consume(TokenType.IDENTIFIER, 'Expected variable name').value;
@@ -490,17 +585,159 @@ class Parser {
     const params = [];
     if (this.peek().type !== TokenType.RPAREN) {
       do {
-        params.push(this.consume(TokenType.IDENTIFIER, 'Expected parameter name').value);
+        const paramName = this.consume(TokenType.IDENTIFIER, 'Expected parameter name').value;
+
+        // Optional type annotation: name: Type
+        if (this.match(TokenType.COLON)) {
+          // Skip the type annotation (just consume it without storing)
+          if (this.peek().type === TokenType.IDENTIFIER) {
+            this.advance();
+          }
+        }
+
+        params.push(paramName);
       } while (this.match(TokenType.COMMA));
     }
 
     this.consume(TokenType.RPAREN, 'Expected ) after parameters');
+
+    // Optional return type annotation: -> ReturnType
+    let returnType = null;
+    if (this.peek().type === TokenType.MINUS) {
+      this.advance(); // consume -
+      if (this.peek().type === TokenType.GT) {
+        this.advance(); // consume >
+        returnType = this.consume(TokenType.IDENTIFIER, 'Expected return type after ->').value;
+      } else {
+        throw new Error('Expected > after - in return type');
+      }
+    }
+
     this.consume(TokenType.LBRACE, 'Expected { before function body');
 
     const statements = this.blockStatementBody();
     const body = new BlockStatement(statements);
 
-    return new FunctionDeclaration(name, params, body, isAsync);
+    const decl = new FunctionDeclaration(name, params, body, isAsync);
+    if (returnType) {
+      decl.returnType = returnType;
+    }
+    return decl;
+  }
+
+  structDeclaration() {
+    // struct 키워드는 statement()에서 이미 consume됨
+    const name = this.consume(TokenType.IDENTIFIER, 'Expected struct name').value;
+    this.consume(TokenType.LBRACE, 'Expected { after struct name');
+
+    const fields = [];
+    if (this.peek().type !== TokenType.RBRACE) {
+      do {
+        // Collect constraints for the field
+        let constraints = [];
+        while (this.peek().type === TokenType.AT) {
+          constraints.push(this.parseConstraint());
+        }
+
+        const fieldName = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+        this.consume(TokenType.COLON, 'Expected : after field name');
+
+        // Parse type annotation (can be function type or simple identifier)
+        let fieldType = 'any';
+        if (this.peek().type === TokenType.FN) {
+          // Parse function type as string representation
+          const fnStart = this.current;
+          this.advance(); // consume 'fn'
+          this.consume(TokenType.LPAREN, 'Expected ( after fn');
+
+          const paramTypes = [];
+          if (this.peek().type !== TokenType.RPAREN) {
+            do {
+              paramTypes.push(this.advance().value);
+            } while (this.match(TokenType.COMMA));
+          }
+
+          this.consume(TokenType.RPAREN, 'Expected ) after parameters');
+
+          // Handle ->
+          if (this.peek().type === TokenType.MINUS) {
+            this.advance();
+            this.consume(TokenType.GT, 'Expected > after -');
+          }
+
+          const returnType = this.advance().value;
+          fieldType = `fn(${paramTypes.join(',')}) -> ${returnType}`;
+        } else if (this.peek().type === TokenType.IDENTIFIER ||
+            this.peek().type === TokenType.LET ||
+            this.peek().type === TokenType.CONST) {
+          fieldType = this.advance().value;
+        }
+
+        const field = { name: fieldName, type: fieldType };
+        if (constraints.length > 0) {
+          field.constraints = constraints;
+        }
+        fields.push(field);
+      } while (this.match(TokenType.COMMA));
+    }
+
+    this.consume(TokenType.RBRACE, 'Expected } after struct fields');
+
+    return new StructDeclaration(name, fields);
+  }
+
+  typeDeclaration() {
+    // type 키워드는 statement()에서 이미 consume됨
+    const name = this.consume(TokenType.IDENTIFIER, 'Expected type name').value;
+    this.consume(TokenType.EQ, 'Expected = after type name');
+
+    // Parse the type expression (simplified: can be function type, identifier, etc.)
+    const typeExpr = this.parseTypeExpression();
+
+    // Consume optional semicolon
+    this.match(TokenType.SEMICOLON);
+
+    return new TypeDeclaration(name, typeExpr);
+  }
+
+  parseTypeExpression() {
+    // Handle function types: fn(Type, Type) -> ReturnType
+    if (this.peek().type === TokenType.FN) {
+      this.advance(); // consume 'fn'
+      this.consume(TokenType.LPAREN, 'Expected ( after fn');
+
+      const paramTypes = [];
+      if (this.peek().type !== TokenType.RPAREN) {
+        do {
+          paramTypes.push(this.advance().value);
+        } while (this.match(TokenType.COMMA));
+      }
+
+      this.consume(TokenType.RPAREN, 'Expected ) after parameters');
+
+      // Handle -> (MINUS followed by GT)
+      if (this.peek().type === TokenType.MINUS) {
+        this.advance(); // consume -
+        if (this.peek().type !== TokenType.GT) {
+          throw new Error('Expected > after - in type expression');
+        }
+        this.advance(); // consume >
+      } else {
+        throw new Error('Expected -> for return type');
+      }
+
+      const returnType = this.advance().value;
+
+      return {
+        kind: 'FunctionType',
+        paramTypes,
+        returnType
+      };
+    }
+
+    // Simple type identifier
+    const typeId = this.consume(TokenType.IDENTIFIER, 'Expected type identifier').value;
+    return { kind: 'TypeIdentifier', name: typeId };
   }
 
   ifStatement() {
@@ -838,6 +1075,7 @@ class Parser {
 
     while (true) {
       if (this.match(TokenType.LPAREN)) {
+        // Handle function call
         const args = [];
         if (this.peek().type !== TokenType.RPAREN) {
           do {
@@ -846,6 +1084,20 @@ class Parser {
         }
         this.consume(TokenType.RPAREN, 'Expected ) after arguments');
         expr = new CallExpression(expr, args);
+
+        // After call, handle member access (for method chaining)
+        while (true) {
+          if (this.match(TokenType.DOT)) {
+            const property = this.consume(TokenType.IDENTIFIER, 'Expected property name').value;
+            expr = new MemberExpression(expr, new Identifier(property), false);
+          } else if (this.match(TokenType.LBRACKET)) {
+            const property = this.expression();
+            this.consume(TokenType.RBRACKET, 'Expected ] after computed member');
+            expr = new MemberExpression(expr, property, true);
+          } else {
+            break;
+          }
+        }
       } else {
         break;
       }
@@ -984,7 +1236,17 @@ class Parser {
       const params = [];
       if (this.peek().type !== TokenType.RPAREN) {
         do {
-          params.push(this.consume(TokenType.IDENTIFIER, 'Expected parameter name').value);
+          const paramName = this.consume(TokenType.IDENTIFIER, 'Expected parameter name').value;
+
+          // Optional type annotation: name: Type
+          if (this.match(TokenType.COLON)) {
+            // Skip the type annotation (just consume it without storing)
+            if (this.peek().type === TokenType.IDENTIFIER) {
+              this.advance();
+            }
+          }
+
+          params.push(paramName);
         } while (this.match(TokenType.COMMA));
       }
       this.consume(TokenType.RPAREN, 'Expected ) after parameters');
@@ -1092,7 +1354,7 @@ class Parser {
 
 module.exports = {
   Parser,
-  Program, VariableDeclaration, FunctionDeclaration, BlockStatement, ExpressionStatement,
+  Program, VariableDeclaration, FunctionDeclaration, StructDeclaration, TypeDeclaration, BlockStatement, ExpressionStatement,
   IfStatement, WhileStatement, ForStatement, ForInStatement, ReturnStatement,
   BreakStatement, ContinueStatement, TryStatement, CatchClause, ThrowStatement, QuestionOp,
   AwaitExpression,
@@ -1101,5 +1363,6 @@ module.exports = {
   ArrayExpression, ObjectExpression, Property, FunctionExpression, ArrowFunctionExpression,
   Identifier, Literal, FStringExpression,
   ImportDeclaration, ImportSpecifier, ImportDefaultSpecifier, ImportNamespaceSpecifier,
-  ExportDeclaration, ExportNamedDeclaration, ExportSpecifier
+  ExportDeclaration, ExportNamedDeclaration, ExportSpecifier,
+  ConstraintDeclaration
 };

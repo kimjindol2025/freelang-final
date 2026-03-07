@@ -18,6 +18,8 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const https = require('https');
+const crypto = require('crypto');
+const net = require('net');
 const { execSync } = require('child_process');
 
 // ============================================================================
@@ -34,11 +36,12 @@ function print(value) {
 }
 
 /**
- * println(value: any): null
- * Writes value to stdout with newline
+ * println(...args: any[]): null
+ * Writes values to stdout with newline (supports multiple arguments)
  */
-function println(value) {
-  console.log(String(value));
+function println(...args) {
+  const message = args.map(arg => String(arg)).join(' ');
+  console.log(message);
   return null;
 }
 
@@ -2681,4 +2684,438 @@ module.exports = {
 
   // Async/Promise (1 class)
   Promise: require('./promise'),
+
+  // ========== SSH/SFTP Extensions ==========
+  // Cryptography
+  sha256,
+  hmac_sha256,
+  aes_encrypt,
+  aes_decrypt,
+  random_bytes,
+  random_int,
+  base64_encode,
+  base64_decode,
+  hex_encode,
+  hex_decode,
+
+  // File System
+  stat,
+  chmod,
+  mkdir,
+  list_dir,
+  file_exists,
+  delete_file,
+  copy_file,
+  rename_file,
+
+  // Networking
+  socket_create,
+  socket_bind,
+  socket_listen,
+  socket_connect,
+  socket_send,
+  socket_recv,
+  socket_close,
+
+  // Utilities
+  time,
+  sleep,
 };
+
+// ============================================================================
+// SSH/SFTP Extensions: Cryptography (Added for SSH Protocol)
+// ============================================================================
+
+/**
+ * sha256(text: string): string
+ * Returns SHA256 hash as hex string
+ */
+function sha256(text) {
+  return crypto.createHash('sha256').update(String(text)).digest('hex');
+}
+
+/**
+ * hmac_sha256(key: string, text: string): string
+ * Returns HMAC-SHA256 as hex string
+ */
+function hmac_sha256(key, text) {
+  return crypto.createHmac('sha256', String(key)).update(String(text)).digest('hex');
+}
+
+/**
+ * aes_encrypt(plaintext: string, key: string, iv: string): string
+ * Encrypts plaintext with AES-256-CBC (key and iv must be 32 and 16 bytes)
+ */
+function aes_encrypt(plaintext, key, iv) {
+  try {
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(String(key), 'hex'), Buffer.from(String(iv), 'hex'));
+    let encrypted = cipher.update(String(plaintext), 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * aes_decrypt(ciphertext: string, key: string, iv: string): string
+ * Decrypts ciphertext with AES-256-CBC
+ */
+function aes_decrypt(ciphertext, key, iv) {
+  try {
+    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(String(key), 'hex'), Buffer.from(String(iv), 'hex'));
+    let decrypted = decipher.update(String(ciphertext), 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * random_bytes(len: i32): string
+ * Returns random bytes as hex string
+ */
+function random_bytes(len) {
+  return crypto.randomBytes(Number(len)).toString('hex');
+}
+
+/**
+ * random_int(min: i32, max: i32): i32
+ * Returns random integer between min and max
+ */
+function random_int(min, max) {
+  return Math.floor(Math.random() * (Number(max) - Number(min) + 1)) + Number(min);
+}
+
+/**
+ * base64_encode(text: string): string
+ * Encodes text to base64
+ */
+function base64_encode(text) {
+  return Buffer.from(String(text), 'utf8').toString('base64');
+}
+
+/**
+ * base64_decode(text: string): string
+ * Decodes base64 text
+ */
+function base64_decode(text) {
+  try {
+    return Buffer.from(String(text), 'base64').toString('utf8');
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * hex_encode(text: string): string
+ * Encodes text to hex
+ */
+function hex_encode(text) {
+  return Buffer.from(String(text), 'utf8').toString('hex');
+}
+
+/**
+ * hex_decode(text: string): string
+ * Decodes hex text
+ */
+function hex_decode(text) {
+  try {
+    return Buffer.from(String(text), 'hex').toString('utf8');
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+// ============================================================================
+// SSH/SFTP Extensions: File System (Added for SSH Protocol)
+// ============================================================================
+
+/**
+ * stat(path: string): {size, mode, uid, gid, mtime} | {error}
+ * Returns file statistics
+ */
+function stat(filepath) {
+  try {
+    const stats = fs.statSync(String(filepath));
+    return {
+      size: stats.size,
+      mode: stats.mode,
+      uid: stats.uid,
+      gid: stats.gid,
+      mtime: stats.mtime.getTime(),
+      isFile: stats.isFile(),
+      isDirectory: stats.isDirectory(),
+    };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * chmod(path: string, mode: i32): bool
+ * Changes file permissions
+ */
+function chmod(filepath, mode) {
+  try {
+    fs.chmodSync(String(filepath), Number(mode));
+    return true;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * mkdir(path: string, mode?: i32): bool
+ * Creates directory
+ */
+function mkdir(filepath, mode = 0o755) {
+  try {
+    fs.mkdirSync(String(filepath), { mode: Number(mode), recursive: true });
+    return true;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * list_dir(path: string): [string] | {error}
+ * Lists files in directory
+ */
+function list_dir(dirpath) {
+  try {
+    return fs.readdirSync(String(dirpath));
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * file_exists(path: string): bool
+ * Checks if file exists
+ */
+function file_exists(filepath) {
+  return fs.existsSync(String(filepath));
+}
+
+/**
+ * delete_file(path: string): bool
+ * Deletes file
+ */
+function delete_file(filepath) {
+  try {
+    fs.unlinkSync(String(filepath));
+    return true;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * copy_file(src: string, dst: string): bool
+ * Copies file
+ */
+function copy_file(src, dst) {
+  try {
+    fs.copyFileSync(String(src), String(dst));
+    return true;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * rename_file(old: string, new: string): bool
+ * Renames file
+ */
+function rename_file(old, newname) {
+  try {
+    fs.renameSync(String(old), String(newname));
+    return true;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+// ============================================================================
+// SSH/SFTP Extensions: Networking (Basic TCP Sockets)
+// ============================================================================
+
+let socketMap = {};
+let socketCounter = 0;
+
+/**
+ * socket_create(): i32
+ * Creates a TCP socket, returns socket_id
+ */
+function socket_create() {
+  const socket_id = socketCounter++;
+  socketMap[socket_id] = {
+    socket: new net.Socket(),
+    listeners: {},
+  };
+  return socket_id;
+}
+
+/**
+ * socket_bind(socket_id: i32, host: string, port: i32): bool
+ * Binds socket to host:port (server-side)
+ */
+function socket_bind(socket_id, host, port) {
+  try {
+    const entry = socketMap[socket_id];
+    if (!entry) return { error: 'Invalid socket_id' };
+    
+    const server = net.createServer((client) => {
+      if (entry.listeners.onConnect) {
+        entry.listeners.onConnect(client);
+      }
+    });
+    
+    server.listen(Number(port), String(host));
+    entry.server = server;
+    return true;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * socket_listen(socket_id: i32, backlog: i32): bool
+ * Listens on socket (already done by bind, but kept for API compatibility)
+ */
+function socket_listen(socket_id, backlog) {
+  return true;
+}
+
+/**
+ * socket_connect(socket_id: i32, host: string, port: i32): bool
+ * Connects socket to remote host:port (client-side)
+ */
+function socket_connect(socket_id, host, port) {
+  try {
+    const entry = socketMap[socket_id];
+    if (!entry) return { error: 'Invalid socket_id' };
+    
+    return new Promise((resolve) => {
+      entry.socket.connect(Number(port), String(host), () => {
+        resolve(true);
+      });
+      entry.socket.on('error', (err) => {
+        resolve({ error: err.message });
+      });
+    });
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * socket_send(socket_id: i32, data: string): i32
+ * Sends data on socket, returns bytes sent
+ */
+function socket_send(socket_id, data) {
+  try {
+    const entry = socketMap[socket_id];
+    if (!entry) return { error: 'Invalid socket_id' };
+    
+    const dataStr = String(data);
+    entry.socket.write(dataStr);
+    return dataStr.length;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * socket_recv(socket_id: i32, len: i32): string | {error}
+ * Receives data from socket
+ */
+function socket_recv(socket_id, len) {
+  try {
+    const entry = socketMap[socket_id];
+    if (!entry) return { error: 'Invalid socket_id' };
+    
+    return new Promise((resolve) => {
+      entry.socket.once('data', (chunk) => {
+        resolve(chunk.toString('utf8'));
+      });
+      entry.socket.on('error', (err) => {
+        resolve({ error: err.message });
+      });
+    });
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * socket_close(socket_id: i32): bool
+ * Closes socket
+ */
+function socket_close(socket_id) {
+  try {
+    const entry = socketMap[socket_id];
+    if (!entry) return { error: 'Invalid socket_id' };
+    
+    if (entry.server) entry.server.close();
+    if (entry.socket) entry.socket.destroy();
+    delete socketMap[socket_id];
+    return true;
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+// ============================================================================
+// Utility Extensions
+// ============================================================================
+
+/**
+ * time(): i32
+ * Returns current timestamp in milliseconds
+ */
+function time() {
+  return Date.now();
+}
+
+/**
+ * sleep(ms: i32): null
+ * Sleeps for ms milliseconds (synchronous)
+ */
+function sleep(ms) {
+  const start = Date.now();
+  while (Date.now() - start < Number(ms)) {}
+  return null;
+}
+
+
+// Re-export all SSH/SFTP extensions after function definitions
+module.exports.sha256 = sha256;
+module.exports.hmac_sha256 = hmac_sha256;
+module.exports.aes_encrypt = aes_encrypt;
+module.exports.aes_decrypt = aes_decrypt;
+module.exports.random_bytes = random_bytes;
+module.exports.random_int = random_int;
+module.exports.base64_encode = base64_encode;
+module.exports.base64_decode = base64_decode;
+module.exports.hex_encode = hex_encode;
+module.exports.hex_decode = hex_decode;
+module.exports.stat = stat;
+module.exports.chmod = chmod;
+module.exports.mkdir = mkdir;
+module.exports.list_dir = list_dir;
+module.exports.file_exists = file_exists;
+module.exports.delete_file = delete_file;
+module.exports.copy_file = copy_file;
+module.exports.rename_file = rename_file;
+module.exports.socket_create = socket_create;
+module.exports.socket_bind = socket_bind;
+module.exports.socket_listen = socket_listen;
+module.exports.socket_connect = socket_connect;
+module.exports.socket_send = socket_send;
+module.exports.socket_recv = socket_recv;
+module.exports.socket_close = socket_close;
+module.exports.time = time;
+module.exports.sleep = sleep;
