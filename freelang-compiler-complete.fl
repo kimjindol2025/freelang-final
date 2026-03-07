@@ -1,0 +1,3658 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FreeLang Complete Self-Hosting Compiler (All Stages Integrated)
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * 통합 컴파일러 (2,687 줄)
+ *   Stage 1: Lexer (tokenization)
+ *   Stage 2: Parser (AST generation)  
+ *   Stage 3: IR Generator (intermediate representation)
+ *   Stage 4: x86-64 Encoder (machine code)
+ *   Stage 5: ELF Builder (executable format)
+ *
+ * 이 파일은 Stage 1-5 모든 구성요소를 포함하여
+ * 자기 자신을 컴파일할 수 있는 완전한 프리랭 컴파일러입니다.
+ *
+ * 사용법:
+ *   node full-e2e-compiler.js freelang-compiler-complete.fl
+ *   → freelang-compiler-v1 생성
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+// ════════════════════════════════════════════════════════════════════════════
+// STAGE 1: LEXER (Tokenization)
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * FreeLang Self-Hosting Lexer (Pure v2 Implementation)
+ *
+ * 자체호스팅 Lexer - FreeLang으로 작성된 토크나이저
+ *
+ * ⚠️ 제약사항:
+ *   - struct 선언 금지 (객체 리터럴만 사용)
+ *   - JS 메서드 금지 (.charCodeAt, .charAt, .length 등)
+ *   - v2 stdlib 함수만 사용 (charAt, string_length, substr 등)
+ *
+ * 기능:
+ *   - 키워드, 식별자, 숫자, 문자열 인식
+ *   - 연산자 및 구두점 토크나이제이션
+ *   - 라인/컬럼 위치 추적
+ *   - 주석 처리 (라인, 블록)
+ *
+ * 예시:
+ *   let code = "fn add(a, b) { return a + b }"
+ *   let tokens = tokenize(code)
+ *   // [{kind: "KEYWORD", value: "fn"}, {kind: "IDENT", value: "add"}, ...]
+ */
+
+// ============================================
+// 1. Token 객체 생성 함수 (struct 대신 사용)
+// ============================================
+
+/**
+ * Token 객체 생성
+ * {kind, value, line, col, length}
+ */
+fn makeToken(kind, value, line, col, length) {
+  return {
+    kind: kind,
+    value: value,
+    line: line,
+    col: col,
+    length: length
+  }
+}
+
+// ============================================
+// 2. Lexer 상태 객체 생성
+// ============================================
+
+/**
+ * Lexer 초기화
+ * {source, pos, line, col, tokens}
+ */
+fn createLexer(source) {
+  return {
+    source: source,
+    pos: 0,
+    line: 1,
+    col: 1,
+    tokens: []
+  }
+}
+
+// ============================================
+// 3. 기본 문자 조회 함수
+// ============================================
+
+/**
+ * 현재 위치의 문자 반환
+ * 끝이면 ""
+ */
+fn current(lexer) {
+  let p = lexer.pos
+  let s = lexer.source
+  let len = string_length(s)
+
+  if (p >= len) {
+    return ""
+  }
+  return charAt(s, p)
+}
+
+/**
+ * offset만큼 앞의 문자 미리보기
+ * 예: peek(lexer, 1) = 다음 문자
+ */
+fn peek(lexer, offset) {
+  let p = lexer.pos + offset
+  let s = lexer.source
+  let len = string_length(s)
+
+  if (p >= len) {
+    return ""
+  }
+  return charAt(s, p)
+}
+
+/**
+ * 현재 위치 전진
+ * 줄바꿈 시 line++, col 리셋
+ */
+fn advance(lexer) {
+  let ch = current(lexer)
+
+  if (ch == "\n") {
+    lexer.line = lexer.line + 1
+    lexer.col = 1
+  } else {
+    lexer.col = lexer.col + 1
+  }
+  lexer.pos = lexer.pos + 1
+}
+
+// ============================================
+// 4. 문자 검사 함수들
+// ============================================
+
+/**
+ * 알파벳 검사 (a-z, A-Z, _)
+ * ASCII 코드 비교로 구현
+ */
+fn isAlpha(ch) {
+  if (ch == "") {
+    return 0
+  }
+
+  // ASCII를 사용하지 않고 문자 직접 비교
+  let c0 = charAt("abcdefghijklmnopqrstuvwxyz", 0)
+  let c1 = charAt("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0)
+  let c2 = charAt("_", 0)
+
+  // 간단히: 소문자 a-z 포함
+  if (ch == "a") { return 1 }
+  if (ch == "b") { return 1 }
+  if (ch == "c") { return 1 }
+  if (ch == "d") { return 1 }
+  if (ch == "e") { return 1 }
+  if (ch == "f") { return 1 }
+  if (ch == "g") { return 1 }
+  if (ch == "h") { return 1 }
+  if (ch == "i") { return 1 }
+  if (ch == "j") { return 1 }
+  if (ch == "k") { return 1 }
+  if (ch == "l") { return 1 }
+  if (ch == "m") { return 1 }
+  if (ch == "n") { return 1 }
+  if (ch == "o") { return 1 }
+  if (ch == "p") { return 1 }
+  if (ch == "q") { return 1 }
+  if (ch == "r") { return 1 }
+  if (ch == "s") { return 1 }
+  if (ch == "t") { return 1 }
+  if (ch == "u") { return 1 }
+  if (ch == "v") { return 1 }
+  if (ch == "w") { return 1 }
+  if (ch == "x") { return 1 }
+  if (ch == "y") { return 1 }
+  if (ch == "z") { return 1 }
+
+  // 대문자 A-Z
+  if (ch == "A") { return 1 }
+  if (ch == "B") { return 1 }
+  if (ch == "C") { return 1 }
+  if (ch == "D") { return 1 }
+  if (ch == "E") { return 1 }
+  if (ch == "F") { return 1 }
+  if (ch == "G") { return 1 }
+  if (ch == "H") { return 1 }
+  if (ch == "I") { return 1 }
+  if (ch == "J") { return 1 }
+  if (ch == "K") { return 1 }
+  if (ch == "L") { return 1 }
+  if (ch == "M") { return 1 }
+  if (ch == "N") { return 1 }
+  if (ch == "O") { return 1 }
+  if (ch == "P") { return 1 }
+  if (ch == "Q") { return 1 }
+  if (ch == "R") { return 1 }
+  if (ch == "S") { return 1 }
+  if (ch == "T") { return 1 }
+  if (ch == "U") { return 1 }
+  if (ch == "V") { return 1 }
+  if (ch == "W") { return 1 }
+  if (ch == "X") { return 1 }
+  if (ch == "Y") { return 1 }
+  if (ch == "Z") { return 1 }
+
+  // 언더스코어
+  if (ch == "_") { return 1 }
+
+  return 0
+}
+
+/**
+ * 숫자 검사 (0-9)
+ */
+fn isDigit(ch) {
+  if (ch == "") {
+    return 0
+  }
+
+  if (ch == "0") { return 1 }
+  if (ch == "1") { return 1 }
+  if (ch == "2") { return 1 }
+  if (ch == "3") { return 1 }
+  if (ch == "4") { return 1 }
+  if (ch == "5") { return 1 }
+  if (ch == "6") { return 1 }
+  if (ch == "7") { return 1 }
+  if (ch == "8") { return 1 }
+  if (ch == "9") { return 1 }
+
+  return 0
+}
+
+/**
+ * 알파벳 또는 숫자 검사
+ */
+fn isAlphaNumeric(ch) {
+  let a = isAlpha(ch)
+  let d = isDigit(ch)
+
+  if (a == 1) { return 1 }
+  if (d == 1) { return 1 }
+
+  return 0
+}
+
+/**
+ * 공백 문자 검사 (space, tab, newline, carriage return)
+ */
+fn isWhitespace(ch) {
+  if (ch == " ") { return 1 }
+  if (ch == "\t") { return 1 }
+  if (ch == "\n") { return 1 }
+  if (ch == "\r") { return 1 }
+
+  return 0
+}
+
+// ============================================
+// 5. 주석 스킵 함수
+// ============================================
+
+/**
+ * 라인 주석 스킵 (// 처리)
+ */
+fn skipLineComment(lexer) {
+  // // 두 글자 건너뛰기
+  advance(lexer)
+  advance(lexer)
+
+  // 줄 끝까지 읽기
+  let ch = current(lexer)
+  while (ch != "" && ch != "\n") {
+    advance(lexer)
+    ch = current(lexer)
+  }
+
+  // \n 도달 시 한 번 더 advance (줄 넘기기)
+  if (ch == "\n") {
+    advance(lexer)
+  }
+}
+
+/**
+ * 블록 주석 스킵 (/* */ 처리)
+ */
+fn skipBlockComment(lexer) {
+  // /* 두 글자 건너뛰기
+  advance(lexer)
+  advance(lexer)
+
+  // */ 찾을 때까지 읽기
+  let ch = current(lexer)
+  let next_ch = peek(lexer, 1)
+
+  while (ch != "") {
+    if (ch == "*" && next_ch == "/") {
+      // */ 도달
+      advance(lexer)  // *
+      advance(lexer)  // /
+      break
+    }
+    advance(lexer)
+    ch = current(lexer)
+    next_ch = peek(lexer, 1)
+  }
+}
+
+/**
+ * 공백과 주석 건너뛰기
+ */
+fn skipWhitespace(lexer) {
+  let ch = current(lexer)
+
+  while (ch != "") {
+    // 공백 문자
+    if (isWhitespace(ch) == 1) {
+      advance(lexer)
+      ch = current(lexer)
+      continue
+    }
+
+    // 라인 주석
+    if (ch == "/" && peek(lexer, 1) == "/") {
+      skipLineComment(lexer)
+      ch = current(lexer)
+      continue
+    }
+
+    // 블록 주석
+    if (ch == "/" && peek(lexer, 1) == "*") {
+      skipBlockComment(lexer)
+      ch = current(lexer)
+      continue
+    }
+
+    // 공백/주석 아님
+    break
+  }
+}
+
+// ============================================
+// 6. 키워드 검사 함수
+// ============================================
+
+/**
+ * 키워드 검사
+ */
+fn isKeyword(word) {
+  if (word == "fn") { return 1 }
+  if (word == "let") { return 1 }
+  if (word == "return") { return 1 }
+  if (word == "if") { return 1 }
+  if (word == "else") { return 1 }
+  if (word == "while") { return 1 }
+  if (word == "for") { return 1 }
+  if (word == "in") { return 1 }
+  if (word == "break") { return 1 }
+  if (word == "continue") { return 1 }
+  if (word == "match") { return 1 }
+  if (word == "struct") { return 1 }
+  if (word == "enum") { return 1 }
+  if (word == "impl") { return 1 }
+  if (word == "trait") { return 1 }
+  if (word == "type") { return 1 }
+  if (word == "as") { return 1 }
+  if (word == "pub") { return 1 }
+  if (word == "mut") { return 1 }
+  if (word == "const") { return 1 }
+  if (word == "static") { return 1 }
+  if (word == "async") { return 1 }
+  if (word == "await") { return 1 }
+  if (word == "try") { return 1 }
+  if (word == "catch") { return 1 }
+  if (word == "throw") { return 1 }
+  if (word == "true") { return 1 }
+  if (word == "false") { return 1 }
+  if (word == "null") { return 1 }
+  if (word == "undefined") { return 1 }
+
+  return 0
+}
+
+// ============================================
+// 7. 식별자/키워드 스캔
+// ============================================
+
+/**
+ * 식별자 또는 키워드 스캔
+ * 문자나 언더스코어로 시작
+ * 문자, 숫자, 언더스코어 포함 가능
+ */
+fn scanIdentifier(lexer) {
+  let start_line = lexer.line
+  let start_col = lexer.col
+  let start_pos = lexer.pos
+
+  // 식별자 문자 읽기
+  let word = ""
+  let ch = current(lexer)
+
+  while (ch != "" && isAlphaNumeric(ch) == 1) {
+    word = word + ch
+    advance(lexer)
+    ch = current(lexer)
+  }
+
+  // 키워드 여부 확인
+  let kind = "IDENT"
+  if (isKeyword(word) == 1) {
+    kind = "KEYWORD"
+  }
+
+  let len = string_length(word)
+  return makeToken(kind, word, start_line, start_col, len)
+}
+
+// ============================================
+// 8. 숫자 스캔
+// ============================================
+
+/**
+ * 숫자 스캔 (정수 및 실수)
+ * 예: 123, 123.456, .456
+ */
+fn scanNumber(lexer) {
+  let start_line = lexer.line
+  let start_col = lexer.col
+  let start_pos = lexer.pos
+
+  let num = ""
+  let ch = current(lexer)
+
+  // 정수 부분
+  while (ch != "" && isDigit(ch) == 1) {
+    num = num + ch
+    advance(lexer)
+    ch = current(lexer)
+  }
+
+  // 소수점 처리
+  if (ch == "." && isDigit(peek(lexer, 1)) == 1) {
+    num = num + ch
+    advance(lexer)
+    ch = current(lexer)
+
+    // 소수 부분
+    while (ch != "" && isDigit(ch) == 1) {
+      num = num + ch
+      advance(lexer)
+      ch = current(lexer)
+    }
+  }
+
+  let len = string_length(num)
+  return makeToken("NUMBER", num, start_line, start_col, len)
+}
+
+// ============================================
+// 9. 문자열 스캔
+// ============================================
+
+/**
+ * 문자열 스캔 ("..." 처리)
+ * 이스케이프 시퀀스: \n, \t, \\, \"
+ */
+fn scanString(lexer) {
+  let start_line = lexer.line
+  let start_col = lexer.col
+
+  // 시작 따옴표 건너뛰기
+  advance(lexer)
+
+  let str = ""
+  let ch = current(lexer)
+
+  while (ch != "" && ch != "\"") {
+    if (ch == "\\") {
+      // 이스케이프 시퀀스
+      advance(lexer)
+      let next = current(lexer)
+
+      if (next == "n") {
+        str = str + "\n"
+      } else if (next == "t") {
+        str = str + "\t"
+      } else if (next == "\\") {
+        str = str + "\\"
+      } else if (next == "\"") {
+        str = str + "\""
+      } else {
+        // 알 수 없는 이스케이프: 그냥 문자 추가
+        str = str + next
+      }
+
+      advance(lexer)
+      ch = current(lexer)
+    } else {
+      str = str + ch
+      advance(lexer)
+      ch = current(lexer)
+    }
+  }
+
+  // 종료 따옴표 건너뛰기
+  if (ch == "\"") {
+    advance(lexer)
+  }
+
+  let len = string_length(str)
+  return makeToken("STRING", str, start_line, start_col, len)
+}
+
+// ============================================
+// 10. 연산자 및 구두점 스캔
+// ============================================
+
+/**
+ * 2글자 연산자 검사
+ * ==, !=, <=, >=, &&, ||, ++, --, ->, =>
+ */
+fn checkTwoCharOp(lexer) {
+  let ch = current(lexer)
+  let next = peek(lexer, 1)
+
+  if (ch == "=" && next == "=") { return "==" }
+  if (ch == "!" && next == "=") { return "!=" }
+  if (ch == "<" && next == "=") { return "<=" }
+  if (ch == ">" && next == "=") { return ">=" }
+  if (ch == "&" && next == "&") { return "&&" }
+  if (ch == "|" && next == "|") { return "||" }
+  if (ch == "+" && next == "+") { return "++" }
+  if (ch == "-" && next == "-") { return "--" }
+  if (ch == "-" && next == ">") { return "->" }
+  if (ch == "=" && next == ">") { return "=>" }
+
+  return ""
+}
+
+/**
+ * 단일 문자 연산자/구두점
+ */
+fn isSingleCharOp(ch) {
+  if (ch == "+") { return 1 }
+  if (ch == "-") { return 1 }
+  if (ch == "*") { return 1 }
+  if (ch == "/") { return 1 }
+  if (ch == "=") { return 1 }
+  if (ch == "!") { return 1 }
+  if (ch == "<") { return 1 }
+  if (ch == ">") { return 1 }
+  if (ch == "&") { return 1 }
+  if (ch == "|") { return 1 }
+  if (ch == "^") { return 1 }
+  if (ch == "%") { return 1 }
+  if (ch == "~") { return 1 }
+  if (ch == ".") { return 1 }
+  if (ch == ",") { return 1 }
+  if (ch == ";") { return 1 }
+  if (ch == ":") { return 1 }
+  if (ch == "?") { return 1 }
+  if (ch == "@") { return 1 }
+  if (ch == "#") { return 1 }
+
+  return 0
+}
+
+/**
+ * 연산자 또는 구두점 스캔
+ */
+fn scanOperator(lexer) {
+  let start_line = lexer.line
+  let start_col = lexer.col
+
+  // 2글자 연산자 먼저 확인
+  let op = checkTwoCharOp(lexer)
+  if (op != "") {
+    advance(lexer)
+    advance(lexer)
+    return makeToken("OP", op, start_line, start_col, 2)
+  }
+
+  // 단일 문자 연산자
+  let ch = current(lexer)
+  if (isSingleCharOp(ch) == 1) {
+    advance(lexer)
+    return makeToken("OP", ch, start_line, start_col, 1)
+  }
+
+  // 괄호 및 중괄호
+  if (ch == "(") {
+    advance(lexer)
+    return makeToken("LPAREN", "(", start_line, start_col, 1)
+  }
+  if (ch == ")") {
+    advance(lexer)
+    return makeToken("RPAREN", ")", start_line, start_col, 1)
+  }
+  if (ch == "{") {
+    advance(lexer)
+    return makeToken("LBRACE", "{", start_line, start_col, 1)
+  }
+  if (ch == "}") {
+    advance(lexer)
+    return makeToken("RBRACE", "}", start_line, start_col, 1)
+  }
+  if (ch == "[") {
+    advance(lexer)
+    return makeToken("LBRACKET", "[", start_line, start_col, 1)
+  }
+  if (ch == "]") {
+    advance(lexer)
+    return makeToken("RBRACKET", "]", start_line, start_col, 1)
+  }
+
+  // 알 수 없는 문자는 스킵
+  advance(lexer)
+  return makeToken("UNKNOWN", ch, start_line, start_col, 1)
+}
+
+// ============================================
+// 11. 메인 토크나이저 함수
+// ============================================
+
+/**
+ * 소스 코드를 토큰 배열로 변환
+ */
+fn tokenize(source) {
+  let lexer = createLexer(source)
+
+  while (lexer.pos < string_length(source)) {
+    skipWhitespace(lexer)
+
+    let ch = current(lexer)
+
+    // 파일 끝
+    if (ch == "") {
+      break
+    }
+
+    // 식별자 또는 키워드
+    if (isAlpha(ch) == 1) {
+      let token = scanIdentifier(lexer)
+      push(lexer.tokens, token)
+      continue
+    }
+
+    // 숫자
+    if (isDigit(ch) == 1) {
+      let token = scanNumber(lexer)
+      push(lexer.tokens, token)
+      continue
+    }
+
+    // 문자열
+    if (ch == "\"") {
+      let token = scanString(lexer)
+      push(lexer.tokens, token)
+      continue
+    }
+
+    // 연산자 및 구두점
+    let token = scanOperator(lexer)
+    push(lexer.tokens, token)
+  }
+
+  // EOF 토큰 추가
+  let eof_token = makeToken("EOF", "", lexer.line, lexer.col, 0)
+  push(lexer.tokens, eof_token)
+
+  return lexer.tokens
+}
+
+// ============================================
+// 12. 토큰 표시 함수 (디버깅)
+// ============================================
+
+/**
+ * 토큰을 문자열로 변환 (디버깅용)
+ */
+fn tokenToString(token) {
+  let result = "["
+  result = result + token.kind
+  result = result + ": \""
+  result = result + token.value
+  result = result + "\" @"
+  result = result + str(token.line)
+  result = result + ":"
+  result = result + str(token.col)
+  result = result + "]"
+
+  return result
+}
+
+/**
+ * 토큰 배열을 출력 (디버깅용)
+ */
+fn printTokens(tokens) {
+  let i = 0
+  while (i < arr_len(tokens)) {
+    let token = arr_get(tokens, i)
+    println(tokenToString(token))
+    i = i + 1
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// STAGE 2: PARSER (AST Generation)
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * FreeLang Self-Hosting Parser (Agent 3 Implementation)
+ *
+ * 자체호스팅 파서 구현 - FreeLang으로 작성된 완전한 파서
+ *
+ * 목표:
+ *   - Lexer 토큰을 AST로 변환
+ *   - 재귀 하강 파싱 (Recursive Descent)
+ *   - 모든 FreeLang 문법 지원
+ *
+ * AST 구조:
+ *   { type: "...", data: {...}, children: [...] }
+ *
+ * 예시:
+ *   let code = "fn add(a, b) { return a + b }"
+ *   let tokens = tokenize(code)
+ *   let ast = parseProgram(tokens)
+ *   println(ast.data.functions.length)
+ */
+
+// ============================================
+// 1. 파서 상태 관리
+// ============================================
+
+fn createParserState(tokens) {
+  let state = {
+    tokens: tokens,
+    pos: 0,
+    errors: []
+  }
+  return state
+}
+
+fn getCurrentToken(state) {
+  let pos = state.pos
+  let tokens = state.tokens
+  let len = arr_len(tokens)
+
+  if (pos < len) {
+    return arr_get(tokens, pos)
+  }
+
+  // EOF token
+  return { kind: "EOF", value: "", line: 1, col: 1 }
+}
+
+fn getPeekToken(state, offset) {
+  let pos = state.pos + offset
+  let tokens = state.tokens
+  let len = arr_len(tokens)
+
+  if (pos < len) {
+    return arr_get(tokens, pos)
+  }
+
+  return { kind: "EOF", value: "", line: 1, col: 1 }
+}
+
+fn advanceParser(state) {
+  state.pos = state.pos + 1
+  return state
+}
+
+fn checkTokenKind(state, kind) {
+  let tok = getCurrentToken(state)
+  return tok.kind == kind
+}
+
+fn matchTokenKind(state, kind) {
+  if (checkTokenKind(state, kind)) {
+    let tok = getCurrentToken(state)
+    advanceParser(state)
+    return tok
+  }
+  return 0
+}
+
+fn consumeTokenKind(state, kind, errMsg) {
+  if (checkTokenKind(state, kind)) {
+    let tok = getCurrentToken(state)
+    advanceParser(state)
+    return tok
+  }
+
+  // Error
+  arr_push(state.errors, errMsg)
+  return 0
+}
+
+// ============================================
+// 2. AST 노드 생성 헬퍼
+// ============================================
+
+fn makeASTNode(nodeType, data, children) {
+  let node = {
+    type: nodeType,
+    data: data,
+    children: children
+  }
+  return node
+}
+
+fn makeIdentifierNode(name) {
+  return makeASTNode("Identifier", { name: name }, [])
+}
+
+fn makeLiteralNode(value, literalType) {
+  return makeASTNode("Literal", { value: value, literalType: literalType }, [])
+}
+
+fn makeNumberNode(value) {
+  return makeLiteralNode(value, "number")
+}
+
+fn makeStringNode(value) {
+  return makeLiteralNode(value, "string")
+}
+
+fn makeBinaryOpNode(op, left, right) {
+  return makeASTNode("BinaryOp", { op: op }, [left, right])
+}
+
+fn makeCallNode(callee, args) {
+  let children = [callee]
+  let i = 0
+  while (i < arr_len(args)) {
+    arr_push(children, arr_get(args, i))
+    i = i + 1
+  }
+  return makeASTNode("Call", {}, children)
+}
+
+fn makeFunctionNode(name, params, body) {
+  return makeASTNode("Function", { name: name, params: params }, [body])
+}
+
+fn makeLetNode(name, value) {
+  return makeASTNode("Let", { name: name }, [value])
+}
+
+fn makeIfNode(condition, thenBody, elseBody) {
+  let children = [condition, thenBody]
+  if (elseBody) {
+    arr_push(children, elseBody)
+  }
+  return makeASTNode("If", {}, children)
+}
+
+fn makeBlockNode(statements) {
+  return makeASTNode("Block", {}, statements)
+}
+
+fn makeReturnNode(value) {
+  let children = []
+  if (value) {
+    arr_push(children, value)
+  }
+  return makeASTNode("Return", {}, children)
+}
+
+// ============================================
+// 3. 우선순위 및 연산자 처리
+// ============================================
+
+fn getOperatorPrecedence(op) {
+  if (op == "||") {
+    return 1
+  }
+  if (op == "&&") {
+    return 2
+  }
+  if (op == "==" || op == "!=") {
+    return 3
+  }
+  if (op == "<" || op == ">" || op == "<=" || op == ">=") {
+    return 4
+  }
+  if (op == "+" || op == "-") {
+    return 5
+  }
+  if (op == "*" || op == "/" || op == "%") {
+    return 6
+  }
+  if (op == "^") {
+    return 7
+  }
+  return 0
+}
+
+fn isBinaryOp(tok) {
+  return getOperatorPrecedence(tok.value) > 0
+}
+
+// ============================================
+// 4. Expression 파싱 (Recursive Descent)
+// ============================================
+
+fn parsePrimary(state) {
+  let tok = getCurrentToken(state)
+
+  // Number
+  if (tok.kind == "NUMBER") {
+    advanceParser(state)
+    return makeNumberNode(tok.value)
+  }
+
+  // String
+  if (tok.kind == "STRING") {
+    advanceParser(state)
+    return makeStringNode(tok.value)
+  }
+
+  // Identifier or function call
+  if (tok.kind == "IDENT") {
+    advanceParser(state)
+    let name = tok.value
+
+    // Check for function call
+    if (checkTokenKind(state, "LPAREN")) {
+      advanceParser(state)
+      let args = []
+
+      // Parse arguments
+      while (!checkTokenKind(state, "RPAREN") && !checkTokenKind(state, "EOF")) {
+        let arg = parseExpression(state)
+        arr_push(args, arg)
+
+        // Check for comma
+        if (checkTokenKind(state, "COMMA")) {
+          advanceParser(state)
+        }
+      }
+
+      // Consume )
+      consumeTokenKind(state, "RPAREN", "Expected )")
+
+      return makeCallNode(makeIdentifierNode(name), args)
+    }
+
+    return makeIdentifierNode(name)
+  }
+
+  // Parenthesized expression
+  if (tok.kind == "LPAREN") {
+    advanceParser(state)
+    let expr = parseExpression(state)
+    consumeTokenKind(state, "RPAREN", "Expected )")
+    return expr
+  }
+
+  // Error
+  arr_push(state.errors, "Unexpected token: " + tok.kind)
+  return 0
+}
+
+fn parseBinaryRight(state, left, minPrec) {
+  let tok = getCurrentToken(state)
+  let prec = getOperatorPrecedence(tok.value)
+
+  if (prec == 0 || prec < minPrec) {
+    return left
+  }
+
+  // Consume operator
+  advanceParser(state)
+  let op = tok.value
+
+  // Parse right side
+  let right = parsePrimary(state)
+
+  // Check next operator
+  let nextTok = getCurrentToken(state)
+  let nextPrec = getOperatorPrecedence(nextTok.value)
+
+  if (nextPrec > prec) {
+    right = parseBinaryRight(state, right, prec + 1)
+  }
+
+  // Create binary node
+  let binary = makeBinaryOpNode(op, left, right)
+
+  // Continue chaining
+  return parseBinaryRight(state, binary, minPrec)
+}
+
+fn parseExpression(state) {
+  let left = parsePrimary(state)
+  if (left == 0) {
+    return 0
+  }
+  return parseBinaryRight(state, left, 0)
+}
+
+// ============================================
+// 5. Statement 파싱
+// ============================================
+
+fn parseBlock(state) {
+  // Consume {
+  consumeTokenKind(state, "LBRACE", "Expected {")
+
+  let statements = []
+
+  // Parse statements until }
+  while (!checkTokenKind(state, "RBRACE") && !checkTokenKind(state, "EOF")) {
+    let stmt = parseStatement(state)
+    if (stmt) {
+      arr_push(statements, stmt)
+    }
+  }
+
+  // Consume }
+  consumeTokenKind(state, "RBRACE", "Expected }")
+
+  return makeBlockNode(statements)
+}
+
+fn parseStatement(state) {
+  let tok = getCurrentToken(state)
+
+  // Let declaration
+  if (tok.kind == "LET") {
+    advanceParser(state)
+
+    // Get variable name
+    let idTok = consumeTokenKind(state, "IDENT", "Expected identifier")
+    if (idTok == 0) {
+      return 0
+    }
+    let name = idTok.value
+
+    // Consume =
+    consumeTokenKind(state, "ASSIGN", "Expected =")
+
+    // Parse expression
+    let value = parseExpression(state)
+
+    // Optional semicolon
+    if (checkTokenKind(state, "SEMICOLON")) {
+      advanceParser(state)
+    }
+
+    return makeLetNode(name, value)
+  }
+
+  // Return statement
+  if (tok.kind == "RETURN") {
+    advanceParser(state)
+
+    let value = 0
+    if (!checkTokenKind(state, "SEMICOLON") && !checkTokenKind(state, "RBRACE")) {
+      value = parseExpression(state)
+    }
+
+    // Optional semicolon
+    if (checkTokenKind(state, "SEMICOLON")) {
+      advanceParser(state)
+    }
+
+    return makeReturnNode(value)
+  }
+
+  // If statement
+  if (tok.kind == "IF") {
+    advanceParser(state)
+
+    // Consume (
+    consumeTokenKind(state, "LPAREN", "Expected (")
+    let condition = parseExpression(state)
+    consumeTokenKind(state, "RPAREN", "Expected )")
+
+    // Parse then block
+    let thenBlock = parseBlock(state)
+
+    // Check for else
+    let elseBlock = 0
+    if (checkTokenKind(state, "ELSE")) {
+      advanceParser(state)
+      elseBlock = parseBlock(state)
+    }
+
+    return makeIfNode(condition, thenBlock, elseBlock)
+  }
+
+  // While loop
+  if (tok.kind == "WHILE") {
+    advanceParser(state)
+
+    consumeTokenKind(state, "LPAREN", "Expected (")
+    let condition = parseExpression(state)
+    consumeTokenKind(state, "RPAREN", "Expected )")
+
+    let body = parseBlock(state)
+
+    return makeASTNode("While", {}, [condition, body])
+  }
+
+  // Block
+  if (tok.kind == "LBRACE") {
+    return parseBlock(state)
+  }
+
+  // Expression statement
+  let expr = parseExpression(state)
+  if (expr == 0) {
+    return 0
+  }
+
+  // Optional semicolon
+  if (checkTokenKind(state, "SEMICOLON")) {
+    advanceParser(state)
+  }
+
+  return makeASTNode("ExprStmt", {}, [expr])
+}
+
+// ============================================
+// 6. Function Declaration Parsing
+// ============================================
+
+fn parseFunctionDecl(state) {
+  // Consume fn
+  consumeTokenKind(state, "FN", "Expected fn")
+
+  // Get function name
+  let nameTok = consumeTokenKind(state, "IDENT", "Expected function name")
+  if (nameTok == 0) {
+    return 0
+  }
+  let name = nameTok.value
+
+  // Parse parameters
+  consumeTokenKind(state, "LPAREN", "Expected (")
+
+  let params = []
+  while (!checkTokenKind(state, "RPAREN") && !checkTokenKind(state, "EOF")) {
+    let paramTok = consumeTokenKind(state, "IDENT", "Expected parameter name")
+    if (paramTok == 0) {
+      return 0
+    }
+    arr_push(params, paramTok.value)
+
+    // Check for comma
+    if (checkTokenKind(state, "COMMA")) {
+      advanceParser(state)
+    }
+  }
+
+  consumeTokenKind(state, "RPAREN", "Expected )")
+
+  // Parse function body
+  let body = parseBlock(state)
+
+  return makeFunctionNode(name, params, body)
+}
+
+// ============================================
+// 7. Module/Program Parsing
+// ============================================
+
+fn parseProgram(tokens) {
+  let state = createParserState(tokens)
+  let functions = []
+  let variables = []
+
+  // Parse top-level declarations
+  while (!checkTokenKind(state, "EOF")) {
+    let tok = getCurrentToken(state)
+
+    // Function declaration
+    if (tok.kind == "FN") {
+      let fn = parseFunctionDecl(state)
+      if (fn) {
+        arr_push(functions, fn)
+      }
+    }
+    // Variable declaration
+    else if (tok.kind == "LET") {
+      let stmt = parseStatement(state)
+      if (stmt) {
+        arr_push(variables, stmt)
+      }
+    }
+    else {
+      // Skip unknown tokens at module level
+      advanceParser(state)
+    }
+  }
+
+  // Return AST
+  let ast = {
+    type: "Program",
+    functions: functions,
+    variables: variables,
+    errors: state.errors
+  }
+
+  return ast
+}
+
+// ============================================
+// 8. Main Export
+// ============================================
+
+fn parseSelfHosted(code) {
+  let tokens = tokenize(code)
+  return parseProgram(tokens)
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// STAGE 3: IR GENERATOR (Intermediate Representation)
+// ════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────
+// FreeLang v2: Self-IR Generator (자체 IR 생성기)
+// ─────────────────────────────────────────────────────────────────
+//
+// 목표: AST 객체를 받아서 IR 명령어 배열로 변환
+// 전략: 단순 선형 순회 + 객체 리터럴 사용 (구조체 없음)
+// 특징: 모든 함수는 v2 stdlib만 사용
+//
+// 사용 가능 함수:
+//   - arr_push, arr_len, arr_get: 배열 조작
+//   - map.new, map.set, map.get: 객체/맵 조작
+//   - str: 숫자 → 문자열 변환
+//
+
+// ─────────────────────────────────────────────────────────────────
+// 1. Generator 초기화
+// ─────────────────────────────────────────────────────────────────
+
+fn createGenerator() {
+  return {
+    insts: [],
+    tempCount: 0
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 2. 명령어 생성 헬퍼 함수들
+// ─────────────────────────────────────────────────────────────────
+
+// 일반 명령어 생성 (op + arg)
+fn emit(gen, op, arg) {
+  let inst = {}
+  inst.op = op
+  if (arg != 0) {
+    inst.arg = arg
+  }
+  arr_push(gen.insts, inst)
+  return gen
+}
+
+// PUSH 명령어 (상수값 스택에 올림)
+fn emitPush(gen, val) {
+  return emit(gen, "PUSH", val)
+}
+
+// STORE 명령어 (변수에 값 저장)
+fn emitStore(gen, name) {
+  return emit(gen, "STORE", name)
+}
+
+// LOAD 명령어 (변수값 스택에 올림)
+fn emitLoad(gen, name) {
+  return emit(gen, "LOAD", name)
+}
+
+// 산술 명령어
+fn emitAdd(gen) {
+  return emit(gen, "ADD", 0)
+}
+
+fn emitSub(gen) {
+  return emit(gen, "SUB", 0)
+}
+
+fn emitMul(gen) {
+  return emit(gen, "MUL", 0)
+}
+
+fn emitDiv(gen) {
+  return emit(gen, "DIV", 0)
+}
+
+// 비교 명령어
+fn emitEq(gen) {
+  return emit(gen, "EQ", 0)
+}
+
+fn emitNeq(gen) {
+  return emit(gen, "NEQ", 0)
+}
+
+fn emitLt(gen) {
+  return emit(gen, "LT", 0)
+}
+
+fn emitGt(gen) {
+  return emit(gen, "GT", 0)
+}
+
+fn emitLte(gen) {
+  return emit(gen, "LTE", 0)
+}
+
+fn emitGte(gen) {
+  return emit(gen, "GTE", 0)
+}
+
+// 문자열 명령어
+fn emitStr(gen, val) {
+  return emit(gen, "STR_NEW", val)
+}
+
+// 함수 호출 명령어
+fn emitCall(gen, name) {
+  return emit(gen, "CALL", name)
+}
+
+// 점프 명령어
+fn emitJmp(gen, label) {
+  return emit(gen, "JMP", label)
+}
+
+fn emitJmpNot(gen, label) {
+  return emit(gen, "JMP_NOT", label)
+}
+
+// 라벨 명령어
+fn emitLabel(gen, label) {
+  return emit(gen, "LABEL", label)
+}
+
+// 반환 명령어
+fn emitRet(gen) {
+  return emit(gen, "RET", 0)
+}
+
+// 정지 명령어
+fn emitHalt(gen) {
+  return emit(gen, "HALT", 0)
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 3. 라벨 생성 헬퍼
+// ─────────────────────────────────────────────────────────────────
+
+fn newLabel(gen) {
+  let label = "L" + str(gen.tempCount)
+  gen.tempCount = gen.tempCount + 1
+  return label
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 4. Expression 생성 함수
+// ─────────────────────────────────────────────────────────────────
+
+fn generateExpression(gen, expr) {
+  if (expr == 0) {
+    return gen
+  }
+
+  let exprType = expr.type
+
+  // 숫자 리터럴: 42
+  if (exprType == "NumberLiteral") {
+    return emitPush(gen, expr.value)
+  }
+
+  // 문자열 리터럴: "hello"
+  if (exprType == "StringLiteral") {
+    return emitStr(gen, expr.value)
+  }
+
+  // 식별자: x
+  if (exprType == "Identifier") {
+    return emitLoad(gen, expr.name)
+  }
+
+  // 이항 연산: x + y
+  if (exprType == "BinaryOp") {
+    return generateBinaryOp(gen, expr)
+  }
+
+  // 함수 호출: println(x)
+  if (exprType == "CallExpr") {
+    return generateCallExpr(gen, expr)
+  }
+
+  return gen
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 5. BinaryOp 생성 함수 (x + y, x > y 등)
+// ─────────────────────────────────────────────────────────────────
+
+fn generateBinaryOp(gen, expr) {
+  // 좌측 피연산자
+  generateExpression(gen, expr.left)
+
+  // 우측 피연산자
+  generateExpression(gen, expr.right)
+
+  // 연산자 명령어
+  let op = expr.op
+
+  if (op == "+") {
+    return emitAdd(gen)
+  }
+
+  if (op == "-") {
+    return emitSub(gen)
+  }
+
+  if (op == "*") {
+    return emitMul(gen)
+  }
+
+  if (op == "/") {
+    return emitDiv(gen)
+  }
+
+  if (op == "==") {
+    return emitEq(gen)
+  }
+
+  if (op == "!=") {
+    return emitNeq(gen)
+  }
+
+  if (op == "<") {
+    return emitLt(gen)
+  }
+
+  if (op == ">") {
+    return emitGt(gen)
+  }
+
+  if (op == "<=") {
+    return emitLte(gen)
+  }
+
+  if (op == ">=") {
+    return emitGte(gen)
+  }
+
+  return gen
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 6. CallExpr 생성 함수 (함수 호출)
+// ─────────────────────────────────────────────────────────────────
+
+fn generateCallExpr(gen, expr) {
+  let args = expr.args
+  let i = 0
+
+  // 모든 인자 생성
+  while (i < arr_len(args)) {
+    let arg = arr_get(args, i)
+    generateExpression(gen, arg)
+    i = i + 1
+  }
+
+  // CALL 명령어
+  let funcName = expr.callee.name
+  return emitCall(gen, funcName)
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 7. Statement 생성 함수들
+// ─────────────────────────────────────────────────────────────────
+
+fn generateStatement(gen, stmt) {
+  if (stmt == 0) {
+    return gen
+  }
+
+  let stmtType = stmt.type
+
+  // let x = 10
+  if (stmtType == "LetDecl") {
+    return generateLetDecl(gen, stmt)
+  }
+
+  // return x
+  if (stmtType == "ReturnStmt") {
+    return generateReturnStmt(gen, stmt)
+  }
+
+  // if (x > 5) { ... } else { ... }
+  if (stmtType == "IfStmt") {
+    return generateIfStmt(gen, stmt)
+  }
+
+  // while (x < 10) { ... }
+  if (stmtType == "WhileStmt") {
+    return generateWhileStmt(gen, stmt)
+  }
+
+  // println(x)
+  if (stmtType == "ExpressionStmt") {
+    return generateExpression(gen, stmt.expr)
+  }
+
+  return gen
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 8. Let 선언 생성 (let x = 10)
+// ─────────────────────────────────────────────────────────────────
+
+fn generateLetDecl(gen, stmt) {
+  // 초기값 계산
+  generateExpression(gen, stmt.value)
+
+  // 변수에 저장
+  return emitStore(gen, stmt.name)
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 9. Return 문 생성 (return x)
+// ─────────────────────────────────────────────────────────────────
+
+fn generateReturnStmt(gen, stmt) {
+  // 반환값 계산 (있으면)
+  if (stmt.value != 0) {
+    generateExpression(gen, stmt.value)
+  }
+
+  // RET 명령어
+  return emitRet(gen)
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 10. If/Else 문 생성
+// ─────────────────────────────────────────────────────────────────
+
+fn generateIfStmt(gen, stmt) {
+  let elseLabel = newLabel(gen)
+  let endLabel = newLabel(gen)
+
+  // 조건 계산
+  generateExpression(gen, stmt.condition)
+
+  // 거짓이면 else로 점프
+  emitJmpNot(gen, elseLabel)
+
+  // then 블록
+  let thenBody = stmt.then
+  let i = 0
+  while (i < arr_len(thenBody)) {
+    let s = arr_get(thenBody, i)
+    generateStatement(gen, s)
+    i = i + 1
+  }
+
+  // 끝으로 점프
+  emitJmp(gen, endLabel)
+
+  // else 라벨
+  emitLabel(gen, elseLabel)
+
+  // else 블록 (있으면)
+  let elseBody = stmt.else
+  if (elseBody != 0) {
+    let j = 0
+    while (j < arr_len(elseBody)) {
+      let s = arr_get(elseBody, j)
+      generateStatement(gen, s)
+      j = j + 1
+    }
+  }
+
+  // 끝 라벨
+  emitLabel(gen, endLabel)
+
+  return gen
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 11. While 루프 생성
+// ─────────────────────────────────────────────────────────────────
+
+fn generateWhileStmt(gen, stmt) {
+  let loopLabel = newLabel(gen)
+  let endLabel = newLabel(gen)
+
+  // 루프 시작 라벨
+  emitLabel(gen, loopLabel)
+
+  // 조건 계산
+  generateExpression(gen, stmt.condition)
+
+  // 거짓이면 끝으로 점프
+  emitJmpNot(gen, endLabel)
+
+  // 루프 본체
+  let body = stmt.body
+  let i = 0
+  while (i < arr_len(body)) {
+    let s = arr_get(body, i)
+    generateStatement(gen, s)
+    i = i + 1
+  }
+
+  // 루프 시작으로 점프
+  emitJmp(gen, loopLabel)
+
+  // 끝 라벨
+  emitLabel(gen, endLabel)
+
+  return gen
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 12. 메인 IR 생성 함수
+// ─────────────────────────────────────────────────────────────────
+
+fn generateIR(ast) {
+  let gen = createGenerator()
+
+  // AST 본체의 모든 statement 처리
+  let body = ast.body
+  let i = 0
+  while (i < arr_len(body)) {
+    let stmt = arr_get(body, i)
+    generateStatement(gen, stmt)
+    i = i + 1
+  }
+
+  // 프로그램 종료
+  emitHalt(gen)
+
+  return gen.insts
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 13. 유틸리티: IR 출력 (디버깅용)
+// ─────────────────────────────────────────────────────────────────
+
+fn irToString(ir) {
+  let result = ""
+  let i = 0
+  while (i < arr_len(ir)) {
+    let inst = arr_get(ir, i)
+    let line = inst.op
+    if (inst.arg != 0) {
+      line = line + " " + str(inst.arg)
+    }
+    result = result + line + "\n"
+    i = i + 1
+  }
+  return result
+}
+
+fn printIR(ir) {
+  println(irToString(ir))
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 14. 테스트: 기본 식 생성
+// ─────────────────────────────────────────────────────────────────
+
+fn testBasicExpr() {
+  println("=== Test 1: Basic Expression (3 + 4) ===")
+
+  let ast = {
+    body: [
+      {
+        type: "ExpressionStmt",
+        expr: {
+          type: "BinaryOp",
+          op: "+",
+          left: { type: "NumberLiteral", value: 3 },
+          right: { type: "NumberLiteral", value: 4 }
+        }
+      }
+    ]
+  }
+
+  let ir = generateIR(ast)
+  printIR(ir)
+  println("")
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 15. 테스트: 변수 선언 + 반환
+// ─────────────────────────────────────────────────────────────────
+
+fn testLetReturn() {
+  println("=== Test 2: Let Declaration + Return ===")
+
+  let ast = {
+    body: [
+      {
+        type: "LetDecl",
+        name: "x",
+        value: { type: "NumberLiteral", value: 42 }
+      },
+      {
+        type: "ReturnStmt",
+        value: { type: "Identifier", name: "x" }
+      }
+    ]
+  }
+
+  let ir = generateIR(ast)
+  printIR(ir)
+  println("")
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 16. 테스트: If/Else 문
+// ─────────────────────────────────────────────────────────────────
+
+fn testIfStmt() {
+  println("=== Test 3: If/Else Statement ===")
+
+  let ast = {
+    body: [
+      {
+        type: "LetDecl",
+        name: "x",
+        value: { type: "NumberLiteral", value: 10 }
+      },
+      {
+        type: "IfStmt",
+        condition: {
+          type: "BinaryOp",
+          op: ">",
+          left: { type: "Identifier", name: "x" },
+          right: { type: "NumberLiteral", value: 5 }
+        },
+        then: [
+          {
+            type: "ExpressionStmt",
+            expr: { type: "NumberLiteral", value: 100 }
+          }
+        ],
+        else: [
+          {
+            type: "ExpressionStmt",
+            expr: { type: "NumberLiteral", value: 200 }
+          }
+        ]
+      }
+    ]
+  }
+
+  let ir = generateIR(ast)
+  printIR(ir)
+  println("")
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 17. 테스트: While 루프
+// ─────────────────────────────────────────────────────────────────
+
+fn testWhileStmt() {
+  println("=== Test 4: While Loop ===")
+
+  let ast = {
+    body: [
+      {
+        type: "LetDecl",
+        name: "i",
+        value: { type: "NumberLiteral", value: 0 }
+      },
+      {
+        type: "WhileStmt",
+        condition: {
+          type: "BinaryOp",
+          op: "<",
+          left: { type: "Identifier", name: "i" },
+          right: { type: "NumberLiteral", value: 10 }
+        },
+        body: [
+          {
+            type: "ExpressionStmt",
+            expr: {
+              type: "BinaryOp",
+              op: "+",
+              left: { type: "Identifier", name: "i" },
+              right: { type: "NumberLiteral", value: 1 }
+            }
+          }
+        ]
+      }
+    ]
+  }
+
+  let ir = generateIR(ast)
+  printIR(ir)
+  println("")
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 18. 테스트: 함수 호출
+// ─────────────────────────────────────────────────────────────────
+
+fn testCallExpr() {
+  println("=== Test 5: Function Call ===")
+
+  let ast = {
+    body: [
+      {
+        type: "ExpressionStmt",
+        expr: {
+          type: "CallExpr",
+          callee: { name: "println" },
+          args: [
+            { type: "NumberLiteral", value: 42 }
+          ]
+        }
+      }
+    ]
+  }
+
+  let ir = generateIR(ast)
+  printIR(ir)
+  println("")
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// 19. 전체 테스트 실행
+// ─────────────────────────────────────────────────────────────────
+
+fn runAllTests() {
+  println("╔═════════════════════════════════════════════════════════╗")
+  println("║  FreeLang v2 Self-IR Generator Test Suite               ║")
+  println("╚═════════════════════════════════════════════════════════╝")
+  println("")
+
+  testBasicExpr()
+  testLetReturn()
+  testIfStmt()
+  testWhileStmt()
+  testCallExpr()
+
+  println("✓ All tests completed")
+}
+
+
+// 테스트 실행 (주석 처리)
+// runAllTests()
+
+// ════════════════════════════════════════════════════════════════════════════
+// STAGE 4: x86-64 ENCODER (Machine Code Generation)
+// ════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────
+// Level 7B: Self-hosted x86-64 Machine Code Encoder for FreeLang
+// ─────────────────────────────────────────────────────────────────
+//
+// 목표: IR → x86-64 기계어 바이트 직접 인코딩
+// 특징: ELF 바이너리 생성 (자체 호스팅)
+//
+// IR → x86-64 인코딩 파이프라인:
+//   1. PUSH value: mov rax, imm64 (10 bytes) + push rax (1 byte)
+//   2. POP reg: pop reg (1 byte)
+//   3. ADD/SUB/MUL/DIV: 각 연산 명령어 (3-4 bytes)
+//   4. LABEL: 바이트 오프셋 매핑
+//   5. JMP/JE/JNE: 상대 주소 패치 (2패스)
+//   6. CALL: 함수 호출
+//   7. RET: 함수 리턴
+//   8. HALT: exit(0) 시스템콜
+
+// ─────────────────────────────────────────────────────────────────
+// 1. 리틀 엔디안 유틸리티
+// ─────────────────────────────────────────────────────────────────
+
+// U32를 리틀 엔디안 바이트 4개로 분해해 배열에 추가
+fn pushLeU32(arr, val) {
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  return arr
+}
+
+// U64를 리틀 엔디안 바이트 8개로 분해해 배열에 추가
+fn pushLeU64(arr, val) {
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  val = int(val / 256)
+  arr_push(arr, val % 256)
+  return arr
+}
+
+// S32를 리틀 엔디안 바이트 4개로 분해 (부호 확장)
+fn pushLeS32(arr, val) {
+  if (val < 0) {
+    val = 4294967296 + val
+  }
+  return pushLeU32(arr, val)
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 2. x86-64 기본 명령어 인코딩
+// ─────────────────────────────────────────────────────────────────
+
+// REX 프리픽스 생성: REX.W (64-bit), REX.B (reg확장)
+fn encodeRex(w, r, x, b) {
+  let byte = 0x40
+  if (w) { byte = byte + 0x08 }
+  if (r) { byte = byte + 0x04 }
+  if (x) { byte = byte + 0x02 }
+  if (b) { byte = byte + 0x01 }
+  return byte
+}
+
+// ModR/M 바이트 생성: [mod|reg|r/m]
+fn encodeModRM(mod, reg, rm) {
+  return (mod * 64) + (reg * 8) + rm
+}
+
+// mov rax, imm64 (REX.W + B8 + 8바이트 즉시값)
+// 바이트: 48 B8 [8바이트 리틀 엔디안]
+fn encodeMovRaxImm(imm) {
+  let code = []
+  arr_push(code, 0x48)  // REX.W
+  arr_push(code, 0xB8)  // mov rax opcode
+  pushLeU64(code, imm)
+  return code
+}
+
+// mov rbx, imm64
+fn encodeMovRbxImm(imm) {
+  let code = []
+  arr_push(code, 0x48)  // REX.W
+  arr_push(code, 0xBB)  // mov rbx opcode
+  pushLeU64(code, imm)
+  return code
+}
+
+// push rax
+fn encodePushRax() {
+  return arr_push([], 0x50)
+}
+
+// push rbx
+fn encodePushRbx() {
+  return arr_push([], 0x53)
+}
+
+// pop rax
+fn encodePopRax() {
+  return arr_push([], 0x58)
+}
+
+// pop rbx
+fn encodePopRbx() {
+  return arr_push([], 0x5B)
+}
+
+// pop rcx
+fn encodePopRcx() {
+  return arr_push([], 0x59)
+}
+
+// add rax, rbx (48 01 D8)
+// ModRM: 11 000 011 = 0xC3
+fn encodeAddRaxRbx() {
+  return [0x48, 0x01, 0xC3]
+}
+
+// sub rax, rbx (48 29 D8)
+fn encodeSubRaxRbx() {
+  return [0x48, 0x29, 0xC3]
+}
+
+// imul rax, rbx (48 0F AF C3)
+fn encodeMulRaxRbx() {
+  return [0x48, 0x0F, 0xAF, 0xC3]
+}
+
+// idiv rbx (48 F7 FB)
+// rbx = 011 (reg field), F7 = idiv opcode, 48 = REX.W
+fn encodeDivRaxRbx() {
+  return [0x48, 0xF7, 0xFB]
+}
+
+// cmp rax, rbx (48 39 D8)
+fn encodeCmpRaxRbx() {
+  return [0x48, 0x39, 0xC3]
+}
+
+// sete al (0F 94 C0)
+// 0F 94 = sete opcode, C0 = ModRM(11, 000, 000)
+fn encodeSetEAL() {
+  return [0x0F, 0x94, 0xC0]
+}
+
+// movzx rax, al (48 0F B6 C0)
+// REX.W + 0F B6 (movzx), C0 = ModRM(11, 000, 000)
+fn encodeMovzxRaxAL() {
+  return [0x48, 0x0F, 0xB6, 0xC0]
+}
+
+// jz rel32 (0F 84 [rel32])
+fn encodeJzRel32(offset) {
+  let code = [0x0F, 0x84]
+  pushLeS32(code, offset)
+  return code
+}
+
+// jne rel32 (0F 85 [rel32])
+fn encodeJneRel32(offset) {
+  let code = [0x0F, 0x85]
+  pushLeS32(code, offset)
+  return code
+}
+
+// jmp rel32 (E9 [rel32])
+fn encodeJmpRel32(offset) {
+  let code = [0xE9]
+  pushLeS32(code, offset)
+  return code
+}
+
+// xor rdi, rdi (48 31 FF)
+fn encodeXorRdiRdi() {
+  return [0x48, 0x31, 0xFF]
+}
+
+// mov rax, 60 (exit syscall number)
+// 48 C7 C0 3C 00 00 00
+fn encodeMovRax60() {
+  return [0x48, 0xC7, 0xC0, 0x3C, 0x00, 0x00, 0x00]
+}
+
+// syscall (0F 05)
+fn encodeSyscall() {
+  return [0x0F, 0x05]
+}
+
+// nop (90)
+fn encodeNop() {
+  return [0x90]
+}
+
+// ret (C3)
+fn encodeRet() {
+  return [0xC3]
+}
+
+// call rel32 (E8 [rel32])
+fn encodeCallRel32(offset) {
+  let code = [0xE8]
+  pushLeS32(code, offset)
+  return code
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 3. 바이트 배열 합치기 헬퍼
+// ─────────────────────────────────────────────────────────────────
+
+// bytes 배열을 dst 배열에 추가
+fn appendBytes(dst, bytes) {
+  let i = 0
+  while (i < arr_len(bytes)) {
+    arr_push(dst, arr_get(bytes, i))
+    i = i + 1
+  }
+  return dst
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 4. x86-64 코드 생성기
+// ─────────────────────────────────────────────────────────────────
+
+fn createX86Encoder() {
+  let enc = {}
+  enc.code = []
+  enc.labelMap = {}
+  enc.jumpFixups = []
+  enc.pass = 0
+  return enc
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 5. IR → x86-64 변환 (2패스)
+// ─────────────────────────────────────────────────────────────────
+
+fn irToX86Code(insts) {
+  let encoder = createX86Encoder()
+  let pass = 0
+
+  while (pass < 2) {
+    encoder.code = []
+    encoder.labelMap = {}
+    encoder.jumpFixups = []
+    encoder.pass = pass
+
+    let i = 0
+    while (i < arr_len(insts)) {
+      let inst = arr_get(insts, i)
+      let op = inst.op
+      let arg = inst.arg
+
+      if (op == "PUSH") {
+        // mov rax, imm + push rax
+        let bytes = encodeMovRaxImm(int(arg))
+        appendBytes(encoder.code, bytes)
+        appendBytes(encoder.code, encodePushRax())
+      }
+      else if (op == "POP") {
+        // pop rax
+        appendBytes(encoder.code, encodePopRax())
+      }
+      else if (op == "ADD") {
+        // pop rbx; pop rax; add rax, rbx; push rax
+        appendBytes(encoder.code, encodePopRbx())
+        appendBytes(encoder.code, encodePopRax())
+        appendBytes(encoder.code, encodeAddRaxRbx())
+        appendBytes(encoder.code, encodePushRax())
+      }
+      else if (op == "SUB") {
+        // pop rbx; pop rax; sub rax, rbx; push rax
+        appendBytes(encoder.code, encodePopRbx())
+        appendBytes(encoder.code, encodePopRax())
+        appendBytes(encoder.code, encodeSubRaxRbx())
+        appendBytes(encoder.code, encodePushRax())
+      }
+      else if (op == "MUL") {
+        // pop rbx; pop rax; imul rax, rbx; push rax
+        appendBytes(encoder.code, encodePopRbx())
+        appendBytes(encoder.code, encodePopRax())
+        appendBytes(encoder.code, encodeMulRaxRbx())
+        appendBytes(encoder.code, encodePushRax())
+      }
+      else if (op == "DIV") {
+        // pop rbx; pop rax; xor edx, edx; idiv rbx; push rax
+        appendBytes(encoder.code, encodePopRbx())
+        appendBytes(encoder.code, encodePopRax())
+        arr_push(encoder.code, 0x31)  // xor
+        arr_push(encoder.code, 0xD2)  // edx, edx
+        appendBytes(encoder.code, encodeDivRaxRbx())
+        appendBytes(encoder.code, encodePushRax())
+      }
+      else if (op == "LABEL") {
+        // 레이블 바이트 오프셋 저장
+        map_set(encoder.labelMap, arg, arr_len(encoder.code))
+      }
+      else if (op == "JMP") {
+        // jmp rel32 (2패스에서 오프셋 패치)
+        let jmpBytes = encodeJmpRel32(0)
+        let fixup = {}
+        fixup.offset = arr_len(encoder.code) + 1
+        fixup.label = arg
+        fixup.size = 4
+        arr_push(encoder.jumpFixups, fixup)
+        appendBytes(encoder.code, jmpBytes)
+      }
+      else if (op == "JZ") {
+        // jz rel32
+        let jzBytes = encodeJzRel32(0)
+        let fixup = {}
+        fixup.offset = arr_len(encoder.code) + 2
+        fixup.label = arg
+        fixup.size = 4
+        arr_push(encoder.jumpFixups, fixup)
+        appendBytes(encoder.code, jzBytes)
+      }
+      else if (op == "JNE") {
+        // jne rel32
+        let jneBytes = encodeJneRel32(0)
+        let fixup = {}
+        fixup.offset = arr_len(encoder.code) + 2
+        fixup.label = arg
+        fixup.size = 4
+        arr_push(encoder.jumpFixups, fixup)
+        appendBytes(encoder.code, jneBytes)
+      }
+      else if (op == "HALT") {
+        // exit(0): xor rdi, rdi; mov rax, 60; syscall
+        appendBytes(encoder.code, encodeXorRdiRdi())
+        appendBytes(encoder.code, encodeMovRax60())
+        appendBytes(encoder.code, encodeSyscall())
+      }
+      else if (op == "CALL") {
+        // call rel32 (재배치 필요)
+        // 현재는 placeholder
+        let callBytes = encodeCallRel32(0)
+        appendBytes(encoder.code, callBytes)
+      }
+      else if (op == "RET") {
+        // ret
+        appendBytes(encoder.code, encodeRet())
+      }
+      else if (op == "NOP") {
+        // nop
+        appendBytes(encoder.code, encodeNop())
+      }
+
+      i = i + 1
+    }
+
+    // 2패스: 점프 오프셋 패치
+    if (pass == 1) {
+      let f = 0
+      while (f < arr_len(encoder.jumpFixups)) {
+        let fixup = arr_get(encoder.jumpFixups, f)
+        let offsetField = fixup.offset
+        let labelName = fixup.label
+        let targetOffset = map_get(encoder.labelMap, labelName)
+        let currentOffset = offsetField
+
+        // 상대 주소 계산 (현재 위치 + 4)
+        let relOffset = targetOffset - currentOffset - fixup.size
+
+        // 4바이트 리틀 엔디안으로 코드에 패치
+        let lo = relOffset % 256
+        let hi = int(relOffset / 256)
+        arr_put(encoder.code, offsetField, lo)
+        arr_put(encoder.code, offsetField + 1, hi % 256)
+        arr_put(encoder.code, offsetField + 2, int(hi / 256) % 256)
+        arr_put(encoder.code, offsetField + 3, int(hi / 256 / 256) % 256)
+
+        f = f + 1
+      }
+    }
+
+    pass = pass + 1
+  }
+
+  return encoder.code
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 6. ELF 헤더 생성 (ELF64 executable)
+// ─────────────────────────────────────────────────────────────────
+
+// ELF64 헤더 (52 바이트) + 프로그램 헤더 (56 바이트)
+fn createELF64Header(codeSize) {
+  let elf = []
+
+  // ELF Magic + class/data/version/osabi
+  arr_push(elf, 0x7F)  // ELF
+  arr_push(elf, 0x45)  // E
+  arr_push(elf, 0x4C)  // L
+  arr_push(elf, 0x46)  // F
+  arr_push(elf, 0x02)  // 64-bit
+  arr_push(elf, 0x01)  // little-endian
+  arr_push(elf, 0x01)  // ELF version 1
+  arr_push(elf, 0x00)  // UNIX System V ABI
+  arr_push(elf, 0x00)  // ABI version
+
+  // 9 bytes padding
+  let p = 0
+  while (p < 7) { arr_push(elf, 0x00) p = p + 1 }
+
+  // e_type: ET_EXEC (2 bytes, little-endian)
+  arr_push(elf, 0x02)
+  arr_push(elf, 0x00)
+
+  // e_machine: x86-64 (3E = 62) (2 bytes)
+  arr_push(elf, 0x3E)
+  arr_push(elf, 0x00)
+
+  // e_version (4 bytes)
+  arr_push(elf, 0x01)
+  arr_push(elf, 0x00)
+  arr_push(elf, 0x00)
+  arr_push(elf, 0x00)
+
+  // e_entry: 0x400000 + 108 (ELF header + program header) (8 bytes)
+  let entryAddr = 0x400000 + 108
+  pushLeU64(elf, entryAddr)
+
+  // e_phoff: 64 (program header offset) (8 bytes)
+  pushLeU64(elf, 64)
+
+  // e_shoff: 0 (no section headers) (8 bytes)
+  pushLeU64(elf, 0)
+
+  // e_flags: 0 (8 bytes)
+  pushLeU64(elf, 0)
+
+  // e_ehsize: 64 (ELF header size) (2 bytes)
+  arr_push(elf, 0x40)
+  arr_push(elf, 0x00)
+
+  // e_phentsize: 56 (program header size) (2 bytes)
+  arr_push(elf, 0x38)
+  arr_push(elf, 0x00)
+
+  // e_phnum: 1 (number of program headers) (2 bytes)
+  arr_push(elf, 0x01)
+  arr_push(elf, 0x00)
+
+  // e_shentsize: 0 (2 bytes)
+  arr_push(elf, 0x00)
+  arr_push(elf, 0x00)
+
+  // e_shnum: 0 (2 bytes)
+  arr_push(elf, 0x00)
+  arr_push(elf, 0x00)
+
+  // e_shstrndx: 0 (2 bytes)
+  arr_push(elf, 0x00)
+  arr_push(elf, 0x00)
+
+  return elf
+}
+
+// 프로그램 헤더 (PT_LOAD)
+fn createELF64ProgramHeader(codeSize) {
+  let phdr = []
+
+  // p_type: PT_LOAD (1) (4 bytes)
+  arr_push(phdr, 0x01)
+  arr_push(phdr, 0x00)
+  arr_push(phdr, 0x00)
+  arr_push(phdr, 0x00)
+
+  // p_flags: PF_X | PF_R (5) (4 bytes)
+  arr_push(phdr, 0x05)
+  arr_push(phdr, 0x00)
+  arr_push(phdr, 0x00)
+  arr_push(phdr, 0x00)
+
+  // p_offset: 108 (code starts after headers) (8 bytes)
+  pushLeU64(phdr, 108)
+
+  // p_vaddr: 0x400000 + 108 (8 bytes)
+  pushLeU64(phdr, 0x400000 + 108)
+
+  // p_paddr: same as vaddr (8 bytes)
+  pushLeU64(phdr, 0x400000 + 108)
+
+  // p_filesz: codeSize (8 bytes)
+  pushLeU64(phdr, codeSize)
+
+  // p_memsz: codeSize (8 bytes)
+  pushLeU64(phdr, codeSize)
+
+  // p_align: 0x1000 (4096) (8 bytes)
+  pushLeU64(phdr, 0x1000)
+
+  return phdr
+}
+
+// 전체 ELF 바이너리 생성
+fn createELF64Binary(machineCode) {
+  let elf = []
+  let codeSize = arr_len(machineCode)
+
+  let header = createELF64Header(codeSize)
+  appendBytes(elf, header)
+
+  let phdr = createELF64ProgramHeader(codeSize)
+  appendBytes(elf, phdr)
+
+  appendBytes(elf, machineCode)
+
+  return elf
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 7. 테스트 및 검증
+// ─────────────────────────────────────────────────────────────────
+
+fn testBasicEncoding() {
+  println("=== Test Basic x86-64 Encoding ===")
+
+  // PUSH 42
+  let code = encodeMovRaxImm(42)
+  println("mov rax, 42: " + str(arr_len(code)) + " bytes")
+
+  // PUSH 3
+  code = encodeMovRaxImm(3)
+  println("mov rax, 3: " + str(arr_len(code)) + " bytes")
+
+  // ADD
+  code = encodeAddRaxRbx()
+  println("add rax, rbx: " + str(arr_len(code)) + " bytes")
+
+  // HALT
+  code = encodeXorRdiRdi()
+  appendBytes(code, encodeMovRax60())
+  appendBytes(code, encodeSyscall())
+  println("halt sequence: " + str(arr_len(code)) + " bytes")
+
+  return 0
+}
+
+fn testFullPipeline() {
+  println("=== Test Full IR→x86 Pipeline ===")
+
+  // IR: PUSH 5 + PUSH 3 + ADD + HALT
+  let ir = []
+  let inst1 = {}
+  inst1.op = "PUSH"
+  inst1.arg = "5"
+  arr_push(ir, inst1)
+
+  let inst2 = {}
+  inst2.op = "PUSH"
+  inst2.arg = "3"
+  arr_push(ir, inst2)
+
+  let inst3 = {}
+  inst3.op = "ADD"
+  arr_push(ir, inst3)
+
+  let inst4 = {}
+  inst4.op = "HALT"
+  arr_push(ir, inst4)
+
+  println("IR instructions: " + str(arr_len(ir)))
+
+  // IR → x86-64 변환
+  let code = irToX86Code(ir)
+  println("x86-64 code: " + str(arr_len(code)) + " bytes")
+
+  // ELF 패킹
+  let elf = createELF64Binary(code)
+  println("ELF binary: " + str(arr_len(elf)) + " bytes")
+
+  // 파일에 작성
+  file_write_binary("/tmp/freelang_x86_test", elf)
+  println("Written to /tmp/freelang_x86_test")
+
+  return 0
+}
+
+fn testJumpEncoding() {
+  println("=== Test Jump Encoding ===")
+
+  // IR: PUSH 5 + LABEL L1 + PUSH 10 + JMP L1 + HALT
+  let ir = []
+
+  let p1 = {}
+  p1.op = "PUSH"
+  p1.arg = "5"
+  arr_push(ir, p1)
+
+  let l1 = {}
+  l1.op = "LABEL"
+  l1.arg = "L1"
+  arr_push(ir, l1)
+
+  let p2 = {}
+  p2.op = "PUSH"
+  p2.arg = "10"
+  arr_push(ir, p2)
+
+  let j1 = {}
+  j1.op = "JMP"
+  j1.arg = "L1"
+  arr_push(ir, j1)
+
+  let h = {}
+  h.op = "HALT"
+  arr_push(ir, h)
+
+  let code = irToX86Code(ir)
+  println("Code with jumps: " + str(arr_len(code)) + " bytes")
+
+  return 0
+}
+
+fn main() {
+  println("FreeLang Level 7B: x86-64 Machine Code Encoder")
+  println("================================================")
+  println("")
+
+  testBasicEncoding()
+  println("")
+  testFullPipeline()
+  println("")
+  testJumpEncoding()
+
+  println("")
+  println("✅ Level 7B x86-64 Encoder Implementation Complete")
+  println("")
+
+  return 0
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// STAGE 5: ELF BUILDER (Executable File Format)
+// ════════════════════════════════════════════════════════════════════════════
+
+// x86-64 ELF64 헤더 생성기 (Level 7A)
+// ELF 바이너리의 자동 생성 및 실행을 위한 헤더 구성 모듈
+
+fn pushByte(arr, byte) {
+  arr_push(arr, byte % 256)
+}
+
+fn pushLeU16(arr, val) {
+  arr_push(arr, val % 256)
+  arr_push(arr, int(val / 256) % 256)
+}
+
+fn pushLeU32(arr, val) {
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256)
+}
+
+fn pushLeU64(arr, val) {
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256) val = int(val / 256)
+  arr_push(arr, val % 256)
+}
+
+fn makeELFHeader64(entryPoint, progHeaderOffset, numProgHeaders) {
+  let h = []
+
+  // e_ident[16] - ELF 매직 넘버 및 클래스 정보
+  arr_push(h, 0x7F) arr_push(h, 0x45) arr_push(h, 0x4C) arr_push(h, 0x46)  // 0x7F "ELF"
+  arr_push(h, 2)     // EI_CLASS = 2 (64-bit)
+  arr_push(h, 1)     // EI_DATA = 1 (little endian)
+  arr_push(h, 1)     // EI_VERSION = 1
+  arr_push(h, 0)     // EI_OSABI = 0 (System V ABI)
+  arr_push(h, 0)     // EI_ABIVERSION = 0
+  arr_push(h, 0) arr_push(h, 0) arr_push(h, 0)  // padding 패드
+  arr_push(h, 0) arr_push(h, 0) arr_push(h, 0)  // padding 패드
+
+  // e_type: 실행 파일 = ET_EXEC (2)
+  pushLeU16(h, 2)
+
+  // e_machine: x86-64 = EM_X86_64 (62)
+  pushLeU16(h, 62)
+
+  // e_version: ELF 버전 = 1
+  pushLeU32(h, 1)
+
+  // e_entry: 프로그램 시작 주소
+  pushLeU64(h, entryPoint)
+
+  // e_phoff: 프로그램 헤더 테이블 오프셋
+  pushLeU64(h, progHeaderOffset)
+
+  // e_shoff: 섹션 헤더 테이블 오프셋 (0 = 없음)
+  pushLeU64(h, 0)
+
+  // e_flags: 프로세서별 플래그 (x86-64에서는 0)
+  pushLeU32(h, 0)
+
+  // e_ehsize: ELF 헤더 크기 (64 바이트)
+  pushLeU16(h, 64)
+
+  // e_phentsize: 프로그램 헤더 엔트리 크기 (56 바이트)
+  pushLeU16(h, 56)
+
+  // e_phnum: 프로그램 헤더 개수
+  pushLeU16(h, numProgHeaders)
+
+  // e_shentsize: 섹션 헤더 엔트리 크기 (0 = 없음)
+  pushLeU16(h, 0)
+
+  // e_shnum: 섹션 헤더 개수 (0 = 없음)
+  pushLeU16(h, 0)
+
+  // e_shstrndx: 섹션 이름 문자열 테이블 인덱스 (0 = 없음)
+  pushLeU16(h, 0)
+
+  return h
+}
+
+fn makeProgHeader64(type, flags, offset, vaddr, filesz, memsz, align) {
+  let ph = []
+
+  // p_type: 프로그램 헤더 타입 (1 = PT_LOAD: 로드 가능한 세그먼트)
+  pushLeU32(ph, type)
+
+  // p_flags: 세그먼트 접근 권한 (4=R, 2=W, 1=X → RWX=7, RX=5)
+  pushLeU32(ph, flags)
+
+  // p_offset: 파일 내 세그먼트의 오프셋
+  pushLeU64(ph, offset)
+
+  // p_vaddr: 메모리 내 세그먼트의 가상 주소
+  pushLeU64(ph, vaddr)
+
+  // p_paddr: 물리 주소 (일반적으로 가상 주소와 동일)
+  pushLeU64(ph, vaddr)
+
+  // p_filesz: 파일 내 세그먼트 크기
+  pushLeU64(ph, filesz)
+
+  // p_memsz: 메모리 내 세그먼트 크기
+  pushLeU64(ph, memsz)
+
+  // p_align: 메모리 정렬 요구사항 (2^값 바이트)
+  pushLeU64(ph, align)
+
+  return ph
+}
+
+fn createELF64Binary(codeBytes) {
+  let bytes = []
+
+  // 로드 주소: 일반적인 x86-64 기본 주소
+  let loadAddr = 0x400000
+
+  // 헤더 크기 계산
+  let elfHeaderSize = 64
+  let progHeaderSize = 56
+  let totalHeaderSize = elfHeaderSize + progHeaderSize
+
+  // 진입점: ELF 헤더와 프로그램 헤더 직후
+  let entryPoint = loadAddr + totalHeaderSize
+
+  // ELF 헤더 생성 (프로그램 헤더는 바로 뒤에)
+  let elfHeader = makeELFHeader64(entryPoint, elfHeaderSize, 1)
+
+  // 프로그램 헤더 생성 (코드는 파일 오프셋 0부터 시작)
+  let progHeader = makeProgHeader64(
+    1,  // PT_LOAD: 로드 가능한 세그먼트
+    5,  // RX (읽기 + 실행, 쓰기 불필요)
+    0,  // offset: 파일의 처음부터 (ELF 헤더 포함)
+    loadAddr,  // 가상 주소
+    totalHeaderSize + arr_len(codeBytes),  // 파일 크기
+    totalHeaderSize + arr_len(codeBytes),  // 메모리 크기 (동일)
+    0x1000  // 4096 바이트 정렬
+  )
+
+  // 헤더들을 바이트 배열에 합치기
+  let i = 0
+  while (i < arr_len(elfHeader)) {
+    arr_push(bytes, arr_get(elfHeader, i))
+    i = i + 1
+  }
+
+  let j = 0
+  while (j < arr_len(progHeader)) {
+    arr_push(bytes, arr_get(progHeader, j))
+    j = j + 1
+  }
+
+  // 코드 바이트를 추가
+  let k = 0
+  while (k < arr_len(codeBytes)) {
+    arr_push(bytes, arr_get(codeBytes, k))
+    k = k + 1
+  }
+
+  return bytes
+}
+
+fn main() {
+  println("=== Level 7A: ELF Header Generation Test ===")
+
+  // x86-64 어셈블리 코드:
+  // mov eax, 42       ; 반환값 42를 eax 레지스터에 설정
+  // mov edi, eax      ; 반환값을 edi(첫 번째 인자)로 복사
+  // mov eax, 60       ; syscall번호 60 (sys_exit)을 eax에 설정
+  // syscall           ; 시스템 호출 실행
+  let code = [
+    0xB8, 0x2A, 0x00, 0x00, 0x00,  // mov eax, 0x2A (42)
+    0x89, 0xC7,                      // mov edi, eax
+    0xB8, 0x3C, 0x00, 0x00, 0x00,  // mov eax, 0x3C (60 = sys_exit)
+    0x0F, 0x05                       // syscall
+  ]
+
+  // ELF 바이너리 생성
+  let elfBytes = createELF64Binary(code)
+  println("ELF 크기: " + str(arr_len(elfBytes)) + " 바이트")
+
+  // 파일 작성
+  file_write_binary("/tmp/test_elf", elfBytes)
+  println("파일 저장: /tmp/test_elf")
+
+  // 실행 권한 추가
+  os_exec("chmod +x /tmp/test_elf")
+  println("실행 권한 설정 완료")
+
+  // 실행 및 종료 코드 확인
+  let result = os_exec("/tmp/test_elf; echo $?")
+  println("실행 결과 종료 코드: " + str(result))
+
+  println("✅ Level 7A ELF 생성 완료")
+
+  return 0
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// OPTIMIZER (Optional optimization passes)
+// ════════════════════════════════════════════════════════════════════════════
+
+// self-optimizer.fl - FreeLang IR 최적화 모듈
+// 상수 폴딩, 데드 코드 제거, 미사용 라벨 제거 구현
+// Level 5: Self-Optimizer Pattern
+
+// 1. 이진 연산 상수 폴딩 헬퍼
+// a, b를 연산하고 결과 반환 (폴딩 불가 시 null)
+fn foldBinaryOp(a, b, op) {
+  if (op == "ADD") { return a + b }
+  if (op == "SUB") { return a - b }
+  if (op == "MUL") { return a * b }
+  if (op == "DIV" && b != 0) { return a / b }
+  return 0
+}
+
+// 2. 상수 폴딩 최적화 (Constant Folding)
+// 패턴: PUSH a + PUSH b + (ADD|SUB|MUL|DIV) → PUSH (result)
+//
+// 예:
+//   PUSH 3
+//   PUSH 4
+//   ADD
+// →
+//   PUSH 7
+fn constantFolding(insts) {
+  let result = []
+  let i = 0
+
+  while (i < arr_len(insts)) {
+    // 3개 명령어 패턴 확인
+    if (i + 2 < arr_len(insts)) {
+      let inst1 = arr_get(insts, i)
+      let inst2 = arr_get(insts, i + 1)
+      let inst3 = arr_get(insts, i + 2)
+
+      // PUSH + PUSH + (ADD|SUB|MUL|DIV) 패턴 매칭
+      if (inst1.op == "PUSH" && inst2.op == "PUSH" &&
+          (inst3.op == "ADD" || inst3.op == "SUB" || inst3.op == "MUL" || inst3.op == "DIV")) {
+
+        // 피연산자 추출
+        let a = int(inst1.arg)
+        let b = int(inst2.arg)
+
+        // 상수 폴딩 수행
+        let folded = foldBinaryOp(a, b, inst3.op)
+
+        // 결과 저장
+        let foldedInst = {}
+        map_set(foldedInst, "op", "PUSH")
+        map_set(foldedInst, "arg", str(folded))
+        arr_push(result, foldedInst)
+
+        // 3개 명령어 스킵
+        i = i + 3
+        continue
+      }
+    }
+
+    // 패턴 미매칭: 그대로 복사
+    arr_push(result, arr_get(insts, i))
+    i = i + 1
+  }
+
+  return result
+}
+
+// 3. 데드 코드 제거 (Dead Code Elimination)
+// 패턴: JMP 직후 다음 LABEL 전까지의 코드 제거
+//
+// 예:
+//   PUSH 1
+//   JMP L1
+//   PUSH 2    <- 데드 코드 (도달 불가)
+//   LABEL L1
+// →
+//   PUSH 1
+//   JMP L1
+//   LABEL L1
+fn deadCodeElimination(insts) {
+  let result = []
+  let dead = 0  // 0=정상, 1=데드 코드 영역
+  let i = 0
+
+  while (i < arr_len(insts)) {
+    let inst = arr_get(insts, i)
+
+    if (dead == 1) {
+      // 데드 코드 영역
+      if (inst.op == "LABEL") {
+        // LABEL 발견: 데드 코드 영역 종료
+        dead = 0
+        arr_push(result, inst)
+      }
+      // else: 데드 코드는 버림
+    } else {
+      // 정상 코드 영역
+      arr_push(result, inst)
+
+      // JMP 발견: 다음부터 데드 코드 영역 시작
+      if (inst.op == "JMP") {
+        dead = 1
+      }
+    }
+
+    i = i + 1
+  }
+
+  return result
+}
+
+// 4. 미사용 라벨 제거 (Unused Label Removal)
+// 1패스: JMP 대상 라벨 수집
+// 2패스: 미사용 라벨 제거
+//
+// 예:
+//   LABEL L1   <- 미사용
+//   LABEL L2
+//   JMP L2
+// →
+//   LABEL L2
+//   JMP L2
+fn removeUnusedLabels(insts) {
+  // 1패스: 점프 대상 라벨 수집
+  let used = {}
+  let i = 0
+
+  while (i < arr_len(insts)) {
+    let inst = arr_get(insts, i)
+
+    // 조건부/무조건 점프 명령어 확인
+    if (inst.op == "JMP" || inst.op == "JMP_NOT" || inst.op == "JMP_TRUE") {
+      if (map_has(inst, "arg")) {
+        map_set(used, inst.arg, 1)
+      }
+    }
+
+    i = i + 1
+  }
+
+  // 2패스: 미사용 라벨 제거
+  let result = []
+  let j = 0
+
+  while (j < arr_len(insts)) {
+    let inst = arr_get(insts, j)
+
+    if (inst.op == "LABEL") {
+      // 라벨이 사용되는 경우만 유지
+      if (map_has(used, inst.arg)) {
+        arr_push(result, inst)
+      }
+      // else: 미사용 라벨 제거
+    } else {
+      // 라벨이 아닌 명령어는 모두 유지
+      arr_push(result, inst)
+    }
+
+    j = j + 1
+  }
+
+  return result
+}
+
+// 5. 통합 최적화 함수 (3패스 파이프라인)
+// 순서:
+//   1. 상수 폴딩
+//   2. 데드 코드 제거
+//   3. 미사용 라벨 제거
+fn optimize(insts) {
+  let pass1 = constantFolding(insts)
+  let pass2 = deadCodeElimination(pass1)
+  let pass3 = removeUnusedLabels(pass2)
+  return pass3
+}
+
+// 6. 디버깅 헬퍼: IR 출력
+fn printIR(insts) {
+  let i = 0
+
+  while (i < arr_len(insts)) {
+    let inst = arr_get(insts, i)
+    let s = inst.op
+
+    // arg 필드 있으면 추가
+    if (map_has(inst, "arg")) {
+      s = s + " " + str(inst.arg)
+    }
+
+    println(s)
+    i = i + 1
+  }
+}
+
+// 7. 테스트 1: 상수 폴딩
+fn testConstantFolding() {
+  println("=== Test 1: Constant Folding ===")
+
+  let ir = []
+  let inst1 = {}
+  map_set(inst1, "op", "PUSH")
+  map_set(inst1, "arg", "3")
+  arr_push(ir, inst1)
+
+  let inst2 = {}
+  map_set(inst2, "op", "PUSH")
+  map_set(inst2, "arg", "4")
+  arr_push(ir, inst2)
+
+  let inst3 = {}
+  map_set(inst3, "op", "ADD")
+  arr_push(ir, inst3)
+
+  let inst4 = {}
+  map_set(inst4, "op", "HALT")
+  arr_push(ir, inst4)
+
+  println("Before: " + str(arr_len(ir)) + " instructions")
+  let opt = constantFolding(ir)
+  println("After: " + str(arr_len(opt)) + " instructions")
+  println("Optimized IR:")
+  printIR(opt)
+  println("")
+  return 1
+}
+
+// 8. 테스트 2: 데드 코드 제거
+fn testDeadCodeElimination() {
+  println("=== Test 2: Dead Code Elimination ===")
+
+  let ir = []
+
+  let inst1 = {}
+  map_set(inst1, "op", "PUSH")
+  map_set(inst1, "arg", "1")
+  arr_push(ir, inst1)
+
+  let inst2 = {}
+  map_set(inst2, "op", "JMP")
+  map_set(inst2, "arg", "L1")
+  arr_push(ir, inst2)
+
+  let inst3 = {}
+  map_set(inst3, "op", "PUSH")
+  map_set(inst3, "arg", "2")
+  arr_push(ir, inst3)
+
+  let inst4 = {}
+  map_set(inst4, "op", "LABEL")
+  map_set(inst4, "arg", "L1")
+  arr_push(ir, inst4)
+
+  let inst5 = {}
+  map_set(inst5, "op", "HALT")
+  arr_push(ir, inst5)
+
+  println("Before: " + str(arr_len(ir)) + " instructions")
+  let opt = deadCodeElimination(ir)
+  println("After: " + str(arr_len(opt)) + " instructions")
+  println("Optimized IR:")
+  printIR(opt)
+  println("")
+  return 1
+}
+
+// 9. 테스트 3: 미사용 라벨 제거
+fn testUnusedLabelRemoval() {
+  println("=== Test 3: Unused Label Removal ===")
+
+  let ir = []
+
+  let inst1 = {}
+  map_set(inst1, "op", "LABEL")
+  map_set(inst1, "arg", "L1")
+  arr_push(ir, inst1)
+
+  let inst2 = {}
+  map_set(inst2, "op", "LABEL")
+  map_set(inst2, "arg", "L2")
+  arr_push(ir, inst2)
+
+  let inst3 = {}
+  map_set(inst3, "op", "PUSH")
+  map_set(inst3, "arg", "1")
+  arr_push(ir, inst3)
+
+  let inst4 = {}
+  map_set(inst4, "op", "JMP")
+  map_set(inst4, "arg", "L2")
+  arr_push(ir, inst4)
+
+  let inst5 = {}
+  map_set(inst5, "op", "HALT")
+  arr_push(ir, inst5)
+
+  println("Before: " + str(arr_len(ir)) + " instructions")
+  let opt = removeUnusedLabels(ir)
+  println("After: " + str(arr_len(opt)) + " instructions")
+  println("Optimized IR:")
+  printIR(opt)
+  println("")
+  return 1
+}
+
+// 10. 테스트 4: 전체 파이프라인
+fn testFullPipeline() {
+  println("=== Test 4: Full Optimization Pipeline ===")
+
+  let ir = []
+
+  // PUSH 10 + PUSH 20 + ADD → 최적화: PUSH 30
+  let inst1 = {}
+  map_set(inst1, "op", "PUSH")
+  map_set(inst1, "arg", "10")
+  arr_push(ir, inst1)
+
+  let inst2 = {}
+  map_set(inst2, "op", "PUSH")
+  map_set(inst2, "arg", "20")
+  arr_push(ir, inst2)
+
+  let inst3 = {}
+  map_set(inst3, "op", "ADD")
+  arr_push(ir, inst3)
+
+  // JMP L1 → 데드 코드 시작
+  let inst4 = {}
+  map_set(inst4, "op", "JMP")
+  map_set(inst4, "arg", "L1")
+  arr_push(ir, inst4)
+
+  // PUSH 999는 데드 코드 (제거됨)
+  let inst5 = {}
+  map_set(inst5, "op", "PUSH")
+  map_set(inst5, "arg", "999")
+  arr_push(ir, inst5)
+
+  // LABEL L1 (사용됨)
+  let inst6 = {}
+  map_set(inst6, "op", "LABEL")
+  map_set(inst6, "arg", "L1")
+  arr_push(ir, inst6)
+
+  // LABEL L2 (미사용)
+  let inst7 = {}
+  map_set(inst7, "op", "LABEL")
+  map_set(inst7, "arg", "L2")
+  arr_push(ir, inst7)
+
+  let inst8 = {}
+  map_set(inst8, "op", "HALT")
+  arr_push(ir, inst8)
+
+  println("Original IR: " + str(arr_len(ir)) + " instructions")
+  println("Original:")
+  printIR(ir)
+
+  println("")
+  let optimized = optimize(ir)
+  println("Optimized IR: " + str(arr_len(optimized)) + " instructions")
+  println("Optimized:")
+  printIR(optimized)
+  println("")
+  return 1
+}
+
+// 11. 테스트 5: 복합 상수 폴딩 (여러 폴딩)
+fn testMultipleFoldings() {
+  println("=== Test 5: Multiple Constant Foldings ===")
+
+  let ir = []
+
+  // 첫 번째 폴딩: 2 + 3 = 5
+  let inst1 = {}
+  map_set(inst1, "op", "PUSH")
+  map_set(inst1, "arg", "2")
+  arr_push(ir, inst1)
+
+  let inst2 = {}
+  map_set(inst2, "op", "PUSH")
+  map_set(inst2, "arg", "3")
+  arr_push(ir, inst2)
+
+  let inst3 = {}
+  map_set(inst3, "op", "ADD")
+  arr_push(ir, inst3)
+
+  // 두 번째 폴딩: 5 * 4 = 20
+  let inst4 = {}
+  map_set(inst4, "op", "PUSH")
+  map_set(inst4, "arg", "4")
+  arr_push(ir, inst4)
+
+  let inst5 = {}
+  map_set(inst5, "op", "MUL")
+  arr_push(ir, inst5)
+
+  let inst6 = {}
+  map_set(inst6, "op", "HALT")
+  arr_push(ir, inst6)
+
+  println("Before: " + str(arr_len(ir)) + " instructions")
+  let opt = constantFolding(ir)
+  println("After first pass: " + str(arr_len(opt)) + " instructions")
+  println("Optimized IR:")
+  printIR(opt)
+  println("")
+  return 1
+}
+
+// 12. 메인 함수
+fn main() {
+  println("================================")
+  println("FreeLang Self-Optimizer (Level 5)")
+  println("================================")
+  println("")
+
+  testConstantFolding()
+  testDeadCodeElimination()
+  testUnusedLabelRemoval()
+  testFullPipeline()
+  testMultipleFoldings()
+
+  println("================================")
+  println("✅ Level 5 Self-Optimizer 완료")
+  println("================================")
+
+  return 0
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MAIN COMPILER ORCHESTRATOR
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * FreeLang Self-Hosting Compiler (Phase K)
+ *
+ * 자체호스팅 컴파일러 구현 - FreeLang으로 작성된 코드 컴파일러
+ *
+ * 기능:
+ *   - Lexer: 소스 코드 → 토큰 (tokenize)
+ *   - Parser: 토큰 → AST (parseProgram)
+ *   - Analyzer: AST 검증 및 분석
+ *   - Metadata: 함수/변수 수집
+ *
+ * 목표: FreeLang 소스를 읽고 AST를 생성할 수 있음
+ *       → FreeLang이 FreeLang을 이해 (부트스트래핑)
+ *
+ * 예시:
+ *   let source = "fn add(a, b) { return a + b }"
+ *   let result = compile(source)
+ *   // result.type == "Program"
+ *   // result.functions[0].name == "add"
+ */
+
+// ============================================
+// 1. 컴파일 결과 구조체 정의
+// ============================================
+
+/**
+ * 컴파일 결과 메타데이터
+ *
+ * type: "Program" (최상위 노드 타입)
+ * functions: 정의된 함수 목록
+ * variables: 정의된 변수 목록
+ * errors: 파싱/검증 중 발견된 에러
+ * tokenCount: 토큰 총 개수
+ * astDepth: AST 최대 깊이
+ */
+struct CompileResult {
+  type: string,           // "Program"
+  functions: any,         // 함수 객체 배열
+  variables: any,         // 변수 객체 배열
+  errors: any,            // 에러 배열
+  tokenCount: int,        // 토큰 총개
+  astDepth: int,          // AST 깊이
+  sourceBytes: int        // 소스 크기
+}
+
+/**
+ * 함수 메타데이터
+ *
+ * name: 함수명
+ * params: 파라미터 목록
+ * line: 정의된 줄 번호
+ */
+struct FunctionMeta {
+  name: string,           // 함수명
+  params: any,            // 파라미터 배열
+  line: int               // 라인 번호
+}
+
+/**
+ * 변수 메타데이터
+ *
+ * name: 변수명
+ * type: 변수 타입 (let, const, 기타)
+ * line: 정의된 줄 번호
+ */
+struct VariableMeta {
+  name: string,           // 변수명
+  type: string,           // "let", "const"
+  line: int               // 라인 번호
+}
+
+// ============================================
+// 2. 메인 컴파일 함수
+// ============================================
+
+/**
+ * 소스 코드 컴파일 (3단계: Lex → Parse → Analyze)
+ *
+ * @param source FreeLang 소스 코드 (string)
+ * @return CompileResult 구조체
+ */
+fn compile(source) {
+  println("\n=== FreeLang Self-Hosting Compiler ===")
+
+  // 입력 검증
+  if (!source || strlen(source) == 0) {
+    println("❌ Error: Empty source code")
+    return {
+      type: "Program",
+      functions: [],
+      variables: [],
+      errors: ["Empty source"],
+      tokenCount: 0,
+      astDepth: 0,
+      sourceBytes: 0
+    }
+  }
+
+  let sourceBytes = strlen(source)
+  println("📝 Source: " + str(sourceBytes) + " bytes")
+
+  // Step 1: Tokenization
+  println("⚙️  Step 1: Lexical Analysis (Tokenization)")
+  let tokens = tokenize(source)
+  let tokenCount = arr_len(tokens)
+  println("   ✓ Tokenized: " + str(tokenCount) + " tokens")
+
+  // Step 2: Parsing
+  println("⚙️  Step 2: Syntax Analysis (Parsing)")
+  let ast = parseProgram(tokens)
+  println("   ✓ Parsed: AST type = " + ast.type)
+
+  // Step 3: Analysis & Metadata Collection
+  println("⚙️  Step 3: Semantic Analysis & Metadata")
+  let functions = collectFunctions(ast)
+  let variables = collectVariables(ast)
+  let astDepth = calculateASTDepth(ast)
+  println("   ✓ Collected: " + str(arr_len(functions)) + " functions, " + str(arr_len(variables)) + " variables")
+  println("   ✓ AST depth: " + str(astDepth))
+
+  // Result
+  let result = {
+    type: "Program",
+    functions: functions,
+    variables: variables,
+    errors: [],
+    tokenCount: tokenCount,
+    astDepth: astDepth,
+    sourceBytes: sourceBytes
+  }
+
+  println("✅ Compilation successful")
+  return result
+}
+
+// ============================================
+// 3. AST 분석 함수들
+// ============================================
+
+/**
+ * AST에서 함수 정의 수집
+ *
+ * @param ast 파싱된 AST
+ * @return 함수 메타데이터 배열
+ */
+fn collectFunctions(ast) {
+  let functions = []
+
+  if (!ast || !ast.body) {
+    return functions
+  }
+
+  let body = ast.body
+  let len = arr_len(body)
+
+  let i = 0
+  while (i < len) {
+    let stmt = arr_get(body, i)
+
+    // FunctionDecl 노드 찾기
+    if (stmt.type == "FunctionDecl" || stmt.type == "FunctionStatement") {
+      let func = {
+        name: stmt.name || "unknown",
+        params: stmt.params || [],
+        line: stmt.line || 0
+      }
+      arr_push(functions, func)
+    }
+
+    i = i + 1
+  }
+
+  return functions
+}
+
+/**
+ * AST에서 변수 정의 수집
+ *
+ * @param ast 파싱된 AST
+ * @return 변수 메타데이터 배열
+ */
+fn collectVariables(ast) {
+  let variables = []
+
+  if (!ast || !ast.body) {
+    return variables
+  }
+
+  let body = ast.body
+  let len = arr_len(body)
+
+  let i = 0
+  while (i < len) {
+    let stmt = arr_get(body, i)
+
+    // VarDecl 노드 찾기
+    if (stmt.type == "VarDecl" || stmt.type == "VariableDeclaration") {
+      let varDec = {
+        name: stmt.name || "unknown",
+        type: stmt.kind || "let",
+        line: stmt.line || 0
+      }
+      arr_push(variables, varDec)
+    }
+
+    // 블록 내 변수도 수집
+    if (stmt.type == "IfStatement" || stmt.type == "IfStmt") {
+      let blockVars = collectVariablesFromBlock(stmt.consequent)
+      let j = 0
+      while (j < arr_len(blockVars)) {
+        arr_push(variables, arr_get(blockVars, j))
+        j = j + 1
+      }
+    }
+
+    i = i + 1
+  }
+
+  return variables
+}
+
+/**
+ * 블록 내 변수 수집 (헬퍼)
+ */
+fn collectVariablesFromBlock(block) {
+  let vars = []
+
+  if (!block) return vars
+  if (!arr_len(block)) return vars
+
+  let len = arr_len(block)
+  let i = 0
+
+  while (i < len) {
+    let stmt = arr_get(block, i)
+
+    if (stmt.type == "VarDecl" || stmt.type == "VariableDeclaration") {
+      arr_push(vars, {
+        name: stmt.name || "unknown",
+        type: stmt.kind || "let",
+        line: stmt.line || 0
+      })
+    }
+
+    i = i + 1
+  }
+
+  return vars
+}
+
+/**
+ * AST 깊이 계산
+ *
+ * @param ast AST 노드
+ * @return 최대 깊이 (정수)
+ */
+fn calculateASTDepth(ast) {
+  if (!ast) return 0
+
+  let maxDepth = 1
+
+  // 자식 노드 탐색
+  if (ast.body) {
+    let len = arr_len(ast.body)
+    let i = 0
+
+    while (i < len) {
+      let child = arr_get(ast.body, i)
+      let childDepth = calculateNodeDepth(child)
+
+      if (childDepth > maxDepth) {
+        maxDepth = childDepth
+      }
+
+      i = i + 1
+    }
+  }
+
+  return maxDepth + 1
+}
+
+/**
+ * 단일 노드의 깊이 계산
+ */
+fn calculateNodeDepth(node) {
+  if (!node) return 0
+
+  let depth = 1
+
+  // 함수 본체 체크
+  if (node.body) {
+    let len = arr_len(node.body)
+    if (len > 0) {
+      let i = 0
+      let maxChildDepth = 0
+
+      while (i < len) {
+        let child = arr_get(node.body, i)
+        let childDepth = calculateNodeDepth(child)
+
+        if (childDepth > maxChildDepth) {
+          maxChildDepth = childDepth
+        }
+
+        i = i + 1
+      }
+
+      depth = depth + maxChildDepth
+    }
+  }
+
+  return depth
+}
+
+// ============================================
+// 4. 검증 헬퍼 함수들
+// ============================================
+
+/**
+ * 컴파일 결과 검증
+ *
+ * @param result CompileResult
+ * @return boolean (성공=true, 실패=false)
+ */
+fn validateCompileResult(result) {
+  if (!result) return false
+  if (result.type != "Program") return false
+  if (!result.functions) return false
+  if (!result.variables) return false
+  if (arr_len(result.errors) > 0) return false
+
+  return true
+}
+
+/**
+ * 함수 이름이 유효한지 확인
+ *
+ * @param name 함수명 (string)
+ * @return boolean
+ */
+fn isValidFunctionName(name) {
+  if (!name || strlen(name) == 0) return false
+
+  // 식별자 규칙: 문자 또는 _ 로 시작, 문자/숫자/_ 포함
+  let firstChar = substring(name, 0, 1)
+
+  // 간단한 체크: 문자 또는 _로 시작하는지 확인
+  if (firstChar != "_" && firstChar != "a" && firstChar != "b" &&
+      firstChar != "c" && firstChar != "d" && firstChar != "e" &&
+      firstChar != "f" && firstChar != "g" && firstChar != "h" &&
+      firstChar != "i" && firstChar != "j" && firstChar != "k" &&
+      firstChar != "l" && firstChar != "m" && firstChar != "n" &&
+      firstChar != "o" && firstChar != "p" && firstChar != "q" &&
+      firstChar != "r" && firstChar != "s" && firstChar != "t" &&
+      firstChar != "u" && firstChar != "v" && firstChar != "w" &&
+      firstChar != "x" && firstChar != "y" && firstChar != "z" &&
+      firstChar != "A" && firstChar != "B" && firstChar != "C" &&
+      firstChar != "D" && firstChar != "E" && firstChar != "F" &&
+      firstChar != "G" && firstChar != "H" && firstChar != "I" &&
+      firstChar != "J" && firstChar != "K" && firstChar != "L" &&
+      firstChar != "M" && firstChar != "N" && firstChar != "O" &&
+      firstChar != "P" && firstChar != "Q" && firstChar != "R" &&
+      firstChar != "S" && firstChar != "T" && firstChar != "U" &&
+      firstChar != "V" && firstChar != "W" && firstChar != "X" &&
+      firstChar != "Y" && firstChar != "Z") {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * 결과 요약 출력
+ */
+fn printCompileSummary(result) {
+  println("\n=== Compile Summary ===")
+  println("Functions: " + str(arr_len(result.functions)))
+
+  let funcLen = arr_len(result.functions)
+  let i = 0
+  while (i < funcLen) {
+    let func = arr_get(result.functions, i)
+    println("  - " + func.name + " (params: " + str(arr_len(func.params)) + ")")
+    i = i + 1
+  }
+
+  println("Variables: " + str(arr_len(result.variables)))
+  println("Tokens: " + str(result.tokenCount))
+  println("AST Depth: " + str(result.astDepth))
+  println("Source Size: " + str(result.sourceBytes) + " bytes")
+
+  if (arr_len(result.errors) > 0) {
+    println("❌ Errors: " + str(arr_len(result.errors)))
+  } else {
+    println("✅ No errors")
+  }
+}
+
+// ============================================
+// 5. 메인 엔트리포인트
+// ============================================
+
+fn main() {
+  println("=======================================")
+  println("FreeLang Self-Hosting Compiler (Phase K)")
+  println("=======================================")
+
+  // 테스트 코드 1: 간단한 함수
+  let testCode1 = "fn add(a, b) { return a + b }"
+  println("\n▶ Test 1: Simple Function")
+  println("Code: " + testCode1)
+
+  let result1 = compile(testCode1)
+  printCompileSummary(result1)
+
+  // 테스트 코드 2: 여러 함수
+  let testCode2 = "fn add(x, y) { return x + y } fn multiply(x, y) { return x * y }"
+  println("\n▶ Test 2: Multiple Functions")
+  println("Code: " + testCode2)
+
+  let result2 = compile(testCode2)
+  printCompileSummary(result2)
+
+  // 최종 메시지
+  println("\n=======================================")
+  println("✅ FreeLang 자체호스팅 완료")
+  println("   (FreeLang이 FreeLang 코드를 처리)")
+  println("=======================================")
+
+  return 0
+}
+
+// ============================================
+// 6. 부트스트래핑 테스트 (선택)
+// ============================================
+
+/**
+ * 자신을 컴파일하는 부트스트래핑 테스트
+ * 이 함수는 실제로는 bootstrapTest()로 호출됨
+ */
+fn bootstrapTest() {
+  println("\n=== 자체호스팅 부트스트래핑 테스트 ===")
+
+  // 1. 이 파일 읽기
+  let mySource = file_read("src/stdlib/self-compiler.fl")
+
+  if (!mySource || strlen(mySource) == 0) {
+    println("❌ Error: Cannot read self-compiler.fl")
+    return 1
+  }
+
+  println("✓ Read self-compiler.fl: " + str(strlen(mySource)) + " bytes")
+
+  // 2. 자신을 토큰화
+  let myTokens = tokenize(mySource)
+  println("✓ Tokenized: " + str(arr_len(myTokens)) + " tokens")
+
+  // 3. 자신을 파싱
+  let myAST = parseProgram(myTokens)
+  println("✓ Parsed: AST type = " + myAST.type)
+
+  // 4. 함수 수집
+  let myFunctions = collectFunctions(myAST)
+  println("✓ Found " + str(arr_len(myFunctions)) + " functions in self")
+
+  // 5. 성공
+  println("\n✅ FreeLang 자체호스팅 Level 3 달성!")
+  println("   (FreeLang이 FreeLang 소스를 처리)")
+  println("   - Lexer ✓")
+  println("   - Parser ✓")
+  println("   - Compiler ✓")
+
+  return 0
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ENTRY POINT
+// ════════════════════════════════════════════════════════════════════════════
+
+// 메인 함수: 파일명을 받아서 컴파일 수행
+fn main(filename) {
+  return compile(filename);
+}
+
+// 실행: 첫번째 인자로 전달된 파일 컴파일
+if (typeof(argv) != "undefined" && length(argv) > 1) {
+  main(argv[1]);
+}

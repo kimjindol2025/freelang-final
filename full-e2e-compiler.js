@@ -119,9 +119,21 @@ class Lexer {
       const ch = this.current();
       const startCol = this.col;
 
-      // Comments
+      // Comments (// and /* */)
       if (ch === '/' && this.peek() === '/') {
         while (this.current() !== '\n' && this.current() !== '\0') this.advance();
+        continue;
+      }
+      if (ch === '/' && this.peek() === '*') {
+        this.advance(); // skip /
+        this.advance(); // skip *
+        while (!(this.current() === '*' && this.peek() === '/') && this.current() !== '\0') {
+          this.advance();
+        }
+        if (this.current() === '*' && this.peek() === '/') {
+          this.advance(); // skip *
+          this.advance(); // skip /
+        }
         continue;
       }
 
@@ -566,8 +578,8 @@ async function main() {
   console.log('🚀 FreeLang Self-Hosting E2E Compiler');
   console.log('═'.repeat(60));
 
-  // Read hello.free
-  const sourceFile = '/tmp/verify/freelang-final/hello.free';
+  // Read source file (from command line argument or default to hello.free)
+  const sourceFile = process.argv[2] || '/tmp/verify/freelang-final/hello.free';
   const source = fs.readFileSync(sourceFile, 'utf8');
   console.log(`\n📄 Source file: ${sourceFile}`);
   console.log(`   Size: ${source.length} bytes\n`);
@@ -623,8 +635,8 @@ async function main() {
     console.log(`      Size: ${elfBinary.length} bytes`);
     console.log(`      Magic: ${Array.from(elfBinary.slice(0, 4)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')}`);
 
-    // Write output
-    const outputPath = '/tmp/verify/freelang-final/hello-compiled.elf';
+    // Write output (default name for bootstrap process)
+    const outputPath = 'a.elf';
     fs.writeFileSync(outputPath, elfBinary);
     console.log(`\n✅ COMPILATION COMPLETE`);
     console.log(`   Output: ${outputPath}`);
