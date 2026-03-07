@@ -7,6 +7,14 @@ const fs = require('fs');
 const path = require('path');
 
 const {
+  Lexer
+} = require('./complete-lexer');
+
+const {
+  Parser
+} = require('./complete-parser');
+
+const {
   generateAstToIR
 } = require('./phase1-ir-generator');
 
@@ -32,47 +40,43 @@ class FreeLangCompiler {
     };
   }
 
-  // Phase 1: Tokenization & Parsing
-  parse(sourceCode) {
+  // Phase 1: Lexing
+  lex(sourceCode) {
     if (this.options.verbose) {
-      console.log('[Phase 1] Parsing source code...');
+      console.log('[Phase 1] Lexing source code...');
     }
 
-    // For now, assume simple AST structure
-    // In real implementation, would use parser.fl
+    const lexer = new Lexer(sourceCode);
+    const { tokens, errors } = lexer.tokenize();
 
-    return this._parseSimpleLanguage(sourceCode);
+    if (errors.length > 0 && this.options.verbose) {
+      console.log(`  Lexer errors: ${errors.length}`);
+    }
+
+    return tokens;
   }
 
-  _parseSimpleLanguage(code) {
-    // Parse simple assignment + return statements
-    const ast = [];
-    const lines = code.split('\n').filter(l => l.trim());
+  // Phase 2: Parsing (Tokens → AST)
+  parse(sourceCode) {
+    if (this.options.verbose) {
+      console.log('[Phase 2] Parsing tokens to AST...');
+    }
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('return')) {
-        ast.push({
-          type: 'returnStatement',
-          value: { type: 'literal', value: parseInt(trimmed.substring(6)) }
-        });
-      } else if (trimmed.includes('=')) {
-        const [varName, value] = trimmed.split('=').map(s => s.trim());
-        ast.push({
-          type: 'assignment',
-          name: varName,
-          value: { type: 'literal', value: parseInt(value) }
-        });
-      }
+    const tokens = this.lex(sourceCode);
+    const parser = new Parser(tokens);
+    const { ast, errors } = parser.parse();
+
+    if (errors.length > 0 && this.options.verbose) {
+      console.log(`  Parser errors: ${errors.length}`);
     }
 
     return ast;
   }
 
-  // Phase 2: Semantic Analysis → IR Generation
+  // Phase 3: IR Generation
   generateIR(ast) {
     if (this.options.verbose) {
-      console.log('[Phase 2] Generating intermediate representation...');
+      console.log('[Phase 3] Generating intermediate representation...');
     }
 
     const irProgram = generateAstToIR(ast, null);
@@ -84,10 +88,10 @@ class FreeLangCompiler {
     return irProgram;
   }
 
-  // Phase 3: Code Generation (IR → x86-64)
+  // Phase 4: Code Generation (IR → x86-64)
   generateAssembly(irProgram) {
     if (this.options.verbose) {
-      console.log('[Phase 3] Generating x86-64 assembly...');
+      console.log('[Phase 4] Generating x86-64 assembly...');
     }
 
     const codegen = new X86CodeGenerator(irProgram);
@@ -101,10 +105,10 @@ class FreeLangCompiler {
     return asmCode;
   }
 
-  // Phase 4: Assembly → Binary (ELF)
+  // Phase 5: Linking and Binary Generation
   generateBinary(asmCode, outputPath) {
     if (this.options.verbose) {
-      console.log('[Phase 4] Linking and generating ELF binary...');
+      console.log('[Phase 5] Linking and generating ELF binary...');
     }
 
     const linker = new Linker();
