@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-03-07T02:06:41.545Z",
+  "sourceFile": "/tmp/verify/freelang-final/hello.free",
+  "sourceSize": 112,
+  "stages": {
+    "lexer": {
+      "status": "✅",
+      "tokens": 17
+    },
+    "parser": {
+      "status": "✅",
+      "astNodes": 2
+    },
+    "irGenerator": {
+      "status": "✅",
+      "instructions": 6
+    },
+    "x86Encoder": {
+      "status": "✅",
+      "bytes": 30
+    },
+    "elfBuilder": {
+      "status": "✅",
+      "outputSize": 150
+    }
+  },
+  "outputFile": "/tmp/verify/freelang-final/hello-compiled.elf",
+  "success": true
+}
