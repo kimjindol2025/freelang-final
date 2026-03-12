@@ -1,0 +1,407 @@
+/**
+ * FreeLang v2.6.0 - Pattern Matching Enhancements
+ * Nested patterns, destructuring, guard clauses
+ *
+ * Target: 1,500 lines across pattern_matching.fl + examples
+ */
+
+// ============================================================================
+// 1. NESTED PATTERN MATCHING
+// ============================================================================
+
+type User = {
+  id: number,
+  name: string,
+  profile: {
+    age: number,
+    email: string,
+    address: {
+      street: string,
+      city: string,
+      country: string
+    }
+  }
+}
+
+// Nested pattern matching with destructuring
+let describeUser = (user: User) => {
+  return match(user)
+    .when(
+      u => u.profile.address.country === "KR",
+      u => `Korean user: ${u.name} from ${u.profile.address.city}`
+    )
+    .when(
+      u => u.profile.age < 18,
+      u => `Minor: ${u.name}`
+    )
+    .when(
+      u => u.profile.age >= 65,
+      u => `Senior: ${u.name} (${u.profile.age})`
+    )
+    .else(u => `Adult: ${u.name}`)
+}
+
+// ============================================================================
+// 2. ARRAY AND OBJECT DESTRUCTURING IN PATTERNS
+// ============================================================================
+
+// Array destructuring pattern
+type ApiResponse = {
+  status: number,
+  data: any[],
+  metadata: { count: number, page: number }
+}
+
+let handleResponse = (response: ApiResponse) => {
+  return match(response)
+    .when(
+      r => r.status === 200 && r.data.length > 0,
+      r => {
+        let [first, second, ...rest] = r.data
+        return `Success: first=${first}, second=${second}, more=${rest.length}`
+      }
+    )
+    .when(
+      r => r.status === 200 && r.data.length === 0,
+      () => "Success but no data"
+    )
+    .when(
+      r => r.status >= 400 && r.status < 500,
+      r => `Client error: ${r.status}`
+    )
+    .when(
+      r => r.status >= 500,
+      r => `Server error: ${r.status}`
+    )
+    .else(() => "Unknown status")
+}
+
+// Object destructuring in patterns
+type Request = {
+  method: string,
+  path: string,
+  headers: {
+    "content-type": string,
+    "authorization"?: string
+  },
+  body?: any
+}
+
+let handleRequest = (req: Request) => {
+  return match(req)
+    .when(
+      r => r.method === "GET",
+      r => `GET ${r.path}`
+    )
+    .when(
+      r => r.method === "POST" && r.body,
+      r => {
+        let { "content-type": ct, "authorization": auth } = r.headers
+        return `POST with ${ct}, auth: ${auth ? "yes" : "no"}`
+      }
+    )
+    .when(
+      r => r.method === "PUT",
+      () => "Update operation"
+    )
+    .when(
+      r => r.method === "DELETE",
+      () => "Delete operation"
+    )
+    .else(() => "Unknown method")
+}
+
+// ============================================================================
+// 3. GUARD CLAUSES
+// ============================================================================
+
+type Product = {
+  name: string,
+  price: number,
+  stock: number,
+  category: string
+}
+
+let analyzeProduct = (product: Product) => {
+  return match(product)
+    // Guard: price check
+    .when(
+      p => p.price > 1000,
+      (p) => p.stock > 50
+        ? `Premium in stock: ${p.name} (${p.stock} units)`
+        : `Premium low stock: ${p.name} (only ${p.stock} units)`,
+      // Guard clause: only if high-priced AND sufficient context
+      p => p.category === "electronics"
+    )
+    // Guard: availability check
+    .when(
+      p => p.stock === 0,
+      () => "Out of stock",
+      p => p.price < 100
+    )
+    // Guard: bulk availability
+    .when(
+      p => p.stock >= 100,
+      p => `Bulk available: ${p.name} (${p.stock} units)`
+    )
+    // Multiple guards combined
+    .when(
+      p => p.price > 50 && p.stock > 0 && p.price <= 1000,
+      p => `Mid-range available: ${p.name} (${p.stock} units)`
+    )
+    .else(p => `Limited: ${p.name}`)
+}
+
+// ============================================================================
+// 4. PATTERN MATCHING WITH TYPE NARROWING
+// ============================================================================
+
+type Result<T, E> =
+  | { type: "ok", value: T }
+  | { type: "error", error: E }
+
+// Type narrowing in match
+let processResult = (result: Result<string, string>) => {
+  return match(result)
+    .when(
+      r => r.type === "ok",
+      r => {
+        // Type narrowed to ok variant
+        let value = r.value
+        return `Success: ${value.toUpperCase()}`
+      }
+    )
+    .when(
+      r => r.type === "error",
+      r => {
+        // Type narrowed to error variant
+        let error = r.error
+        return `Failed: ${error}`
+      }
+    )
+    .else(() => "Unknown result")
+}
+
+// ============================================================================
+// 5. RECURSIVE PATTERN MATCHING
+// ============================================================================
+
+type Tree<T> =
+  | { type: "leaf", value: T }
+  | { type: "branch", left: Tree<T>, right: Tree<T> }
+
+let sumTree = (tree: Tree<number>): number => {
+  return match(tree)
+    .when(
+      t => t.type === "leaf",
+      t => t.value
+    )
+    .when(
+      t => t.type === "branch",
+      t => sumTree(t.left) + sumTree(t.right)
+    )
+    .else(() => 0)
+}
+
+let flattenTree = (tree: Tree<any>): any[] => {
+  return match(tree)
+    .when(
+      t => t.type === "leaf",
+      t => [t.value]
+    )
+    .when(
+      t => t.type === "branch",
+      t => [...flattenTree(t.left), ...flattenTree(t.right)]
+    )
+    .else(() => [])
+}
+
+// ============================================================================
+// 6. PATTERN MATCHING WITH COMPLEX CONDITIONS
+// ============================================================================
+
+type Transaction = {
+  id: string,
+  amount: number,
+  from: string,
+  to: string,
+  timestamp: number,
+  status: "pending" | "completed" | "failed"
+}
+
+let categorizeTransaction = (txn: Transaction) => {
+  return match(txn)
+    // Large transaction
+    .when(
+      t => t.amount > 10000 && t.status === "completed",
+      t => {
+        let hours = Math.floor((Date.now() - t.timestamp) / 3600000)
+        return `Large transfer: ${t.amount}$ (${hours}h old)`
+      }
+    )
+    // Fraud detection: rapid transactions
+    .when(
+      t => t.status === "pending" && t.amount > 5000,
+      t => `⚠️ Pending large: ${t.amount}$ from ${t.from}`
+    )
+    // Failed transactions needing review
+    .when(
+      t => t.status === "failed",
+      t => `❌ Failed: ${t.amount}$ (ID: ${t.id})`
+    )
+    // Small routine transaction
+    .when(
+      t => t.amount <= 100 && t.status === "completed",
+      () => "✅ Small routine transaction"
+    )
+    .else(t => `Standard: ${t.amount}$`)
+}
+
+// ============================================================================
+// 7. PATTERN MATCHING WITH VALIDATION
+// ============================================================================
+
+type Email = string
+
+let isValidEmail = (email: Email): boolean => {
+  return email.includes("@") && email.includes(".")
+}
+
+type Account = {
+  email: Email,
+  username: string,
+  created_at: number
+}
+
+let validateAccount = (account: Account) => {
+  return match(account)
+    .when(
+      a => !isValidEmail(a.email),
+      () => "❌ Invalid email format"
+    )
+    .when(
+      a => a.username.length < 3,
+      () => "❌ Username too short"
+    )
+    .when(
+      a => a.username.length > 30,
+      () => "❌ Username too long"
+    )
+    .when(
+      a => isValidEmail(a.email) && a.username.length >= 3 && a.username.length <= 30,
+      a => `✅ Valid account: ${a.username} (${a.email})`
+    )
+    .else(() => "❌ Invalid account")
+}
+
+// ============================================================================
+// 8. PATTERN MATCHING WITH ACCUMULATION
+// ============================================================================
+
+type LogEntry = {
+  level: "debug" | "info" | "warn" | "error",
+  message: string,
+  timestamp: number
+}
+
+let analyzeLogStream = (logs: LogEntry[]) => {
+  let stats = {
+    debug: 0,
+    info: 0,
+    warn: 0,
+    error: 0
+  }
+
+  for (let log of logs) {
+    match(log)
+      .when(l => l.level === "debug", () => stats.debug++)
+      .when(l => l.level === "info", () => stats.info++)
+      .when(l => l.level === "warn", () => stats.warn++)
+      .when(l => l.level === "error", () => stats.error++)
+      .else(() => {})
+  }
+
+  return stats
+}
+
+// ============================================================================
+// 9. PATTERN MATCHING WITH TRANSFORMATION
+// ============================================================================
+
+type Message =
+  | { type: "text", content: string }
+  | { type: "image", url: string, alt: string }
+  | { type: "video", url: string, duration: number }
+  | { type: "code", language: string, source: string }
+
+let renderMessage = (msg: Message): string => {
+  return match(msg)
+    .when(
+      m => m.type === "text",
+      m => `<p>${m.content}</p>`
+    )
+    .when(
+      m => m.type === "image",
+      m => `<img src="${m.url}" alt="${m.alt}" />`
+    )
+    .when(
+      m => m.type === "video",
+      m => `<video src="${m.url}" duration="${m.duration}s" />`
+    )
+    .when(
+      m => m.type === "code",
+      m => `<pre><code class="lang-${m.language}">${m.source}</code></pre>`
+    )
+    .else(() => "Unknown message type")
+}
+
+// ============================================================================
+// 10. COMPLEX PATTERN MATCHING: STATE MACHINE
+// ============================================================================
+
+type OrderState =
+  | { type: "created", orderId: string, timestamp: number }
+  | { type: "processing", orderId: string, items: number }
+  | { type: "shipped", orderId: string, trackingId: string }
+  | { type: "delivered", orderId: string, signature: string }
+  | { type: "cancelled", orderId: string, reason: string }
+
+let handleOrderStateChange = (state: OrderState) => {
+  return match(state)
+    .when(
+      s => s.type === "created",
+      s => `📦 Order ${s.orderId} created`
+    )
+    .when(
+      s => s.type === "processing",
+      s => `⚙️ Processing ${s.items} items for order ${s.orderId}`
+    )
+    .when(
+      s => s.type === "shipped",
+      s => `🚚 Order ${s.orderId} shipped - Track: ${s.trackingId}`
+    )
+    .when(
+      s => s.type === "delivered",
+      s => `✅ Order ${s.orderId} delivered - Signed by: ${s.signature}`
+    )
+    .when(
+      s => s.type === "cancelled",
+      s => `❌ Order ${s.orderId} cancelled - Reason: ${s.reason}`
+    )
+    .else(() => "Unknown order state")
+}
+
+export {
+  describeUser,
+  handleResponse,
+  handleRequest,
+  analyzeProduct,
+  processResult,
+  sumTree,
+  flattenTree,
+  categorizeTransaction,
+  validateAccount,
+  analyzeLogStream,
+  renderMessage,
+  handleOrderStateChange
+}
